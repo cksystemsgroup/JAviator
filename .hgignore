@@ -1,5 +1,9 @@
 syntax: glob
 *.o
+*.d
+*.hex
+*.elf
+*.map
 *.ko
 *.so.*
 *.so
