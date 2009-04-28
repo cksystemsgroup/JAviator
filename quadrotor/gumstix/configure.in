@@ -1,0 +1,81 @@
+-*- mode: m4 -*-
+
+m4_define([controller_version_major], [0])
+m4_define([controller_version_minor], [0])
+m4_define([controller_version_micro], [1])
+m4_define([controller_full_version],
+    [controller_version_major.controller_version_minor.controller_version_micro])
+
+AC_INIT([controller], [controller_full_version])
+
+AC_CANONICAL_TARGET
+AM_INIT_AUTOMAKE
+AC_CONFIG_HEADERS(controller-config.h)
+
+
+### Basic checks ######################################################
+
+AC_ISC_POSIX
+AM_PROG_AS
+AC_PROG_CC
+AC_PROG_RANLIB
+AC_PROG_LN_S
+AC_HEADER_STDC
+AC_HEADER_TIME
+
+AC_C_BIGENDIAN([LITTLE_ENDIAN=], [LITTLE_ENDIAN=1])
+
+AC_DEFINE(CONTROLLER_VERSION, "controller_full_version",
+    [The version number of this release])
+AC_DEFINE(CONTROLLER_VERSION_MAJOR, controller_version_major,
+    [The Epoch of this release])
+AC_DEFINE(CONTROLLER_VERSION_MINOR, controller_version_minor,
+    [The Major version number of this release])
+AC_DEFINE(CONTROLLER_VERSION_MICRO, controller_version_micro,
+    [The Minor version number of this release])
+
+case ${target} in
+arm-*	  )
+    AC_DEFINE(TARGET_CPU_ARM, 1, [Target CPU arch]) ;;
+i?86-*	  )
+    AC_DEFINE(TARGET_CPU_X86, 1, [Target CPU arch]) ;;
+powerpc-* )
+    AC_DEFINE(TARGET_CPU_POWERPC, 1, [Target CPU arch]) ;;
+x86_64-*  )
+    AC_DEFINE(TARGET_CPU_X86_64, 1, [Target CPU arch]) ;;
+*	  )
+    echo "Unsupported target architeture." ;;
+esac
+
+# So we are using -nostdinc, but a few compiler-provided headers are needed, 
+# e.g. stdarg.h. Try to find out where they are. We are a bit gcc specific here.
+gcc=`which ${CC}`
+gcc_version=`${gcc} --version | grep --max-count=1 '.' | awk '{ print $3; }'`
+gcc_dir=`dirname ${gcc}`
+gcc_prefix=`dirname ${gcc_dir}`
+gcc_builtin_headers="${gcc_prefix}/lib/gcc/${target}/${gcc_version}/include"
+
+CONTROLLER_CFLAGS="-I${gcc_builtin_headers}"
+
+AC_SUBST([CONTROLLER_CFLAGS])
+
+AC_CONFIG_FILES([
+Makefile
+include/Makefile
+src/Makefile
+])
+
+AC_OUTPUT
+
+echo "
+Configuration:
+
+	Source code location:	${srcdir}
+	Cross compiling:        ${cross_compiling}
+	Target:                 ${target}
+	Compiler:               ${CC}
+	GCC  Version:           ${gcc_version}
+	Compiler flags:         ${CFLAGS} ${CONTROLLER_CFLAGS}
+	Linker flags:           ${LDFLAGS}
+"
+
