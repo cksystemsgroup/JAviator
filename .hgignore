@@ -1,0 +1,35 @@
+syntax: glob
+*.o
+*.ko
+*.so.*
+*.so
+*.la
+*.a
+*.log
+*.swp
+*.lo
+*.Po
+*.pyc
+.svn
+.deps
+*.cache
+.libs
+*.status
+stamp-*
+bin
+share
+private.xml
+*.m4
+depcomp
+install-sh
+missing
+cross
+build
+*~
+
+syntax: regexp
+\.orig$
+\.orig\..*$
+\.chg\..*$
+\.rej$
+\.conflict\~$
