@@ -20,8 +20,6 @@ bin
 share
 private.xml
 *.m4
-depcomp
-missing
 cross
 build
 *~
