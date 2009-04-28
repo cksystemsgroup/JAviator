@@ -21,7 +21,6 @@ share
 private.xml
 *.m4
 depcomp
-install-sh
 missing
 cross
 build
