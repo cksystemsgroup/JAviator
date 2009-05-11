@@ -1,5 +1,3 @@
-/* $Id: control_loop.c,v 1.40 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -29,25 +27,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <signal.h>
 
+#include "../shared/protocol.h"
+#include "../shared/transfer.h"
 #include "control_loop.h"
 #include "controller.h"
-#include "channel.h"
+#include "comm_channel.h"
+#include "communication.h"
 #include "javiator_port.h"
-#include "inertial_port.h"
 #include "terminal_port.h"
-#include "navigation.h"
-#include "pwm_signals.h"
+#include "inertial_port.h"
+#include "command_data.h"
+#include "javiator_data.h"
+#include "inertial_data.h"
 #include "sensor_data.h"
-#include "utimer.h"
-#include "param.h"
-#include "trim.h"
-#include "filter_param.h"
+#include "motor_signals.h"
+#include "ctrl_params.h"
+#include "filter_params.h"
 #include "kalman_filter.h"
+#include "us_timer.h"
 
 
-#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+//#define ADJUST_YAW
+//#define ADJUST_Z
+//#define FAST_PWM
 
 
 /* filter parameters */
@@ -62,38 +68,40 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* scaling constants*/
-#define FACTOR_EULER_ANGLE      6282.0/65536.0      // units    --> [mrad] (2*PI*1000 mrad/2^16)
+#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 // units    --> [mrad] (2*PI*1000 mrad/2^16)
 #define FACTOR_ANGULAR_RATE     8500.0/32768.0      // units    --> [mrad/s]
 #define FACTOR_ANGULAR_ACCEL    8500.0/32768.0*76.3 // units    --> [mrad/s^2]
+#define FACTOR_POSITION         1.0
+#define FACTOR_LINEAR_RATE      1.0
 #define FACTOR_LINEAR_ACCEL     9810.0/4681.0       // units    --> [mm/s^2] (4681=32768000/7000)
+
 #define FACTOR_LASER            0.1                 // [1/10mm] --> [mm]
 #define FACTOR_SONAR            5000.0/1024.0       // [0-5V]   --> [mm]
 #define FACTOR_PRESSURE         5000.0/1024.0       // [0-5V]   --> [mm]
 #define FACTOR_BATTERY          18000.0/1024.0      // [0-5V]   --> [0-18V]
 #define FACTOR_PARAMETER        0.001
 
-#define MOTOR_MAX               1000
-#define MOTOR_MIN               0
+#ifdef FAST_PWM
+  #define MOTOR_MAX             16000
+  #define MOTOR_MIN             0
+#else
+  #define MOTOR_MAX             1000
+  #define MOTOR_MIN             0
+#endif
 
-/* security constants */
-#define TOLERANCE_ROLL          10
-#define TOLERANCE_PITCH         10
-#define TOLERANCE_YAW           10
-#define TOLERANCE_Z             10
-
-#define NAVIGATION_THRESHOLD    35
-#define PI                      3142 // [mrad]
-#define TIME_OUT                200  // terminal connection timeout
+#define COMMAND_THRESHOLD       35
+#define MRAD_PI                 3142 // [mrad]
 #define IO_JITTER               1000 // io time window
+#define IMU_DELAY               10   // [ms]
 
 /* control loop parameters */
-static int period;
+static int ms_period;
 static int us_period;
 static long long next_period;
 static int controller_state;
 static int altitude_mode;
 static double uZold;
-static int control_z;
+static int compute_z;
 static volatile int running;
 
 /* motor speed up threshold */
@@ -108,15 +116,15 @@ static struct controller ctrl_yaw;
 static struct controller ctrl_z;
 
 /* filter objects */
-static struct kalman_filter     z_kalman_filter;
+static struct kalman_filter z_kalman_filter;
 
-/* sensor and input data */ 
-static sensor_data_t       sensors;
-static struct navigation_data   navigation;
-static struct trim_data         trim;
-/* actuator data */
-static pwm_signals_t     motors;
-static pwm_signals_t     motor_offsets;
+/* sensor and input data */
+static command_data_t   command_data;
+static javiator_data_t  javiator_data;
+static inertial_data_t  inertial_data;
+static sensor_data_t    sensor_data;
+static motor_signals_t  motor_signals;
+static command_data_t   motor_offsets;
 
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 #define SONAR_POS_ROLL           90 // [mm] sonar position on roll axis
@@ -132,302 +140,403 @@ static double cos_yaw   = 0;
 static double sin_yaw   = 0;
 #endif
 
+static void signal_handler(int num);
 
 /****************************************
  *    control loop code                 *
  ****************************************/
 
-static inline void set_ctrl_params( struct controller *ctrl,
-                                    double p, double i, double d, double dd )
+static inline void set_ctrl_params(
+        struct controller *ctrl,
+        double p, double i, double d, double dd )
 {
     ctrl->set_params( ctrl, p, i, d, dd );
 }
 
-int control_loop_setup(int _period, int _control_z)
+int control_loop_setup( int period, int control_z )
 {
-    controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD, _period );
-    controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD, _period );
-    controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, _period );
-    controller_init( &ctrl_z,     "Z",     CTRL_PIDD, _period );
+    struct sigaction act;
+    controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD,     period );
+    controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD,     period );
+    controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, period );
+    controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     period );
 
     init_kalman_filter( &z_kalman_filter );
 
-    memset( &sensors,    0, sizeof( sensors ) );
-    memset( &navigation, 0, sizeof( navigation ) );
-    memset( &trim,       0, sizeof( trim ) );
-    memset( &motors,     0, sizeof( motors ) );
+    memset( &command_data,  0, sizeof( command_data ) );
+    memset( &javiator_data, 0, sizeof( javiator_data ) );
+    memset( &inertial_data, 0, sizeof( inertial_data ) );
+    memset( &sensor_data,   0, sizeof( sensor_data ) );
+    memset( &motor_signals, 0, sizeof( motor_signals ) );
+    memset( &motor_offsets, 0, sizeof( motor_offsets ) );
 
-    period             = _period;
-    us_period          = _period * 1000;
-    next_period        = 0;
-    controller_state   = 0;
-    altitude_mode      = ALT_MODE_GROUND;
-    uZold              = 0;
-    control_z          = _control_z;
-    running            = 1;
+    ms_period        = period;
+    us_period        = period * 1000;
+    next_period      = 0;
+    controller_state = 0;
+    altitude_mode    = ALT_MODE_GROUND;
+    uZold            = 0;
+    compute_z        = control_z;
+    running          = 1;
+
+
+    act.sa_handler = signal_handler;
+
+    if (sigaction(SIGUSR1, &act, NULL))
+        perror("sigaction");
 
     return( 0 );
 }
 
-static int check_terminal_connection( )
+static int check_terminal_connection( void )
 {
-    static int no_navigation_counter = 0;
+    static int command_data_delay = 0;
 
-    if (terminal_port_is_new_navigation()) {
-        no_navigation_counter = 0;
-    } else {
-        ++no_navigation_counter;
+    if( terminal_port_is_new_command_data( ) )
+    {
+        command_data_delay = 0;
+    }
+    else
+    if( ++command_data_delay > COMMAND_THRESHOLD )
+    {
+        return( -1 );
     }
 
-    if (no_navigation_counter >= NAVIGATION_THRESHOLD) {
-        return 1;
+    return( 0 );
+}
+
+static void set_control_params( ctrl_params_t *params,
+    struct controller *ctrl_1, struct controller *ctrl_2 )
+{
+    double kp  = params->kp  * FACTOR_PARAMETER;
+    double ki  = params->ki  * FACTOR_PARAMETER;
+    double kd  = params->kd  * FACTOR_PARAMETER;
+    double kdd = params->kdd * FACTOR_PARAMETER;
+
+    if( ctrl_1 != NULL )
+    {
+        set_ctrl_params( ctrl_1, kp, ki, kd, kdd );
+        fprintf( stdout, "parameter update: %s", ctrl_1->name );
+
+        if( ctrl_2 != NULL )
+        {
+            set_ctrl_params( ctrl_2, kp, ki, kd, kdd );
+            fprintf( stdout, "/%s", ctrl_2->name );
+        }
+
+        fprintf( stdout, "\n--> Kp: %+3.5f   Ki: %+3.5f   Kd: %+3.5f   Kdd: %+3.5f\n",
+            kp, ki, kd, kdd );
+        fflush( stdout );
+    }
+}
+
+static void get_control_params( void )
+{
+    ctrl_params_t params;
+
+    if( terminal_port_is_new_r_p_params( ) )
+    {
+        terminal_port_get_r_p_params( &params );
+        set_control_params( &params, &ctrl_roll, &ctrl_pitch );
     }
 
-    return 0;
+    if( terminal_port_is_new_yaw_params( ) )
+    {
+        terminal_port_get_yaw_params( &params );
+        set_control_params( &params, &ctrl_yaw, NULL );
+    }
+
+    if( terminal_port_is_new_alt_params( ) )
+    {
+        terminal_port_get_alt_params( &params );
+        set_control_params( &params, &ctrl_z, NULL );
+    }
+
+    if( terminal_port_is_new_x_y_params( ) )
+    {
+        terminal_port_get_x_y_params( &params );
+        /*set_control_params( &params, &ctrl_x, &ctrl_y );*/
+    }
 }
 
-static void scale_sensor_data( sensor_data_t *data )
+#ifdef ADJUST_Z
+static void adjust_z( )
 {
-/*
-    data->roll     = data->roll     * FACTOR_EULER_ANGLE;
-    data->pitch    = data->pitch    * FACTOR_EULER_ANGLE;
-    data->yaw      = data->yaw      * FACTOR_EULER_ANGLE;
-
-    data->droll    = data->droll    * FACTOR_ANGULAR_RATE;
-    data->dpitch   = data->dpitch   * FACTOR_ANGULAR_RATE;
-    data->dyaw     = data->dyaw     * FACTOR_ANGULAR_RATE;
-
-    data->ddroll   = data->ddroll   * FACTOR_ANGULAR_ACCEL;
-    data->ddpitch  = data->ddpitch  * FACTOR_ANGULAR_ACCEL;
-    data->ddyaw    = data->ddyaw    * FACTOR_ANGULAR_ACCEL;
-
-    data->ddx      = data->ddx      * FACTOR_LINEAR_ACCEL;
-    data->ddy      = data->ddy      * FACTOR_LINEAR_ACCEL;
-    data->ddz      = data->ddz      * FACTOR_LINEAR_ACCEL;
-*/
-    data->laser    = data->laser    * FACTOR_LASER;
-    data->sonar    = data->sonar    * FACTOR_SONAR;
-    data->pressure = data->pressure * FACTOR_PRESSURE;
-    data->battery  = data->battery  * FACTOR_BATTERY;
-}
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-static void adjust_yaw_value( sensor_data_t *sensors )
-{
-    static int offset_yaw = 0;
+    static int16_t offset_z = 0;
 
     if( altitude_mode == ALT_MODE_FLYING )
     {
-        sensors->yaw -= offset_yaw;
+        sensor_data.z -= offset_z;
     }
     else
-    if( motors.data.front <= 0 && motors.data.right <= 0 &&
-        motors.data.rear  <= 0 && motors.data.left  <= 0 )
+    if( motor_signals.front == 0 && motor_signals.right == 0 &&
+        motor_signals.rear  == 0 && motor_signals.left  == 0 )
     {
-        offset_yaw   = sensors->yaw;
-        sensors->yaw = 0;
+        offset_z = sensor_data.z;
+        sensor_data.z = 0;
     }
 }
 #endif
-/*
-static void adjust_z_value( sensor_data_t *sensors )
+
+#ifdef ADJUST_YAW
+static void adjust_yaw( )
 {
-    static int offset_z = 0;
+    static int16_t offset_yaw = 0;
 
     if( altitude_mode == ALT_MODE_FLYING )
     {
-        sensors->sonar -= offset_z;
+        sensor_data.yaw -= offset_yaw;
     }
     else
-    if( motors.front <= 0 && motors.right <= 0 &&
-        motors.rear  <= 0 && motors.left  <= 0 )
+    if( motor_signals.front == 0 && motor_signals.right == 0 &&
+        motor_signals.rear  == 0 && motor_signals.left  == 0 )
     {
-        offset_z   = sensors->sonar;
-        sensors->sonar = 0;
+        offset_yaw = sensor_data.yaw;
+        sensor_data.yaw = 0;
     }
 }
-*/
-static void get_controller_params()
+#endif
+
+static int get_javiator_data( void )
 {
-    struct parameters params;
-
-    if( terminal_port_is_new_params( ) )
-    {
-        terminal_port_get_params( &params );
-
-        set_ctrl_params( &ctrl_roll,
-            (double) params.rollpitch_Kp  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Ki  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Kd  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Kdd * FACTOR_PARAMETER );
-
-        set_ctrl_params( &ctrl_pitch,
-            (double) params.rollpitch_Kp  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Ki  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Kd  * FACTOR_PARAMETER,
-            (double) params.rollpitch_Kdd * FACTOR_PARAMETER );
-
-        set_ctrl_params( &ctrl_yaw,
-            (double) params.yaw_Kp        * FACTOR_PARAMETER,
-            (double) params.yaw_Ki        * FACTOR_PARAMETER,
-            (double) params.yaw_Kd        * FACTOR_PARAMETER,
-            (double) params.yaw_Kdd       * FACTOR_PARAMETER );
-
-        set_ctrl_params( &ctrl_z,
-            (double) params.altitude_Kp   * FACTOR_PARAMETER,
-            (double) params.altitude_Ki   * FACTOR_PARAMETER,
-            (double) params.altitude_Kd   * FACTOR_PARAMETER,
-            (double) params.altitude_Kdd  * FACTOR_PARAMETER );
-    }
-}
-
-static int getSensorData( )
-{
-    /* get data from the javiator channel */
-    static long long __last_run       = 0;
-    static int       last_sensor_tick = 0;
-    //long long        __now;
+    static long long last_run = 0;
+    static uint16_t  last_id  = 0;
+    long long        now;
     int              res;
 
-    res = javiator_port_get_sensors( &sensors );
+    res = javiator_port_get_data( &javiator_data );
 
     if( res )
     {
-        fprintf( stderr, "ERROR: sensors from JAviator not available\n" );
+        fprintf( stderr, "ERROR: data from JAviator not available\n" );
         return( res );
     }
-/*
-    if( sensors.sequence != (last_sensor_tick + 1) )
-    {
-        fprintf( stderr, "WARNING: control loop lost %d sensor packets\n",
-            sensors.sequence - last_sensor_tick );
-        __now = getutime( );
 
-        if( (__now - __last_run) > us_period )
+    if( javiator_data.id != (uint16_t)( last_id + 1 ) )
+    {
+        fprintf( stderr, "WARNING: control loop lost %u JAviator packet(s)\n",
+            javiator_data.id - last_id );
+        now = get_utime( );
+
+        if( now - last_run > us_period )
         {
-            fprintf( stderr, "WARNING: last period is %lld, jitter: %lld\n",
-                __now - __last_run, (__now - __last_run) - us_period );
+            fprintf( stderr, "WARNING: last period is %lld, jitter is %lld\n",
+                now - last_run, now - last_run - us_period );
         }
     }
-*/
-#if DEBUG > 3
-    static long long jitter     = 0;
-    static int       __count    = 0;
-    static long long avg_period = 0;
-    __now = getutime( );
-    avg_period += __now - __last_run;
-#define abs(x) (x)<0?-(x):(x)
-    jitter += (__now - __last_run) - us_period;
-#undef abs
 
-    if (++__count == 32) {
-        printf( "last period is %lld, jitter: %lld\n",
-            avg_period >> 5, jitter >> 5 )
-        avg_period = 0;
-        jitter     = 0;
-        __count    = 0;
-    }
+    last_run = get_utime( );
+    last_id  = javiator_data.id;
+
+    /* scale JAviator data */
+    javiator_data.laser    = (uint32_t)( javiator_data.laser    * FACTOR_LASER );
+    //javiator_data.sonar    = (uint16_t)( javiator_data.sonar    * FACTOR_SONAR );
+    javiator_data.pressure = (uint16_t)( javiator_data.pressure * FACTOR_PRESSURE );
+
+    /* save old positions */
+    sensor_data.dx         = sensor_data.x;
+    sensor_data.dy         = sensor_data.y;
+    sensor_data.dz         = sensor_data.z;
+
+    /* copy and scale positions */
+    sensor_data.x          = (int16_t)( javiator_data.pos_x * FACTOR_POSITION );
+    sensor_data.y          = (int16_t)( javiator_data.pos_y * FACTOR_POSITION );
+    sensor_data.z          = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+
+    /* compute linear rates */
+    sensor_data.dx         = (int16_t)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );
+    sensor_data.dy         = (int16_t)( (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE );
+    sensor_data.dz         = (int16_t)( (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE );
+
+    /* copy and scale battery level */
+    sensor_data.battery    = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
+
+#ifdef ADJUST_Z
+    adjust_z( );
 #endif
-
-    last_sensor_tick = sensors.sequence;
-    __last_run = getutime( );
-
-    /* sensor scaling */
-    scale_sensor_data( &sensors );
-
-    /* check for new trim values */
-    if( terminal_port_is_new_trim( ) )
-    {
-        terminal_port_get_trim( &trim );
-    }
-
-    /* apply stored trim values */
-/*
-    sensors.roll  += trim.roll;
-    sensors.pitch += trim.pitch;
-
-#ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-    cos_roll  = cos( (double) sensors.roll  / 1000.0 );
-    sin_roll  = sin( (double) sensors.roll  / 1000.0 );
-    cos_pitch = cos( (double) sensors.pitch / 1000.0 );
-    sin_pitch = sin( (double) sensors.pitch / 1000.0 );
-#endif
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    cos_yaw   = cos( (double) sensors.yaw   / 1000.0 );
-    sin_yaw   = sin( (double) sensors.yaw   / 1000.0 );
-#endif
-*/
-    /* sensor adjustments */
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    //adjust_yaw_value( &sensors );
-#endif
-
-    //adjust_z_value( &sensors );
 
     return( 0 );
 }
 
-static void filter_and_assign_commands( const struct navigation_data *in, 
-                                        struct navigation_data       *out )
+static int get_inertial_data( void )
 {
-    static struct navigation_data oldNavigation = NAVIGATION_INITIALISER;
-    int yaw_error = in->yaw - oldNavigation.yaw;
+    //static long long last_run   = 0;
+    //static int16_t   last_ticks = 0;
+    //long long        now;
+    int              res;
 
-    if( yaw_error < -PI )
+    res = inertial_port_get_data( &inertial_data );
+
+    if( res == -1 )
     {
-        yaw_error += 2 * PI;
+        //last_run   = get_utime( );
+        //last_ticks = inertial_data.ticks;
+        return( 0 );
     }
-    else
-    if( yaw_error > PI )
+
+    if( res )
     {
-        yaw_error -= 2 * PI;
+        fprintf( stderr, "ERROR: data from IMU not available\n" );
+        return( res );
+    }
+/*
+    if( inertial_data.ticks != (int16_t)( last_ticks + IMU_DELAY ) )
+    {
+        fprintf( stderr, "WARNING: control loop lost %d IMU packet(s), ticks difference: %5d\n",
+            (inertial_data.ticks - last_ticks) / IMU_DELAY,
+            (inertial_data.ticks - last_ticks) + IMU_DELAY );
+        now = get_utime( );
+
+        if( now - last_run > us_period )
+        {
+            fprintf( stderr, "WARNING: last period is %lld, jitter is %lld\n",
+                now - last_run, now - last_run - us_period );
+        }
     }
 
-    out->roll  = oldNavigation.roll  + (int)( FILTER_FACTOR_NAVI * (in->roll  - oldNavigation.roll) );
-    out->pitch = oldNavigation.pitch + (int)( FILTER_FACTOR_NAVI * (in->pitch - oldNavigation.pitch) );
-    out->yaw   = oldNavigation.yaw   + (int)( FILTER_FACTOR_NAVI * yaw_error );
-    out->z     = oldNavigation.z     + (int)( FILTER_FACTOR_NAVI * (in->z     - oldNavigation.z) );
+    last_run   = get_utime( );
+    last_ticks = inertial_data.ticks;
+*/
+    /* copy and scale Euler angles */
+    sensor_data.roll    = (int16_t)( inertial_data.roll  * FACTOR_EULER_ANGLE );
+    sensor_data.pitch   = (int16_t)( inertial_data.pitch * FACTOR_EULER_ANGLE );
+    sensor_data.yaw     = (int16_t)( inertial_data.yaw   * FACTOR_EULER_ANGLE );
 
-    memcpy( &oldNavigation, out, sizeof( oldNavigation ) );
+    /* save old angular rates */
+    sensor_data.ddroll  = sensor_data.droll;
+    sensor_data.ddpitch = sensor_data.dpitch;
+    sensor_data.ddyaw   = sensor_data.dyaw;
+
+    /* copy and scale angular rates */
+    sensor_data.droll   = (int16_t)( inertial_data.droll  * FACTOR_ANGULAR_RATE );
+    sensor_data.dpitch  = (int16_t)( inertial_data.dpitch * FACTOR_ANGULAR_RATE );
+    sensor_data.dyaw    = (int16_t)( inertial_data.dyaw   * FACTOR_ANGULAR_RATE );
+
+    /* compute angular accelerations */
+    sensor_data.ddroll  = (int16_t)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
+    sensor_data.ddpitch = (int16_t)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
+    sensor_data.ddyaw   = (int16_t)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
+
+    /* copy and scale linear accelerations */
+    sensor_data.ddx     = (int16_t)( inertial_data.ddx * FACTOR_LINEAR_ACCEL );
+    sensor_data.ddy     = (int16_t)( inertial_data.ddy * FACTOR_LINEAR_ACCEL );
+    sensor_data.ddz     = (int16_t)( inertial_data.ddz * FACTOR_LINEAR_ACCEL );
+
+#ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+    cos_roll  = cos( (double) sensor_data.roll  / 1000.0 );
+    sin_roll  = sin( (double) sensor_data.roll  / 1000.0 );
+    cos_pitch = cos( (double) sensor_data.pitch / 1000.0 );
+    sin_pitch = sin( (double) sensor_data.pitch / 1000.0 );
+#endif
+
+#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+    cos_yaw   = cos( (double) sensor_data.yaw   / 1000.0 );
+    sin_yaw   = sin( (double) sensor_data.yaw   / 1000.0 );
+#endif
+
+#ifdef ADJUST_YAW
+    adjust_yaw( );
+#endif
+
+    return( 0 );
 }
 
-static int getNavigationData( )
+static void filter_and_assign_commands(
+    const command_data_t *in, command_data_t *out )
 {
-    static struct navigation_data commands = NAVIGATION_INITIALISER;
+    static command_data_t old_commands = { 0, 0, 0, 0 };
+    int yaw_error = in->yaw - old_commands.yaw;
 
-    if( terminal_port_is_shutdown( ) )
+    if( yaw_error < -MRAD_PI )
+    {
+        yaw_error += 2 * MRAD_PI;
+    }
+    else
+    if( yaw_error > MRAD_PI )
+    {
+        yaw_error -= 2 * MRAD_PI;
+    }
+
+    out->roll  = old_commands.roll  + (int)( FILTER_FACTOR_NAVI * (in->roll  - old_commands.roll) );
+    out->pitch = old_commands.pitch + (int)( FILTER_FACTOR_NAVI * (in->pitch - old_commands.pitch) );
+    out->yaw   = old_commands.yaw   + (int)( FILTER_FACTOR_NAVI * yaw_error );
+    out->z     = old_commands.z     + (int)( FILTER_FACTOR_NAVI * (in->z     - old_commands.z) );
+
+    memcpy( &old_commands, out, sizeof( old_commands ) );
+}
+
+static int get_command_data( void )
+{
+    static int sensors_enabled = 0;
+    static command_data_t commands = { 0, 0, 0, 0 };
+    command_data_t new_commands;
+
+    if( terminal_port_is_shut_down( ) )
     {
         altitude_mode = ALT_MODE_SHUTDOWN;
-        terminal_port_reset_shutdown( );
+        terminal_port_reset_shut_down( );
+
+        if( sensors_enabled )
+        {
+            javiator_port_send_enable_sensors( 0 );
+            sensors_enabled = 0;
+        }
     }
     else
     if( terminal_port_is_mode_switch( ) )
     {
-        altitude_mode = altitude_mode ? 0 : ALT_MODE_FLYING;
+        switch( altitude_mode )
+        {
+            case ALT_MODE_GROUND:
+                altitude_mode = ALT_MODE_FLYING;
+                break;
+
+            case ALT_MODE_FLYING:
+                altitude_mode = ALT_MODE_GROUND;
+                break;
+
+            case ALT_MODE_SHUTDOWN:
+                altitude_mode = ALT_MODE_GROUND;
+
+                if( !sensors_enabled )
+                {
+                    javiator_port_send_enable_sensors( 1 );
+                    sensors_enabled = 1;
+                }
+                break;
+
+            default:
+                altitude_mode = ALT_MODE_SHUTDOWN;
+        }
     }
     else
-    if( terminal_port_is_new_navigation( ) )
+    if( terminal_port_is_new_command_data( ) )
     {
-        terminal_port_get_navigation( &commands ); 
+        if( terminal_port_get_command_data( &new_commands ) != -1 )
+        {
+            memcpy( &commands, &new_commands, sizeof( commands ) );
+/*
+            fprintf( stdout, "   roll: %5d   pitch: %5d   yaw: %5d   z: %5d\r",
+                        commands.roll, commands.pitch, commands.yaw, commands.z );
+            fflush( stdout );
+*/
+        }
     }
 
-    filter_and_assign_commands( &commands, &navigation );
+    filter_and_assign_commands( &commands, &command_data );
 
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
     // apply rotation matrix to roll/pitch commands depending on current yaw angle
-    navigation.roll  = (int)( navigation.roll * cos_yaw - navigation.pitch * sin_yaw );
-    navigation.pitch = (int)( navigation.roll * sin_yaw + navigation.pitch * cos_yaw );
+    command_data.roll  = (int)( command_data.roll * cos_yaw - command_data.pitch * sin_yaw );
+    command_data.pitch = (int)( command_data.roll * sin_yaw + command_data.pitch * cos_yaw );
 #endif
 
-    // check for new control parameters
-    get_controller_params( );
+    get_control_params( );
 
     return( 0 );
 }
 
-static void resetController( )
+static void reset_controllers( void )
 {
     ctrl_roll  .reset_zero( &ctrl_roll );
     ctrl_pitch .reset_zero( &ctrl_pitch );
@@ -439,30 +548,37 @@ static void resetController( )
     uZold = 0;
 }
 
-static inline void resetMotors( )
+static inline void reset_motor_signals( void )
 {
-    motors.front = 0;
-    motors.right = 0;
-    motors.rear  = 0;
-    motors.left  = 0;
+    motor_signals.front = 0;
+    motor_signals.right = 0;
+    motor_signals.rear  = 0;
+    motor_signals.left  = 0;
 }
 
-static int performGroundActions( )
+static int perform_ground_actions( void )
 {
     if( revving_step > 0 )
     {
-        if( motors.front > 0 ) motors.front -= motor_revving_add;
-        if( motors.right > 0 ) motors.right -= motor_revving_add;
-        if( motors.rear  > 0 ) motors.rear  -= motor_revving_add;
-        if( motors.left  > 0 ) motors.left  -= motor_revving_add;
+        if( motor_signals.front > 0 ) 
+            motor_signals.front -= motor_revving_add;
+
+        if( motor_signals.right > 0 )
+            motor_signals.right -= motor_revving_add;
+
+        if( motor_signals.rear > 0 )
+            motor_signals.rear -= motor_revving_add;
+
+        if( motor_signals.left > 0 )
+            motor_signals.left -= motor_revving_add;
 
         --revving_step;
     }
     else
     {
         base_motor_speed = terminal_port_get_base_motor_speed( );
-        resetController( );
-        resetMotors( );
+        reset_controllers( );
+        reset_motor_signals( );
         controller_state = 0;
     }
 
@@ -470,12 +586,14 @@ static int performGroundActions( )
 }
 
 
-static int performShutdown( )
+static int perform_shut_down( )
 {
-    resetMotors( );
-    resetController( );
-    revving_step = 0;
     controller_state = 0;
+    revving_step     = 0;
+
+    reset_controllers( );
+    reset_motor_signals( );
+
     return( 1 );
 }
 
@@ -488,20 +606,21 @@ static inline double do_control( struct controller *ctrl,
     return ctrl->control( ctrl, current_angle, desired_angle, angular_velocity, angular_acceleration );
 }
 
-static inline double filter_z( )
+static inline double filter_z( void )
 {
-    static int median_buffer[MEDIAN_BUFFER_SIZE] = MEDIAN_BUFFER_INIT;
+    static short median_buffer[MEDIAN_BUFFER_SIZE] = MEDIAN_BUFFER_INIT;
     int i, j;
 
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-    sensors.sonar = (int)( (double) -SONAR_POS_ROLL  * sin_pitch
-                         + (double)  SONAR_POS_PITCH * cos_pitch * sin_roll
-                         + (double)  sensors.sonar   * cos_pitch * cos_roll );
+    sensor_data.z = (short)(
+          (double) -SONAR_POS_ROLL  * sin_pitch
+        + (double)  SONAR_POS_PITCH * cos_pitch * sin_roll
+        + (double)  sensor_data.z   * cos_pitch * cos_roll );
 #endif
 
     for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
     {
-        if( sensors.sonar < median_buffer[i] )
+        if( sensor_data.z < median_buffer[i] )
         {
             break;
         }
@@ -517,7 +636,7 @@ static inline double filter_z( )
             --j;
         }
 
-        median_buffer[j] = sensors.sonar;
+        median_buffer[j] = sensor_data.z;
     }
     else
     {
@@ -530,29 +649,29 @@ static inline double filter_z( )
             ++j;
         }
 
-        median_buffer[j] = sensors.sonar;
+        median_buffer[j] = sensor_data.z;
     }
 
-    return( (double) median_buffer[MEDIAN_BUFFER_SIZE>>1] / 1000.0 );
+    return( (double) median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ] / 1000.0 );
 }
 
-static inline double filter_ddz( )
+static inline double filter_ddz( void )
 {
     static double old_ddz = 0;
     double new_ddz = 0;
     double ddzEst = 0;
-/*
+
 #ifndef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-    double cos_roll  = cos( (double) sensors.roll  / 1000.0 );
-    double sin_roll  = sin( (double) sensors.roll  / 1000.0 );
-    double cos_pitch = cos( (double) sensors.pitch / 1000.0 );
-    double sin_pitch = sin( (double) sensors.pitch / 1000.0 );
+    double cos_roll  = cos( (double) sensor_data.roll  / 1000.0 );
+    double sin_roll  = sin( (double) sensor_data.roll  / 1000.0 );
+    double cos_pitch = cos( (double) sensor_data.pitch / 1000.0 );
+    double sin_pitch = sin( (double) sensor_data.pitch / 1000.0 );
 #endif
 
-    new_ddz = ( (double) -sensors.ddx * sin_pitch
-              + (double)  sensors.ddy * cos_pitch * sin_roll
-              + (double)  sensors.ddz * cos_pitch * cos_roll ) / 1000.0 + GRAVITY;
-*/
+    new_ddz = ( (double) -sensor_data.ddx * sin_pitch
+              + (double)  sensor_data.ddy * cos_pitch * sin_roll
+              + (double)  sensor_data.ddz * cos_pitch * cos_roll ) / 1000.0 + GRAVITY;
+
     ddzEst  = old_ddz + FILTER_FACTOR_DDZ * (new_ddz - old_ddz);
     old_ddz = ddzEst;
 
@@ -561,20 +680,20 @@ static inline double filter_ddz( )
 
 static inline double filter_dz( double z, double ddz )
 {
-    return apply_kalman_filter( &z_kalman_filter, z, ddz, (double) period / 1000.0 );
+    return apply_kalman_filter( &z_kalman_filter, z, ddz, (double) ms_period / 1000.0 );
 }
 
-static int computeActuatorData( )
+static int compute_motor_signals( void )
 {
-    double zFiltered    = 0;    // median-filtered z
-    double zEst         = 0;    // kalman-estimated z
-    double dzEst        = 0;    // kalman-estimated dz
-    double ddzFiltered  = 0;    // low-pass-filtered ddz
-    double uRoll        = 0;
-    double uPitch       = 0;
-    double uYaw         = 0;
-    double uZnew        = 0;
-    int    state        = 0;
+    double zFiltered   = 0;    // median-filtered z
+    double zEst        = 0;    // kalman-estimated z
+    double dzEst       = 0;    // kalman-estimated dz
+    double ddzFiltered = 0;    // low-pass-filtered ddz
+    double uRoll       = 0;
+    double uPitch      = 0;
+    double uYaw        = 0;
+    double uZnew       = 0;
+    int    i, signals[4];
 
     zFiltered   = filter_z( );                          // apply median filter
     ddzFiltered = filter_ddz( );                        // apply low-pass filter
@@ -588,123 +707,109 @@ static int computeActuatorData( )
     }
     else
     {
-/*
         uRoll  = do_control( &ctrl_roll,
-            sensors.roll/1000.0, navigation.roll/1000.0,
-            sensors.droll/1000.0, sensors.ddroll/1000.0 )*1000.0;
+            sensor_data.roll/1000.0, command_data.roll/1000.0,
+            sensor_data.droll/1000.0, sensor_data.ddroll/1000.0 )*1000.0;
         uPitch = do_control( &ctrl_pitch,
-            sensors.pitch/1000.0, navigation.pitch/1000.0,
-            sensors.dpitch/1000.0, sensors.ddpitch/1000.0 )*1000.0;
+            sensor_data.pitch/1000.0, command_data.pitch/1000.0,
+            sensor_data.dpitch/1000.0, sensor_data.ddpitch/1000.0 )*1000.0;
         uYaw   = do_control( &ctrl_yaw,
-            sensors.yaw/1000.0, navigation.yaw/1000.0,
-            sensors.dyaw/1000.0, sensors.ddyaw/1000.0 )*1000.0;
-*/
-        if( control_z )
+            sensor_data.yaw/1000.0, command_data.yaw/1000.0,
+            sensor_data.dyaw/1000.0, sensor_data.ddyaw/1000.0 )*1000.0;
+
+        if( compute_z )
         {
-            uZnew  = do_control( &ctrl_z, zEst, navigation.z/1000.0, dzEst, ddzFiltered )*1000.0;
+            uZnew  = do_control( &ctrl_z, zEst, command_data.z/1000.0, dzEst, ddzFiltered )*1000.0;
         }
         else
         {
-            uZnew = navigation.z;
+            uZnew = command_data.z;
         }
 
         uZnew += base_motor_speed;
     }
 
-    motors.front = (int)( uZnew + uYaw + uPitch );
-    motors.right = (int)( uZnew - uYaw - uRoll );
-    motors.rear  = (int)( uZnew + uYaw - uPitch );
-    motors.left  = (int)( uZnew - uYaw + uRoll );
+    signals[0] = (int)( uZnew + uYaw + uPitch );
+    signals[1] = (int)( uZnew - uYaw - uRoll );
+    signals[2] = (int)( uZnew + uYaw - uPitch );
+    signals[3] = (int)( uZnew - uYaw + uRoll );
 
-    if( motors.front < MOTOR_MIN ) motors.front = MOTOR_MIN;
-    else
-    if( motors.front > MOTOR_MAX ) motors.front = MOTOR_MAX;
+    for( i = 0; i < 4; ++i )
+    {
+        if( signals[i] < MOTOR_MIN )
+        {
+            signals[i] = MOTOR_MIN;
+        }
+        else
+        if( signals[i] > MOTOR_MAX )
+        {
+            signals[i] = MOTOR_MAX;
+        }
+    }
 
-    if( motors.right < MOTOR_MIN ) motors.right = MOTOR_MIN;
-    else
-    if( motors.right > MOTOR_MAX ) motors.right = MOTOR_MAX;
+    motor_signals.front = (uint16_t) signals[0];
+    motor_signals.right = (uint16_t) signals[1];
+    motor_signals.rear  = (uint16_t) signals[2];
+    motor_signals.left  = (uint16_t) signals[3];
 
-    if( motors.rear  < MOTOR_MIN ) motors.rear  = MOTOR_MIN;
-    else
-    if( motors.rear  > MOTOR_MAX ) motors.rear  = MOTOR_MAX;
+    motor_offsets.roll  = (int16_t) uRoll;
+    motor_offsets.pitch = (int16_t) uPitch;
+    motor_offsets.yaw   = (int16_t) uYaw;
+    motor_offsets.z     = (int16_t) uZnew;
 
-    if( motors.left  < MOTOR_MIN ) motors.left  = MOTOR_MIN;
-    else
-    if( motors.left  > MOTOR_MAX ) motors.left  = MOTOR_MAX;
-
-    motor_offsets.front = uRoll;
-    motor_offsets.right = uPitch;
-    motor_offsets.rear  = uYaw;
-    motor_offsets.left  = uZnew;
     uZold               = uZnew;
-/*
-    if( abs( navigation.roll - sensors.roll ) > TOLERANCE_ROLL )
-    {
-        state |= ADJUSTING_ROLL;
-    }
-
-    if( abs( navigation.pitch - sensors.pitch ) > TOLERANCE_PITCH )
-    {
-        state |= ADJUSTING_PITCH;
-    }
-
-    if( abs( navigation.yaw - sensors.yaw ) > TOLERANCE_YAW )
-    {
-        state |= ADJUSTING_YAW;
-    }
-
-    if( abs( navigation.z - sensors.z ) > TOLERANCE_Z )
-    {
-        state |= ADJUSTING_Z;
-    }
-*/
-    controller_state = state;
 
     return( 0 );
 }
 
-static int sendMotorValues( )
+static int send_motor_signals( void )
 {
-    int res = javiator_port_send_motors( &motors );
+    int res = javiator_port_send_motor_signals( &motor_signals );
 
     if( res == -1 )
     {
-        printf( "connection to JAviator broken\n" );
-        res = javiator_port_send_motors( &motors );
+        fprintf( stderr, "ERROR: connection to JAviator broken\n" );
+        res = javiator_port_send_motor_signals( &motor_signals );
 
         if( res == -1 )
         {
-            printf( "no success with reconnect; aborting\n" );
+            fprintf( stderr, "ERROR: no success with reconnecting to JAviator\n" );
         }
     }
 
     return( res );
 }
 
-static int reportToTerminal( )
+static int send_report_to_terminal( void )
 {
-    return terminal_port_send_report( &sensors, &motors, &motor_offsets, controller_state, altitude_mode );
+    return terminal_port_send_report(
+            &sensor_data,
+            &motor_signals,
+            &motor_offsets,
+            controller_state,
+            altitude_mode );
 }
 
 static inline void do_io( long long deadline )
 {
-    long long now = getutime( );
+    long long now = get_utime( );
 
     while( now < deadline )
     {
-        terminal_port_tick( now + (deadline - now) / 4 );
+        terminal_port_tick( );
+    //    inertial_port_tick( );
         sleep_until( now + 1000 );
-        now = getutime( );
+        now = get_utime( );
     }
 }
 
-static int wait_for_next_period( int period )
+static int wait_for_next_period( void )
 {
     do_io( next_period - IO_JITTER );
 
     if( sleep_until( next_period ) )
     {
-        fprintf( stderr, "error in sleep until\n" );
+        fprintf( stderr, "error in sleep_until\n" );
         exit( 1 );
     }
 
@@ -712,48 +817,130 @@ static int wait_for_next_period( int period )
     return( 0 );
 }
 
+#define NUM_STATS 5
+#define STAT_IMU  0
+#define STAT_SPI  1
+#define STAT_JAV  2
+#define STAT_CMD  3
+#define STAT_REP  4
+
+static long long stats[NUM_STATS] = {0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0};
+
+
+static void calc_stats(long long time, int id)
+{
+    stats[id] += time;
+
+    if(time > max_stats[id])
+        max_stats[id] = time;
+}
+
+static void print_stats(int loops)
+{
+    int i;
+
+    printf("run stats: \n\n");
+    for (i=0;i<NUM_STATS; ++i) {
+        printf("\tstats[%2d] %8lld\tmax %8lld\n", i, stats[i]/loops, max_stats[i]);
+    }
+}
+
+
+static void signal_handler(int num)
+{
+    running = 0;
+}
+
 /* the control loop for our helicopter */
 int control_loop_run( )
 {
     int first_time = 1;
-
-    next_period   = getutime( ) + us_period;
+    long long start, end;
+    int loop_count;
+    next_period   = get_utime( ) + us_period;
     altitude_mode = ALT_MODE_GROUND;
 
-    while( running )
+    if( ms_period != CONTROLLER_PERIOD )
     {
-        if( sendMotorValues( ) )
+        javiator_port_send_ctrl_period( ms_period );
+    }
+
+    //javiator_port_send_enable_sensors( 1 );
+    inertial_port_send_start( );
+    wait_for_next_period( );
+
+    loop_count = 0;
+    while( running )
+    {        
+#if 0
+        start = get_utime();
+        if( send_motor_signals( ) )
         {
             break;
         }
+        end = get_utime();
+        calc_stats(end - start, STAT_SPI);
 
-        if( getSensorData( ) )
+        start = get_utime();
+        if( get_javiator_data( ) )
         {
             altitude_mode = ALT_MODE_SHUTDOWN;
-            performShutdown( );
+            perform_shut_down( );
             fprintf( stderr, "ERROR: connection to JAviator broken\n" );
             break;
         }
         else
-        {
-            fprintf( stdout, "laser: %5u mm"
-                        "     sonar: %5u mm"
-                        "     press: %5u Pa"
-                        "     power: %5u mV\r",
-                        sensors.laser,
-                        sensors.sonar,
-                        sensors.pressure,
-                        sensors.battery );
-            fflush( stdout );
-        }
 
+        {
+/*
+            fprintf( stdout, "laser: %5u"
+                        "     sonar: %5u"
+                        "     pressure: %5u"
+                        "     battery: %5u\r",
+                        javiator_data.laser,
+                        javiator_data.sonar,
+                        javiator_data.pressure,
+                        javiator_data.battery );
+            fflush( stdout );
+*/
+        }
+        end = get_utime();
+        calc_stats(end - start, STAT_JAV);
+#endif
+
+        start = get_utime();
+        if( get_inertial_data( ) )
+        {
+            altitude_mode = ALT_MODE_SHUTDOWN;
+            perform_shut_down( );
+            fprintf( stderr, "ERROR: connection to IMU broken\n" );
+            break;
+        }
+        else
+        {
+            //inertial_port_send_request( );
+/*
+            fprintf( stdout, "roll: %5d"
+                        "     pitch: %5d"
+                        "     yaw: %5d\r",
+                        sensor_data.roll,
+                        sensor_data.pitch,
+                        sensor_data.yaw );
+            fflush( stdout );
+*/
+        }
+        end = get_utime();
+        calc_stats(end - start, STAT_IMU);
+
+        start = get_utime();
         if( check_terminal_connection( ) )
         {
             altitude_mode = ALT_MODE_SHUTDOWN;
 
             if( first_time )
             {
-                //fprintf( stderr, "ERROR: connection to terminal broken\n" );
+                fprintf( stderr, "ERROR: connection to terminal broken\n" );
                 first_time = 0;
             }
         }
@@ -761,31 +948,42 @@ int control_loop_run( )
         {
             first_time = 1;
         }
+        end = get_utime();
+        calc_stats(end - start, STAT_CMD);
 
-        getNavigationData( );
+        start = get_utime();
+        get_command_data( );
 
         switch( altitude_mode )
         {
             case ALT_MODE_GROUND:
-                performGroundActions( );
-                break;
-
-            case ALT_MODE_SHUTDOWN:
-                performShutdown( );
+                perform_ground_actions( );
                 break;
 
             case ALT_MODE_FLYING:
-                computeActuatorData( );
+                compute_motor_signals( );
+                break;
+
+            case ALT_MODE_SHUTDOWN:
+                perform_shut_down( );
                 break;
 
             default:
                 fprintf( stderr, "ERROR: invalid altitude mode %d\n", altitude_mode );
-                break;
         }
 
-        reportToTerminal( );
-        wait_for_next_period( period );
+        send_report_to_terminal( );
+        end = get_utime();
+        calc_stats(end - start, STAT_REP);
+
+        if (++loop_count < 0) {
+            loop_count--;
+            break;
+        }
+        wait_for_next_period( );
     }
+
+    print_stats(loop_count);
 
     return( 0 );
 }
@@ -796,4 +994,4 @@ int control_loop_stop( )
     return( 0 );
 }
 
-// End of file.
+/* End of file */

@@ -1,5 +1,3 @@
-/* $Id: javiator_port.c,v 1.4 2008/11/10 12:17:57 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -31,76 +29,114 @@
 #include <errno.h>
 
 #include "../shared/protocol.h"
+#include "../shared/transfer.h"
 #include "controller.h"
-#include "serial_channel.h"
+#include "comm_channel.h"
+#include "communication.h"
 #include "javiator_port.h"
 #include "terminal_port.h"
-#include "communication.h"
-#include "pwm_signals.h"
-#include "utimer.h"
+#include "us_timer.h"
 
-#include "spi_channel.h"
-
-static struct channel *     _channel;
-static sensor_data_t        _sensors;
-static struct com_packet    _packet;
-static char                 _packet_buf[COMM_BUF_SIZE];
-static int                  _new_sensor_data;
+static javiator_data_t  javiator_data;
+static comm_channel_t * comm_channel;
+static comm_packet_t    comm_packet;
+static char             comm_packet_buf[ COMM_BUF_SIZE ];
+static volatile int     new_data;
 
 
-static inline int parse_sensors(const struct com_packet *packet)
+static inline int parse_javiator_data( const comm_packet_t *packet )
 {
-    int res = sensor_data_from_stream(&_sensors, packet->payload, packet->length);
+    int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
 
-    _new_sensor_data = 1;
+    new_data = 1;
 
-#if DEBUG > 1
-    printf("new sensor data\n");
-#endif
-    return res;
+    return( res );
 }
 
-static int process_packet(const struct com_packet *packet)
+static int process_javiator_packet( const comm_packet_t *packet )
 {
-    if(!packet) {
-        return -1;
+    if( !packet )
+    {
+        return( -1 );
     }
 
-    switch (packet->type)
+    switch( packet->type )
     {
-        case COMM_SENSOR_DATA:
-            return parse_sensors(packet);
+        case COMM_JAVIATOR_DATA:
+            return parse_javiator_data( packet );
 
         default:
-            return terminal_port_forward(packet);
+            return terminal_port_forward( packet );
     }
 
-    return -1;
+    return( -1 );
 }
 
-int javiator_port_init(struct channel *channel)
+int javiator_port_send_ctrl_period( int period )
 {
-    pwm_signals_t motors = { 0, 0, 0, 0 };
+    char buf[1] = { (char) period };
+    comm_packet_t packet;
 
-    _new_sensor_data = 0;
-    memset(&_sensors, 0, sizeof(_sensors));
-    memset(&_packet, 0, sizeof(_packet));
-    _packet.payload = &_packet_buf;
-    _packet.buf_length = COMM_BUF_SIZE;
-    _channel = channel;
+    packet.type     = COMM_CTRL_PERIOD;
+    packet.size     = 1;
+    packet.buf_size = 1;
+    packet.payload  = buf;
 
-    javiator_port_send_motors( &motors );
+    return comm_send_packet( comm_channel, &packet );
+}
 
-    return 0;
+int javiator_port_send_enable_sensors( int enable )
+{
+    char buf[1] = { (char) enable };
+    comm_packet_t packet;
+
+    packet.type     = COMM_EN_SENSORS;
+    packet.size     = 1;
+    packet.buf_size = 1;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int javiator_port_send_motor_signals( const motor_signals_t *signals )
+{
+    char buf[ MOTOR_SIGNALS_SIZE ];
+    comm_packet_t packet;
+
+    motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
+
+    packet.type     = COMM_MOTOR_SIGNALS;
+    packet.size     = MOTOR_SIGNALS_SIZE;
+    packet.buf_size = MOTOR_SIGNALS_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int javiator_port_init( comm_channel_t *channel )
+{
+    motor_signals_t signals = { 0, 0, 0, 0 };
+
+    memset( &javiator_data, 0, sizeof( javiator_data ) );
+    memset( &comm_packet,   0, sizeof( comm_packet ) );
+
+    comm_channel         = channel;
+    comm_packet.buf_size = COMM_BUF_SIZE;
+    comm_packet.payload  = comm_packet_buf;
+    new_data             = 0;
+
+    javiator_port_send_motor_signals( &signals );
+
+    return( 0 );
 }
 
 int javiator_port_tick( void )
 {
-    int res = com_recv_packet( _channel, &_packet );
+    int res = comm_recv_packet( comm_channel, &comm_packet );
 
     if( res == 0 )
     {
-        process_packet( &_packet );
+        process_javiator_packet( &comm_packet );
     }
     else
     if( res == EAGAIN )
@@ -109,16 +145,15 @@ int javiator_port_tick( void )
     }
     else
     {
-        fprintf( stderr, "ERROR in %s %d: cannot receive from JAviator channel\n",
-            __FILE__, __LINE__ );
+        fprintf( stderr, "ERROR: cannot receive from JAviator channel\n" );
     }
 
     return( res );
 }
 
-int javiator_port_get_sensors( sensor_data_t *sensors )
+int javiator_port_get_data( javiator_data_t *data )
 {
-    pwm_signals_t motors = { 0, 0, 0, 0 };
+    motor_signals_t signals = { 0, 0, 0, 0 };
     int res, attempts = 0;
 
     do
@@ -132,7 +167,7 @@ int javiator_port_get_sensors( sensor_data_t *sensors )
                 return( -1 );
             }
 
-            javiator_port_send_motors( &motors );
+            javiator_port_send_motor_signals( &signals );
             sleep_for( 1000 );
         }
         else
@@ -141,32 +176,17 @@ int javiator_port_get_sensors( sensor_data_t *sensors )
             return( -1 );
         }
     }
-    while( !_new_sensor_data );
+    while( !new_data );
 
-    memcpy( sensors, &_sensors, sizeof( *sensors ) );
-    _new_sensor_data = 0;
+    memcpy( data, &javiator_data, sizeof( *data ) );
+    new_data = 0;
 
     return( 0 );
 }
 
-int javiator_port_send_motors(const pwm_signals_t *motors)
+int javiator_port_forward( const comm_packet_t *packet )
 {
-    struct com_packet packet;
-    char buf[PWM_SIGNALS_SIZE];
-    int res;
-
-    pwm_signals_to_stream(motors, buf, PWM_SIGNALS_SIZE );
-    packet.type = COMM_PWM_SIGNALS;
-    packet.length = packet.buf_length = PWM_SIGNALS_SIZE;
-    packet.payload = buf;
-    res = com_send_packet(_channel, &packet);
-
-    return res;
+    return comm_send_packet( comm_channel, packet );
 }
 
-int javiator_port_forward(const struct com_packet *packet)
-{
-    return com_send_packet(_channel, packet);
-}
-
-// End of file.
+/* End of file */

@@ -1,5 +1,3 @@
-/* $Id: inertial_port.h,v 1.2 2008/11/10 12:17:57 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -28,19 +26,23 @@
 #ifndef INERTIAL_PORT_H
 #define INERTIAL_PORT_H
 
-#include "channel.h"
-#include "pwm_signals.h"
-#include "sensor_data.h"
-#include "communication.h"
+#include "comm_channel.h"
+#include "inertial_data.h"
 
-int inertial_port_init( struct channel *channel );
-int inertial_port_tick( long long deadline );
-int inertial_port_connect( void );
-int inertial_port_is_new_sensors( void );
-int inertial_port_get_sensors( sensor_data_t *sensors );
-int inertial_port_send_motors( const pwm_signals_t *motors );
-int inertial_port_forward( const struct com_packet *packet );
 
-#endif // !INERTIAL_PORT_H
+int inertial_port_tick( void );
 
-// End of file.
+int inertial_port_init( comm_channel_t *channel );
+
+int inertial_port_send_request( void );
+
+int inertial_port_send_start( void );
+
+int inertial_port_send_stop( void );
+
+int inertial_port_get_data( inertial_data_t *data );
+
+
+#endif /* !INERTIAL_PORT_H */
+
+/* End of file */

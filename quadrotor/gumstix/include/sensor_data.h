@@ -1,5 +1,3 @@
-/* $Id: sensor_data.h,v 1.4 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -28,14 +26,62 @@
 #ifndef SENSOR_DATA_H
 #define SENSOR_DATA_H
 
-#include "../shared/transfer.h"
+#include <stdint.h>
 
 
-int sensor_data_to_stream( const sensor_data_t *sensor_data, char *buf, int len );
+/* Structure for representing sensor data */
+typedef struct
+{
+    /* Euler angles
+    */
+    int16_t roll;       /* [mrad] */
+    int16_t pitch;      /* [mrad] */
+    int16_t yaw;        /* [mrad] */
 
-int sensor_data_from_stream( sensor_data_t *sensor_data, const char *buf, int len );
+    /* angular rates
+    */
+    int16_t droll;      /* [mrad/s] */
+    int16_t dpitch;     /* [mrad/s] */
+    int16_t dyaw;       /* [mrad/s] */
+
+    /* angular accelerations
+    */
+    int16_t ddroll;     /* [mrad/s^2] */
+    int16_t ddpitch;    /* [mrad/s^2] */
+    int16_t ddyaw;      /* [mrad/s^2] */
+
+    /* positions
+    */
+    int16_t x;          /* [mm] */
+    int16_t y;          /* [mm] */
+    int16_t z;          /* [mm] */
+
+    /* linear rates
+    */
+    int16_t dx;         /* [mm/s] */
+    int16_t dy;         /* [mm/s] */
+    int16_t dz;         /* [mm/s] */
+
+    /* linear accelerations
+    */
+    int16_t ddx;        /* [mm/s^2] */
+    int16_t ddy;        /* [mm/s^2] */
+    int16_t ddz;        /* [mm/s^2] */
+
+    /* battery level
+    */
+    int16_t battery;    /* [mV] */
+
+} sensor_data_t;
+
+#define SENSOR_DATA_SIZE    38  /* byte size of sensor_data_t */
 
 
-#endif // !SENSOR_DATA_H
+int sensor_data_to_stream( const sensor_data_t *data, char *buf, int len );
 
-// End of file.
+int sensor_data_from_stream( sensor_data_t *data, const char *buf, int len );
+
+
+#endif /* !SENSOR_DATA_H */
+
+/* End of file */

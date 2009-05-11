@@ -1,7 +1,6 @@
-/* $Id: communication.h,v 1.5 2008/11/04 16:04:37 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -27,56 +26,28 @@
 #ifndef COMMUNICATION_H
 #define COMMUNICATION_H
 
-#include "channel.h"
+#include "comm_channel.h"
 
-#if DEBUG > 2
-#include <stdint.h>
-#include <stdio.h>
-#endif
 
-struct com_packet
+/* Structure for representing a communication packet */
+typedef struct
 {
-    int type;
-    /* number of bytes to send in the payload */
-    int length;
-    /* number of bytes available in the payload buffer */
-    int buf_length;
-    void *payload;
-    int checksum;
+    int     type;               /* packet type */
+    int     size;               /* payload size */
+    int     buf_size;           /* payload buffer size*/
+    void *  payload;            /* pointer to payload */
+    int     checksum;           /* packet checksum */
+    int     bytes_in_payload;   /* received bytes of the payload */
+    int     state;              /* receive state of this packet */
 
-    /* private don't touch */
-    /* receive state of this packet */
-    int _state;
-    /* received bytes of the payload */
-    int bytes_in_payload;
-};
+} comm_packet_t;
 
-/*
- * return 0 if packet was send successfully
- * return -1 on error
- */
-int com_send_packet(struct channel *channel, const struct com_packet *packet);
 
-/*
- * return 0 if a complete packet was received
- * return EAGAIN when the packet is not received completely
- * return -1 on error
- */
-int com_recv_packet(struct channel *channel, struct com_packet *packet);
-int com_is_packet(struct channel *channel);
+int comm_recv_packet( comm_channel_t *channel, comm_packet_t *packet );
 
-static inline void com_print_packet(const struct com_packet *packet)
-{
-#if DEBUG > 2
-    int i;
-    printf("packet:\n"
-            "\ttype %d\n"
-            "\tsize %d\n"
-            "\tpayload",
-                packet->type, packet->length);
-    for(i = 0; i < packet->length; ++i)
-        printf(" 0x%02x", *((uint8_t *)(packet->payload) + i));
-    printf("\n");
-#endif
-}
-#endif /* COMMUNICATION_H */
+int comm_send_packet( comm_channel_t *channel, const comm_packet_t *packet );
+
+
+#endif /* !COMMUNICATION_H */
+
+/* End of file */

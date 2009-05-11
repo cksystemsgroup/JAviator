@@ -1,7 +1,6 @@
-/* $Id: socket_channel.h,v 1.1 2008/10/16 14:41:13 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -27,15 +26,25 @@
 #ifndef SOCKET_CHANNEL_H
 #define SOCKET_CHANNEL_H
 
-#include "channel.h"
+#include "comm_channel.h"
 
-enum socket_type { SOCK_SERVER, SOCK_CLIENT };
 
-/* initialize the channel. e.g., create and bind the accept socket */
-int socket_channel_init(struct channel *channel, enum socket_type type, char *addr, int port);
+/* Emums for indicating a specific socket type */
+typedef enum
+{
+    SOCK_SERVER,
+    SOCK_CLIENT,
 
-/* fill channel structure */
-int socket_channel_create(struct channel *channel);
-/* deallocate private channel structure */
-int socket_channel_destroy(struct channel *channel);
-#endif /* SOCKET_CHANNEL_H */
+} socket_type_t;
+
+
+int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port );
+
+int socket_channel_create( comm_channel_t *channel );
+
+int socket_channel_destroy( comm_channel_t *channel );
+
+
+#endif /* !SOCKET_CHANNEL_H */
+
+/* End of file */

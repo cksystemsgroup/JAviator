@@ -1,13 +1,12 @@
-/* $Id: control_loop.h,v 1.17 2008/12/18 15:07:18 rtrummer Exp $ */
-
-/* 
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at 
+/*
+ * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
  */
 
-/* 
+/*
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
@@ -27,21 +26,20 @@
 #ifndef CONTROL_LOOP_H
 #define CONTROL_LOOP_H
 
-#include "channel.h"
 
-#define    ADJUSTING_ROLL           0x01
-#define    ADJUSTING_PITCH          0x02
-#define    ADJUSTING_YAW            0x04
-#define    ADJUSTING_Z              0x08
+/* Plant parameters */
+#define GRAVITY         9.81    /* [m/s^2] gravitational acceleration */
+#define JAVIATOR_MASS   2.3     /* [kg] total mass of the JAviator */
+#define THRUST_DELAY    0.1     /* [s] delay in response of rotors */
 
 
-//plant parameters
-#define    GRAVITY           9.81   //!< The value of gravitational acceleration in [m/s^2]
-#define    JAVIATOR_M        2.2    //!< The weight of the JAviator in [Kg]
-#define    THRUST_DELAY      0.1    //!< The delay in rotors response in [s]
+int control_loop_setup( int period, int control_z );
 
-int control_loop_setup(int period, int automatic_altitude);
-int control_loop_run();
-int control_loop_stop();
+int control_loop_run( void );
 
-#endif /* CONTROL_LOOP_H */
+int control_loop_stop( void );
+
+
+#endif /* !CONTROL_LOOP_H */
+
+/* End of file */

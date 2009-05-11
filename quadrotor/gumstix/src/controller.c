@@ -1,7 +1,6 @@
-/* $Id: controller.c,v 1.3 2008/11/10 12:17:57 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -23,6 +22,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
 #include "controller.h"
 
 #ifndef NULL
@@ -75,3 +75,5 @@ int controller_destroy(struct controller *controller)
     }
     return retval;
 }
+
+/* End of file */

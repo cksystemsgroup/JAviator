@@ -1,5 +1,3 @@
-/* $Id: main.c,v 1.7 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -29,34 +27,29 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "controller.h"
-#include "control_loop.h"
+#include "../shared/protocol.h"
+#include "../shared/transfer.h"
+#include "comm_channel.h"
 #include "spi_channel.h"
 #include "serial_channel.h"
 #include "socket_channel.h"
 #include "javiator_port.h"
 #include "inertial_port.h"
 #include "terminal_port.h"
+#include "control_loop.h"
 
-
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
-#include "utimer.h"
-
-
-#define CONTROLLER_PERIOD   14 // [ms]
-#define PERIOD_MULTIPLIER   5  // communicate with terminal every 5th period
-#define Z_AXIS_CONTROLLER   1  // enable z-axis controller
-#define EXEC_CONTROL_LOOP   1  // execute control loop
+#define PERIOD_MULTIPLIER   5 /* communicate with terminal every 5th period */
+#define Z_AXIS_CONTROLLER   1 /* enable z-axis controller */
+#define EXEC_CONTROL_LOOP   1 /* execute control loop */
 #define SPI_DEVICE          "/dev/mem"
 #define SPI_BAUDRATE        115200
 #define SERIAL_DEVICE       "/dev/ttyS2"
 #define SERIAL_BAUDRATE     115200
 #define TERMINAL_PORT       7000
 
-static struct channel       javiator_channel;
-//static struct channel       inertial_channel;
-static struct channel       terminal_channel;
+static comm_channel_t       javiator_channel;
+static comm_channel_t       inertial_channel;
+static comm_channel_t       terminal_channel;
 
 
 static int setup_javiator_port( char *device, int baudrate )
@@ -81,30 +74,30 @@ static int setup_javiator_port( char *device, int baudrate )
 
     return( 0 );
 }
-/*
+
 static int setup_inertial_port( char *device, int baudrate )
 {
     if( serial_channel_create( &inertial_channel ) )
     {
-        fprintf( stderr, "ERROR: unable to create UART channel\n" );
+        fprintf( stderr, "ERROR: unable to create serial channel\n" );
         return( -1 );
     }
 
     if( serial_channel_init( &inertial_channel, device, baudrate ) )
     {
-        fprintf( stderr, "ERROR: cannot initialize UART channel\n" );
+        fprintf( stderr, "ERROR: cannot initialize serial channel\n" );
         return( -1 );
     }
 
     if( inertial_port_init( &inertial_channel ) )
     {
-        fprintf( stderr, "ERROR: IMU port not correctly initialized\n" );
+        fprintf( stderr, "ERROR: inertial port not correctly initialized\n" );
         return( -1 );
     }
 
     return( 0 );
 }
-*/
+
 static int setup_terminal_port( int listen_port, int multiplier )
 {
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
@@ -128,7 +121,6 @@ static int setup_terminal_port( int listen_port, int multiplier )
     }
 
     terminal_port_set_multiplier( multiplier );
-
     return( 0 );
 }
 
@@ -146,8 +138,6 @@ static void usage( char *binary )
 
 int main( int argc, char **argv )
 {
-    const char MSG_EN_SENSORS[7] = {0xFF,0xFF,COMM_EN_SENSORS,0x01,0x01,0x00,COMM_EN_SENSORS+2};
-
     int period     = CONTROLLER_PERIOD;
     int multiplier = PERIOD_MULTIPLIER;
     int control_z  = Z_AXIS_CONTROLLER;
@@ -183,6 +173,13 @@ int main( int argc, char **argv )
             {
                 multiplier = atoi( argv[i] );
             }
+
+            if( multiplier < 1 )
+            {
+                fprintf( stderr, "ERROR: option '-m' requires a multiplier greater zero\n" );
+                usage( argv[0] );
+                exit( 1 );
+            }
         }
         else
         if( !strcmp( argv[i], "-z" ) )
@@ -196,48 +193,50 @@ int main( int argc, char **argv )
         }
     }
 
-    printf( "setup JAviator port\n" );
+    printf( "setting up JAviator port ... " );
 
     if( setup_javiator_port( SPI_DEVICE, SPI_BAUDRATE ) )
     {
+        printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the JAviator port\n" );
         exit( 1 );
     }
-/*
-    printf( "setup IMU port\n" );
+
+    printf( "ok\n" );
+    printf( "setting up Inertial port ... " );
 
     if( setup_inertial_port( SERIAL_DEVICE, SERIAL_BAUDRATE ) )
     {
+        printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the IMU port\n" );
         exit( 1 );
     }
-*/
-    printf( "setup terminal port\n" );
+
+    printf( "ok\n" );
+    printf( "setting up Terminal port ... " );
 
     if( setup_terminal_port( TERMINAL_PORT, multiplier ) )
     {
+        printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the terminal port\n" );
         exit( 1 );
     }
 
+    printf( "ok\n" );
+
     if( exec_loop )
     {
-        if( javiator_channel.transmit( &javiator_channel, MSG_EN_SENSORS, sizeof( MSG_EN_SENSORS ) ) )
-        {
-            fprintf( stderr, "ERROR: cannot transmit COMM_EN_SENSORS\n" );
-        }
-
-        printf( "setup control loop\n" );
+        printf( "setting up control loop\n" );
         control_loop_setup( period, control_z );
-        printf( "start control loop\n" );
+        printf( "starting control loop\n" );
         control_loop_run( );
     }
 
-    spi_channel_destroy( &javiator_channel );
-    //serial_channel_destroy( &inertial_channel );
+    spi_channel_destroy   ( &javiator_channel );
+    serial_channel_destroy( &inertial_channel );
     socket_channel_destroy( &terminal_channel );
 
     return( 0 );
 }
 
-// End of file.
+/* End of file */

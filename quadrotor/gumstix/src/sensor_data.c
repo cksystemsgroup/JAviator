@@ -1,5 +1,3 @@
-/* $Id: sensor_data.c,v 1.6 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -30,48 +28,85 @@
 #include "sensor_data.h"
 
 
-int sensor_data_to_stream( const sensor_data_t *sensor_data, char *buf, int len )
+int sensor_data_to_stream( const sensor_data_t *data, char *buf, int len )
 {
     if( len == SENSOR_DATA_SIZE )
     {
-        buf[0]  = (char)( sensor_data->laser >> 24 );
-        buf[1]  = (char)( sensor_data->laser >> 16 );
-        buf[2]  = (char)( sensor_data->laser >> 8 );
-        buf[3]  = (char)( sensor_data->laser );
-        buf[4]  = (char)( sensor_data->sonar >> 8 );
-        buf[5]  = (char)( sensor_data->sonar );
-        buf[6]  = (char)( sensor_data->pressure >> 8 );
-        buf[7]  = (char)( sensor_data->pressure );
-        buf[8]  = (char)( sensor_data->battery >> 8 );
-        buf[9]  = (char)( sensor_data->battery );
-        buf[10] = (char)( sensor_data->sequence >> 8 );
-        buf[11] = (char)( sensor_data->sequence );
-        buf[12] = (char)( sensor_data->state );
-        buf[13] = (char)( sensor_data->error );
+        buf[0]  = (char)( data->roll >> 8 );
+        buf[1]  = (char)( data->roll );
+        buf[2]  = (char)( data->pitch >> 8 );
+        buf[3]  = (char)( data->pitch );
+        buf[4]  = (char)( data->yaw >> 8 );
+        buf[5]  = (char)( data->yaw );
+        buf[6]  = (char)( data->droll >> 8 );
+        buf[7]  = (char)( data->droll );
+        buf[8]  = (char)( data->dpitch >> 8 );
+        buf[9]  = (char)( data->dpitch );
+        buf[10] = (char)( data->dyaw >> 8 );
+        buf[11] = (char)( data->dyaw );
+        buf[12] = (char)( data->ddroll >> 8 );
+        buf[13] = (char)( data->ddroll );
+        buf[14] = (char)( data->ddpitch >> 8 );
+        buf[15] = (char)( data->ddpitch );
+        buf[16] = (char)( data->ddyaw >> 8 );
+        buf[17] = (char)( data->ddyaw );
+        buf[18] = (char)( data->x >> 8 );
+        buf[19] = (char)( data->x );
+        buf[20] = (char)( data->y >> 8 );
+        buf[21] = (char)( data->y );
+        buf[22] = (char)( data->z >> 8 );
+        buf[23] = (char)( data->z );
+        buf[24] = (char)( data->dx >> 8 );
+        buf[25] = (char)( data->dx );
+        buf[26] = (char)( data->dy >> 8 );
+        buf[27] = (char)( data->dy );
+        buf[28] = (char)( data->dz >> 8 );
+        buf[29] = (char)( data->dz );
+        buf[30] = (char)( data->ddx >> 8 );
+        buf[31] = (char)( data->ddx );
+        buf[32] = (char)( data->ddy >> 8 );
+        buf[33] = (char)( data->ddy );
+        buf[34] = (char)( data->ddz >> 8 );
+        buf[35] = (char)( data->ddz );
+        buf[36] = (char)( data->battery >> 8 );
+        buf[37] = (char)( data->battery );
         return( 0 );
     }
 
-    fprintf( stderr, "ERROR: invalid length (%d) of sensor data to stream\n", len );
+    fprintf( stderr, "ERROR in %s %d: invalid length (%d) of sensor data to stream\n",
+        __FILE__, __LINE__, len );
     return( -1 );
 }
 
-int sensor_data_from_stream( sensor_data_t *sensor_data, const char *buf, int len )
+int sensor_data_from_stream( sensor_data_t *data, const char *buf, int len )
 {
     if( len == SENSOR_DATA_SIZE )
     {
-        sensor_data->laser     = (uint32_t)( (buf[0] << 24) | (buf[1] << 16) |
-                                             (buf[2]  << 8) |  buf[3] );
-        sensor_data->sonar     = (uint16_t)( (buf[4]  << 8) |  buf[5] );
-        sensor_data->pressure  = (uint16_t)( (buf[6]  << 8) |  buf[7] );
-        sensor_data->battery   = (uint16_t)( (buf[8]  << 8) |  buf[9] );
-        sensor_data->sequence  = (uint16_t)( (buf[10] << 8) |  buf[11] );
-        sensor_data->state     = (uint8_t)(   buf[12] );
-        sensor_data->error     = (uint8_t)(                    buf[13] );
+        data->roll    = (buf[0]  << 8) | (buf[1]  & 0xFF);
+        data->pitch   = (buf[2]  << 8) | (buf[3]  & 0xFF);
+        data->yaw     = (buf[4]  << 8) | (buf[5]  & 0xFF);
+        data->droll   = (buf[6]  << 8) | (buf[7]  & 0xFF);
+        data->dpitch  = (buf[8]  << 8) | (buf[9]  & 0xFF);
+        data->dyaw    = (buf[10] << 8) | (buf[11] & 0xFF);
+        data->ddroll  = (buf[12] << 8) | (buf[13] & 0xFF);
+        data->ddpitch = (buf[14] << 8) | (buf[15] & 0xFF);
+        data->ddyaw   = (buf[16] << 8) | (buf[17] & 0xFF);
+        data->x       = (buf[18] << 8) | (buf[19] & 0xFF);
+        data->y       = (buf[20] << 8) | (buf[21] & 0xFF);
+        data->z       = (buf[22] << 8) | (buf[23] & 0xFF);
+        data->dx      = (buf[24] << 8) | (buf[25] & 0xFF);
+        data->dy      = (buf[26] << 8) | (buf[27] & 0xFF);
+        data->dz      = (buf[28] << 8) | (buf[29] & 0xFF);
+        data->ddx     = (buf[30] << 8) | (buf[31] & 0xFF);
+        data->ddy     = (buf[32] << 8) | (buf[33] & 0xFF);
+        data->ddz     = (buf[34] << 8) | (buf[35] & 0xFF);
+        data->battery = (buf[36] << 8) | (buf[37] & 0xFF);
         return( 0 );
     }
 
-    fprintf( stderr, "ERROR: invalid length (%d) of sensor data from stream\n", len );
+    fprintf( stderr, "ERROR in %s %d: invalid length (%d) of sensor data from stream\n",
+        __FILE__, __LINE__, len );
     return( -1 );
 }
 
-// End of file.
+/* End of file */

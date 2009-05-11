@@ -1,5 +1,3 @@
-/* $Id: javiator_port.h,v 1.2 2008/11/10 12:17:57 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -28,19 +26,24 @@
 #ifndef JAVIATOR_PORT_H
 #define JAVIATOR_PORT_H
 
-#include "channel.h"
-#include "pwm_signals.h"
-#include "sensor_data.h"
+#include "../shared/transfer.h"
+#include "comm_channel.h"
 #include "communication.h"
 
-int javiator_port_init( struct channel *channel );
-//int javiator_port_tick( long long deadline );
-//int javiator_port_connect( void );
-//int javiator_port_is_new_sensors( void );
-int javiator_port_get_sensors( sensor_data_t *sensors );
-int javiator_port_send_motors( const pwm_signals_t *motors );
-int javiator_port_forward( const struct com_packet *packet );
 
-#endif // !JAVIATOR_PORT_H
+int javiator_port_init( comm_channel_t *channel );
 
-// End of file.
+int javiator_port_get_data( javiator_data_t *data );
+
+int javiator_port_send_ctrl_period( int period );
+
+int javiator_port_send_enable_sensors( int enable );
+
+int javiator_port_send_motor_signals( const motor_signals_t *signals );
+
+int javiator_port_forward( const comm_packet_t *packet );
+
+
+#endif /* !JAVIATOR_PORT_H */
+
+/* End of file */

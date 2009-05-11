@@ -1,7 +1,6 @@
-/* $Id: ccontrol.h,v 1.1 2008/10/16 14:41:13 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -27,11 +26,19 @@
 #ifndef CCONTROL_H
 #define CCONTROL_H
 
-#include "navigation.h"
-#include "sensor.h"
-#include "actuator.h"
+#include "command_data.h"
+#include "javiator_data.h"
+#include "inertial_data.h"
+#include "motor_signals.h"
 
-int compute_actuator_data(struct navigation_data *navigation_data,
-        struct sensor_data *sensor_data,
-        struct actuator_data *actuator_data);
-#endif
+
+int compute_motor_signals(
+        const command_data_t  *cmd_data,
+        const javiator_data_t *jav_data,
+        const inertial_data_t *imu_data,
+              motor_signals_t *signals );
+
+
+#endif /* !CCONTROL_H */
+
+/* End of file */

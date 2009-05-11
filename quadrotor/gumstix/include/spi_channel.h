@@ -1,6 +1,5 @@
-/* $Id: spi_channel.h,v 1.1 2008/10/16 14:41:13 rtrummer Exp $ */
-
 /*
+ * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -27,14 +26,19 @@
 #ifndef SPI_CHANNEL_H
 #define SPI_CHANNEL_H
 
-#include "channel.h"
+#include "comm_channel.h"
 
-#define SPI_MAX_NAME   32
 
-int spi_channel_init( struct channel *channel, char *interface, int baudrate );
-int spi_channel_create( struct channel *channel );
-int spi_channel_destroy( struct channel *channel );
+#define SPI_MAX_NAME    32
 
-#endif // !SPI_CHANNEL_H
 
-// End of file.
+int spi_channel_init( comm_channel_t *channel, char *interface, int baudrate );
+
+int spi_channel_create( comm_channel_t *channel );
+
+int spi_channel_destroy( comm_channel_t *channel );
+
+
+#endif /* !SPI_CHANNEL_H */
+
+/* End of file */

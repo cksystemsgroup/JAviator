@@ -1,7 +1,6 @@
-/* $Id: serial_channel.h,v 1.1 2008/10/16 14:41:13 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -27,12 +26,19 @@
 #ifndef SERIAL_CHANNEL_H
 #define SERIAL_CHANNEL_H
 
-#include "channel.h"
+#include "comm_channel.h"
 
-#define SERIAL_MAX_NAME   32
 
-int serial_channel_init(struct channel *channel, char *interface, int baudrate);
-int serial_channel_create(struct channel *channel);
-int serial_channel_destroy(struct channel *channel);
+#define SERIAL_MAX_NAME     32
+
+
+int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate );
+
+int serial_channel_create( comm_channel_t *channel );
+
+int serial_channel_destroy( comm_channel_t *channel );
+
 
 #endif /* SERIAL_CHANNEL_H */
+
+/* End of file */

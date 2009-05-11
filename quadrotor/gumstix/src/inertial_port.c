@@ -1,5 +1,3 @@
-/* $Id: javiator_port.c,v 1.4 2008/11/10 12:17:57 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -18,172 +16,215 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *    _new_sensor_data = 1;
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
 #include "../shared/protocol.h"
-#include "../shared/transfer.h"
 #include "controller.h"
 #include "serial_channel.h"
 #include "inertial_port.h"
-#include "terminal_port.h"
-#include "communication.h"
-#include "pwm_signals.h"
-#include "utimer.h"
+#include "inertial_data.h"
+#include "us_timer.h"
 
-static struct channel *     _channel;
-static sensor_data_t        _sensors;
-static struct com_packet    _packet;
-static char                 _packet_buf[COMM_BUF_SIZE];
-static int                  _new_sensor_data;
-static int                  _connected;
+#define CMD_CONFIRMATION    0x00    /* null-byte confirmation */
+#define CMD_CONTINUOUSLY    0x10    /* command for continuous mode */
+#define CMD_DESIRED_DATA    0x31    /* command for desired data */
 
+static inertial_data_t      inertial_data;
+static comm_channel_t *     comm_channel;
+static char                 comm_buf[ DM3_GX1_DATA_SIZE ];
+static volatile int         new_data;
 
-static inline int parse_ack_name( void )
+typedef enum
 {
-    _connected = 1;
-    return 0;
+    st_TYPE = 1,
+    st_PAYLOAD,
+    st_COMPLETE,
+
+} comm_state_t;
+
+
+static inline int parse_inertial_data( void )
+{
+    int res = inertial_data_from_stream( &inertial_data,
+        comm_buf + 1, DM3_GX1_DATA_SIZE - 1 ); /* skip header byte */
+
+    new_data = 1;
+
+    return( res );
 }
 
-static inline int parse_sensors( const struct com_packet *packet )
+static inline int is_valid_data( const uint8_t *data, int size )
 {
-    int res = sensor_data_from_stream(&_sensors, packet->payload, packet->length);
+    uint16_t checksum = ( (data[ size-2 ] << 8) | (data[ size-1 ] & 0xFF) ) - (data[0] & 0xFF);
 
-    _new_sensor_data = 1;
+    size -= 3;
 
-#if DEBUG > 1
-    printf("new sensor data\n");
-#endif
-    return res;
-}
-
-static int process_packet( const struct com_packet *packet )
-{
-    if(!packet) {
-        return -1;
+    while( size )
+    {
+        checksum -= (data[ size-1 ] << 8) | (data[ size ] & 0xFF);
+        size -= 2;
     }
 
-    com_print_packet(packet);
+    return( checksum == 0 );
+}
 
-    switch (packet->type)
+int imu_recv_packet( void )
+{
+    static comm_state_t state = st_TYPE;
+    static int items = 0;
+    int retval = EAGAIN;
+
+redo:
+    switch( state )
     {
-        case COMM_ACK_NAME:
-            return parse_ack_name();
+        case st_TYPE:
+            retval = EAGAIN;
+            items  = comm_channel->receive( comm_channel, comm_buf, 1 );
+            if( items == 1 && comm_buf[0] == CMD_DESIRED_DATA )
+            {
+                state = st_PAYLOAD;
+                goto redo;
+            }
+            break;
 
-        case COMM_SENSOR_DATA:
-            return parse_sensors(packet);
+        case st_PAYLOAD:
+            retval = EAGAIN;
+            items += comm_channel->receive( comm_channel, comm_buf + 1, DM3_GX1_DATA_SIZE - 1 );
+            if( items == DM3_GX1_DATA_SIZE )
+            {
+                state = st_COMPLETE;
+                goto redo;
+            }
+            break;
+
+        case st_COMPLETE:
+            if( is_valid_data( (uint8_t *) comm_buf, DM3_GX1_DATA_SIZE ) )
+            {
+                retval = 0;
+            }
+            else
+            {
+                retval = -1;
+            }
+            state = st_TYPE;
+            break;
 
         default:
-            return terminal_port_forward(packet);
+            state = st_TYPE;
     }
 
-    return -1;
+    return( retval );
 }
 
-int inertial_port_connect( void )
+int inertial_port_init( comm_channel_t *channel )
 {
-    return 0;
+    memset( &inertial_data, 0, sizeof( inertial_data ) );
+
+    comm_channel = channel;
+    new_data     = 0;
+
+    return( 0 );
 }
 
-int inertial_port_init( struct channel *channel )
+int inertial_port_tick( void )
 {
-    _new_sensor_data = 0;
-    memset(&_sensors, 0, sizeof(_sensors));
-    memset(&_packet, 0, sizeof(_packet));
-    _packet.payload = &_packet_buf;
-    _packet.buf_length = COMM_BUF_SIZE;
-    _channel = channel;
-    _connected = 1;
+    int res = 0;
 
-    return 0;
-}
-
-int inertial_port_tick( long long deadline )
-{
-    /* check for new input from the channel */
-    int res = com_recv_packet(_channel, &_packet);
-
-    if (res == 0) {
-        process_packet(&_packet);
-    } else if (res == EAGAIN) {
-        return res;
-    } else {
-        fprintf(stderr, "ERROR in %s %d: cannot receive from IMU channel\n",
-                __FILE__, __LINE__);
+    if (!new_data) 
+    {        
+      //  if (comm_channel->poll(comm_channel) > 0) 
+            res = imu_recv_packet( );
+      //  else
+      //      res = EAGAIN;
+    
+        if( res == 0 )
+        {
+            parse_inertial_data( );
+        }
+        else
+        if( res == EAGAIN )
+        {
+            return( res );
+        }
+        else
+        if( res == -1 )
+        {            
+            fprintf( stderr, "ERROR: invalid data from IMU channel\n" );
+        }
+        else
+        {
+            fprintf( stderr, "ERROR: cannot receive from IMU channel\n" );
+        }
     }
 
-    return res;
+    return( res );
 }
 
-int inertial_port_is_new_sensors( void )
+int inertial_port_send_request( void )
 {
-    return _new_sensor_data;
+    char buf[1] = { (char) CMD_DESIRED_DATA };
+
+    return comm_channel->transmit( comm_channel, buf, 1 );
 }
 
-int inertial_port_get_sensors( sensor_data_t *sensors )
+int inertial_port_send_start( void )
+{
+    char buf[3] = { (char) CMD_CONTINUOUSLY,
+                    (char) CMD_CONFIRMATION,
+                    (char) CMD_DESIRED_DATA };
+
+    return comm_channel->transmit( comm_channel, buf, 3 );
+}
+
+int inertial_port_send_stop( void )
+{
+    char buf[3] = { (char) CMD_CONTINUOUSLY,
+                    (char) CMD_CONFIRMATION,
+                    (char) CMD_CONFIRMATION };
+
+    return comm_channel->transmit( comm_channel, buf, 3 );
+}
+
+int inertial_port_get_data( inertial_data_t *data )
 {
     int res;
 
     do
     {
-        res = inertial_port_tick(0);
+        res = inertial_port_tick( );
 
-        if (res == EAGAIN)
+        if( res == EAGAIN )
         {
-            sleep_for(1000);
+            sleep_for( 1000 );
         }
         else
-        if (res != 0)
+        if( res == -1 )
         {
-            return 1;
+            return( res );
         }
-    }
-    while (!_new_sensor_data);
+        else
+        if( res != 0 )
+        {
+            return( 1 );
+        }
+    } while( !new_data );
 
-    _new_sensor_data = 0;
-    memcpy(sensors, &_sensors, sizeof(*sensors));
-    return 0;
+    memcpy( data, &inertial_data, sizeof( *data ) );
+    new_data = 0;
+
+    return( 0 );
 }
 
-int inertial_port_send_motors( const pwm_signals_t *motors )
-{
-    struct com_packet packet;
-    char buf[PWM_SIGNALS_SIZE];
-    int res;
+/* End of file */
 
-    if (!_connected) {
-        return 0;
-    }
-
-    pwm_signals_to_stream(motors, buf, PWM_SIGNALS_SIZE );
-    packet.type = COMM_PWM_SIGNALS;
-    packet.length = packet.buf_length = PWM_SIGNALS_SIZE;
-    packet.payload = buf;
-    res = com_send_packet(_channel, &packet);
-
-    if (res == -1) {
-        _connected = 0;
-    }
-
-    return res;
-}
-
-int inertial_port_forward( const struct com_packet *packet )
-{
-    if (!_connected) {
-        return 0;
-    }
-
-    return com_send_packet(_channel, packet);
-}
-
-// End of file.

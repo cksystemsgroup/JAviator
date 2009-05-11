@@ -1,7 +1,6 @@
-/* $Id: pidd_controller.c,v 1.2 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -235,3 +234,5 @@ int pidd_controller_destroy(struct controller *controller)
 
     return( 0 );
 }
+
+/* End of file */

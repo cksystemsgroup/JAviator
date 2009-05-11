@@ -1,5 +1,3 @@
-/* $Id: terminal_port.h,v 1.5 2008/11/11 19:28:40 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -28,44 +26,68 @@
 #ifndef TERMINAL_PORT_H
 #define TERMINAL_PORT_H
 
-#include "channel.h"
-#include "navigation.h"
-#include "pwm_signals.h"
+#include "comm_channel.h"
+#include "command_data.h"
+#include "javiator_data.h"
+#include "inertial_data.h"
 #include "sensor_data.h"
-#include "communication.h"
-#include "param.h"
-#include "trim.h"
+#include "motor_signals.h"
+#include "ctrl_params.h"
 
-int  terminal_port_init( struct channel *channel );
-void terminal_port_set_multiplier( int m );
-int  terminal_port_tick( long long deadline );
 
-int  terminal_port_is_new_navigation( void );
-int  terminal_port_get_navigation( struct navigation_data *navigation );
-int  terminal_port_is_shutdown( void );
-int  terminal_port_reset_shutdown( void );
+int terminal_port_tick( void );
 
-int  terminal_port_is_new_trim( void );
-int  terminal_port_is_new_params( void );
-int  terminal_port_is_testmode( void );
-int  terminal_port_is_mode_switch( void );
+int terminal_port_init( comm_channel_t *channel );
 
-int  terminal_port_get_trim( struct trim_data *trim );
-int  terminal_port_get_params( struct parameters *param );
-int  terminal_port_get_base_motor_speed( void );
+int terminal_port_set_multiplier( int m );
 
-int  terminal_port_send_report( const sensor_data_t *sensors,
-        const pwm_signals_t *motors,
-        const pwm_signals_t *motor_offsets,
+int terminal_port_reset_shut_down( void );
+
+int terminal_port_is_new_command_data( void );
+
+int terminal_port_is_new_r_p_params( void );
+
+int terminal_port_is_new_yaw_params( void );
+
+int terminal_port_is_new_alt_params( void );
+
+int terminal_port_is_new_x_y_params( void );
+
+int terminal_port_is_test_mode( void );
+
+int terminal_port_is_mode_switch( void );
+
+int terminal_port_is_shut_down( void );
+
+int terminal_port_get_command_data( command_data_t *data );
+
+int terminal_port_get_r_p_params( ctrl_params_t *params );
+
+int terminal_port_get_yaw_params( ctrl_params_t *params );
+
+int terminal_port_get_alt_params( ctrl_params_t *params );
+
+int terminal_port_get_x_y_params( ctrl_params_t *params );
+
+int terminal_port_get_base_motor_speed( void );
+
+int terminal_port_send_sensor_data( const sensor_data_t *data );
+
+int terminal_port_send_motor_signals( const motor_signals_t *signals );
+
+int terminal_port_send_motor_offsets( const command_data_t *offsets );
+
+int terminal_port_send_state_and_mode( const int state, const int mode );
+
+int terminal_port_send_report(
+        const sensor_data_t   *sensors,
+        const motor_signals_t *signals,
+        const command_data_t  *offsets,
         const int state, const int mode );
 
-int  terminal_port_send_sensors( const sensor_data_t *sensors );
-int  terminal_port_send_motors( const pwm_signals_t *motors );
-int  terminal_port_send_motorOffsets( const struct navigation_data *offsets );
-int  terminal_port_send_state( const int altitudeMode, const int controlState );
+int terminal_port_forward( const comm_packet_t *packet );
 
-int  terminal_port_forward( const struct com_packet *packet );
 
-#endif // !TERMINAL_PORT_H
+#endif /* !TERMINAL_PORT_H */
 
-// End of file.
+/* End of file */

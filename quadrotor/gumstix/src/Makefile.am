@@ -7,26 +7,26 @@ control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm
 control_SOURCES = \
     butter_filter.c \
-    channel.c \
+    command_data.c \
     communication.c \
     controller.c \
     control_loop.c \
+    ctrl_params.c \
+    inertial_data.c \
     inertial_port.c \
+    javiator_data.c \
     javiator_port.c \
     kalman_filter.c \
     main.c \
-    navigation.c \
-    param.c \
+    motor_signals.c \
     pid_controller.c \
     pidd_controller.c \
-    pwm_signals.c \
     sensor_data.c \
     serial_channel.c \
     socket_channel.c \
     spi_channel.c \
     terminal_port.c \
-    trim.c \
-    utimer.c
+    us_timer.c
 
 libcontroller_platform_a_SOURCES =
 

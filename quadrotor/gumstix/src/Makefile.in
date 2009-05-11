@@ -55,15 +55,16 @@ libcontroller_platform_a_OBJECTS =  \
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_control_OBJECTS = butter_filter.$(OBJEXT) channel.$(OBJEXT) \
+am_control_OBJECTS = butter_filter.$(OBJEXT) command_data.$(OBJEXT) \
 	communication.$(OBJEXT) controller.$(OBJEXT) \
-	control_loop.$(OBJEXT) inertial_port.$(OBJEXT) \
-	javiator_port.$(OBJEXT) kalman_filter.$(OBJEXT) main.$(OBJEXT) \
-	navigation.$(OBJEXT) param.$(OBJEXT) pid_controller.$(OBJEXT) \
-	pidd_controller.$(OBJEXT) pwm_signals.$(OBJEXT) \
+	control_loop.$(OBJEXT) ctrl_params.$(OBJEXT) \
+	inertial_data.$(OBJEXT) inertial_port.$(OBJEXT) \
+	javiator_data.$(OBJEXT) javiator_port.$(OBJEXT) \
+	kalman_filter.$(OBJEXT) main.$(OBJEXT) motor_signals.$(OBJEXT) \
+	pid_controller.$(OBJEXT) pidd_controller.$(OBJEXT) \
 	sensor_data.$(OBJEXT) serial_channel.$(OBJEXT) \
 	socket_channel.$(OBJEXT) spi_channel.$(OBJEXT) \
-	terminal_port.$(OBJEXT) trim.$(OBJEXT) utimer.$(OBJEXT)
+	terminal_port.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -188,26 +189,26 @@ control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm
 control_SOURCES = \
     butter_filter.c \
-    channel.c \
+    command_data.c \
     communication.c \
     controller.c \
     control_loop.c \
+    ctrl_params.c \
+    inertial_data.c \
     inertial_port.c \
+    javiator_data.c \
     javiator_port.c \
     kalman_filter.c \
     main.c \
-    navigation.c \
-    param.c \
+    motor_signals.c \
     pid_controller.c \
     pidd_controller.c \
-    pwm_signals.c \
     sensor_data.c \
     serial_channel.c \
     socket_channel.c \
     spi_channel.c \
     terminal_port.c \
-    trim.c \
-    utimer.c
+    us_timer.c
 
 libcontroller_platform_a_SOURCES = 
 all: all-am
@@ -284,26 +285,26 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/butter_filter.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/command_data.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/communication.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/control_loop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/controller.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctrl_params.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inertial_data.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inertial_port.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/javiator_data.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/javiator_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kalman_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/navigation.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/param.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/motor_signals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pid_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pidd_controller.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pwm_signals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sensor_data.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/terminal_port.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trim.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utimer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/us_timer.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

@@ -1,5 +1,3 @@
-/* $Id: terminal_port.c,v 1.7 2008/11/11 19:28:40 hroeck Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
@@ -26,320 +24,384 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
-#include <stdint.h>
 
-#include <../shared/protocol.h>
-
+#include "../shared/protocol.h"
+#include "../shared/transfer.h"
 #include "controller.h"
-#include "socket_channel.h"
-#include "terminal_port.h"
-#include "javiator_port.h"
-#include "navigation.h"
-#include "pwm_signals.h"
-#include "sensor_data.h"
 #include "communication.h"
-#include "param.h"
-#include "trim.h"
-#include "utimer.h"
+#include "javiator_port.h"
+#include "terminal_port.h"
+#include "inertial_port.h"
 
-static struct channel *         _channel;
-static struct navigation_data   _navi;
-static struct trim_data         _trim;
-static struct parameters        _param;
-static struct com_packet        _packet;
-static char                     _packet_buf[COMM_BUF_SIZE];
-static int                      _shutdown;
-static int                      _mode_switch;
-static int                      _testmode;
-static int                      _base_motor_speed;
-static int                      _new_navigation_data;
-static int                      _new_trim_data;
-static int                      _new_parameters;
+static command_data_t   command_data;
+static ctrl_params_t    r_p_params;
+static ctrl_params_t    yaw_params;
+static ctrl_params_t    alt_params;
+static ctrl_params_t    x_y_params;
+static comm_channel_t * comm_channel;
+static comm_packet_t    comm_packet;
+static char             comm_packet_buf[ COMM_BUF_SIZE ];
+static volatile int     shut_down;
+static volatile int     test_mode;
+static volatile int     mode_switch;
+static volatile int     base_motor_speed;
+static volatile int     multiplier = 1;
+static volatile int     new_r_p_params;
+static volatile int     new_yaw_params;
+static volatile int     new_alt_params;
+static volatile int     new_x_y_params;
+static volatile int     new_command_data;
 
 
-static inline int send_name()
+static inline int set_idle_limit( const comm_packet_t *packet )
 {
-    char *name = "CControl";
-    struct com_packet packet;
-    packet.type = COMM_ACK_NAME;
-    packet.length = strlen(name);
-    packet.payload = name;
-    packet.buf_length = packet.length;
-    return com_send_packet(_channel, &packet);
+    char *p = (char *) packet->payload;
+    base_motor_speed = (int)( (short)( p[0] << 8 ) | (short)( p[1] & 0xFF ) );
+    fprintf( stdout, "parameter update: Idle Limit\n--> %d\n", base_motor_speed );
+
+    return( 0 );
 }
 
-static inline int set_test_mode(const struct com_packet *packet)
+static inline int set_test_mode( const comm_packet_t *packet )
 {
-    char *p = (char *)packet->payload;
-    _testmode = (int)p[0];
-    return 0;
+    char *p = (char *) packet->payload;
+    test_mode = (int) p[0];
+    return( 0 );
 }
 
-static inline int set_idle_limit(const struct com_packet *packet)
+static inline int set_mode_switch( void )
 {
-    char *p = (char *)packet->payload;
-    _base_motor_speed = (int)((short)(p[0] << 8) | (short)(p[1] & 0xFF));
-    return 0;
+    mode_switch = 1;
+    return( 0 );
 }
 
-static inline void set_shutdown()
+static inline int set_shut_down( void )
 {
-    _shutdown = 1;
+    shut_down = 1;
+    return( 0 );
 }
 
-static inline void set_mode_switch()
+static inline int parse_command_data_packet( const comm_packet_t *packet )
 {
-    _mode_switch = 1;
+    new_command_data = 1;
+    return command_data_from_stream( &command_data, packet->payload, packet->size );
 }
 
-static inline int parse_navi_packet(const struct com_packet *packet)
+static inline int parse_r_p_params_packet( const comm_packet_t *packet )
 {
-    _new_navigation_data = 1;
-    return navigation_from_stream(&_navi, packet->payload, packet->length);
+    new_r_p_params = 1;
+    return ctrl_params_from_stream( &r_p_params, packet->payload, packet->size );
 }
 
-static inline int parse_trim_packet(const struct com_packet *packet)
+static inline int parse_yaw_params_packet( const comm_packet_t *packet )
 {
-    _new_trim_data = 1;
-    return trim_from_stream(&_trim, packet->payload, packet->length);
+    new_yaw_params = 1;
+    return ctrl_params_from_stream( &yaw_params, packet->payload, packet->size );
 }
 
-static inline int parse_param_packet(const struct com_packet *packet)
+static inline int parse_alt_params_packet( const comm_packet_t *packet )
 {
-    _new_parameters = 1;
-    return params_from_stream(&_param, packet->payload, packet->length);
+    new_alt_params = 1;
+    return ctrl_params_from_stream( &alt_params, packet->payload, packet->size );
 }
 
-static int process_packet(const struct com_packet *packet)
+static inline int parse_x_y_params_packet( const comm_packet_t *packet )
 {
-    if (!packet)
-        return -1;
+    new_x_y_params = 1;
+    return ctrl_params_from_stream( &x_y_params, packet->payload, packet->size );
+}
 
-    com_print_packet(packet);
-    switch (packet->type)
+static int process_data_packet( const comm_packet_t *packet )
+{
+    if( !packet )
     {
-        case COMM_GET_NAME:
-            return send_name();
-        case COMM_TEST_MODE:
-            return set_test_mode(packet);
+        return( -1 );
+    }
+
+    switch( packet->type )
+    {
+        case COMM_COMMAND_DATA:
+            return parse_command_data_packet( packet );
+
+        case COMM_R_P_PARAMS:
+            return parse_r_p_params_packet( packet );
+
+        case COMM_YAW_PARAMS:
+            return parse_yaw_params_packet( packet );
+
+        case COMM_ALT_PARAMS:
+            return parse_alt_params_packet( packet );
+
+        case COMM_X_Y_PARAMS:
+            return parse_x_y_params_packet( packet );
+
         case COMM_IDLE_LIMIT:
-            return set_idle_limit(packet);
-        case COMM_NAVI_DATA:
-            return parse_navi_packet(packet);
-        case COMM_TRIM_DATA:
-            return parse_trim_packet(packet);
-        case COMM_CTRL_PARAMS:
-            return parse_param_packet(packet);
+            return set_idle_limit( packet );
+
+        case COMM_TEST_MODE:
+            return set_test_mode( packet );
+
         case COMM_SWITCH_MODE:
-            set_mode_switch();
-            /* ignore the following */
-        case COMM_LOG_DATA:
-        case COMM_STREAM:
-            return 0;
-            /* shutdown process and immediately forward it */
+            return set_mode_switch( );
+
         case COMM_SHUT_DOWN:
-            set_shutdown();
-            /* fall through */
+            return set_shut_down( );
+
         default:
-            return javiator_port_forward(packet);
+            return javiator_port_forward( packet );
     }
-    return -1;
+
+    return( -1 );
 }
 
-int terminal_port_tick(long long deadline)
+int terminal_port_tick( void )
 {
-    int res;
+    int res = comm_recv_packet( comm_channel, &comm_packet );
 
-    res = com_recv_packet(_channel, &_packet);
-    if (res == 0) {
-        process_packet(&_packet);
-    } else if (res == EAGAIN) {
+    if( res == 0 )
+    {
+        process_data_packet( &comm_packet );
+    }
+    else
+    if( res == EAGAIN )
+    {
         res = 0;
-    } else {
-        fprintf(stderr, "ERROR in %s %d: cannot receive from terminal channel\n",
-            __FILE__, __LINE__);
     }
-    return res;
-}
-
-int terminal_port_init(struct channel *channel)
-{
-    static int __initialized = 0;
-    if(!__initialized) {
-        _channel = channel;
-        memset(&_navi, 0, sizeof(_navi));
-        memset(&_trim, 0, sizeof(_trim));
-        memset(&_param, 0, sizeof(_param));
-        memset(&_packet, 0, sizeof(_packet));
-        _packet.payload = _packet_buf;
-        _packet.buf_length = COMM_BUF_SIZE;
-        __initialized = 1;
-        return 0;
+    else
+    if( res == -1 )
+    {
+        fprintf( stderr, "ERROR: invalid data from terminal channel\n" );
     }
-    fprintf(stderr, "WARNING: try to init the terminal port twice\n");
-    return 1;
+    else
+    {
+        fprintf( stderr, "ERROR: cannot receive from terminal channel\n" );
+    }
+
+    return( res );
 }
 
-int terminal_port_is_new_navigation()
+int terminal_port_init( comm_channel_t *channel )
 {
-    return _new_navigation_data;
+    static int already_initialized = 0;
+
+    if( !already_initialized )
+    {
+        memset( &command_data, 0, sizeof( command_data ) );
+        memset( &r_p_params,   0, sizeof( r_p_params ) );
+        memset( &yaw_params,   0, sizeof( yaw_params ) );
+        memset( &alt_params,   0, sizeof( alt_params ) );
+        memset( &x_y_params,   0, sizeof( x_y_params ) );
+        memset( &comm_packet,  0, sizeof( comm_packet ) );
+
+        comm_channel         = channel;
+        comm_packet.buf_size = COMM_BUF_SIZE;
+        comm_packet.payload  = comm_packet_buf;
+        already_initialized  = 1;
+
+        return( 0 );
+    }
+
+    fprintf( stderr, "WARNING: terminal port already initialized\n" );
+    return( -1 );
 }
 
-int terminal_port_get_navigation(struct navigation_data *navigation)
+int terminal_port_set_multiplier( int m )
 {
-    memcpy(navigation, &_navi, sizeof(*navigation));
-    _new_navigation_data = 0;
-    return 0;
+    return( multiplier = m );
 }
 
-int terminal_port_is_new_trim()
+int terminal_port_reset_shut_down( void )
 {
-    return _new_trim_data;
+    shut_down = 0;
+    return( 0 );
 }
 
-int terminal_port_get_trim(struct trim_data *trim)
+int terminal_port_is_new_command_data( void )
 {
-    memcpy(trim, &_trim, sizeof(*trim));
-    _new_trim_data = 0;
-    return 0;
+    return( new_command_data );
 }
 
-int terminal_port_is_new_params()
+int terminal_port_is_new_r_p_params( void )
 {
-    return _new_parameters;
+    return( new_r_p_params );
 }
 
-int terminal_port_get_params(struct parameters *param)
+int terminal_port_is_new_yaw_params( void )
 {
-    memcpy(param, &_param, sizeof(*param));
-    _new_parameters = 0;
-    return 0;
+    return( new_yaw_params );
 }
 
-int terminal_port_is_testmode()
+int terminal_port_is_new_alt_params( void )
 {
-    return _testmode;
+    return( new_alt_params );
 }
 
-int terminal_port_get_base_motor_speed()
+int terminal_port_is_new_x_y_params( void )
 {
-    return _base_motor_speed;
+    return( new_x_y_params );
 }
 
-int terminal_port_is_shutdown()
+int terminal_port_is_test_mode( void )
 {
-    return _shutdown;
+    return( test_mode );
 }
 
-int terminal_port_reset_shutdown()
+int terminal_port_is_mode_switch( void )
 {
-    _shutdown = 0;
-    return 0;
+    int __mode_switch = mode_switch;
+    mode_switch = 0;
+    return( __mode_switch );
 }
 
-int terminal_port_is_mode_switch()
+int terminal_port_is_shut_down( void )
 {
-    int mode_switch = _mode_switch;
-    _mode_switch = 0;
-    return mode_switch;
+    return( shut_down );
 }
 
-int terminal_port_send_sensors(const sensor_data_t *sensors)
+int terminal_port_get_command_data( command_data_t *data )
 {
-    struct com_packet packet;
-    char buf[SENSOR_DATA_SIZE];
-
-    sensor_data_to_stream(sensors, buf, SENSOR_DATA_SIZE );
-    packet.length = packet.buf_length = SENSOR_DATA_SIZE;
-    packet.type = COMM_SENSOR_DATA;
-    packet.payload = buf;
-    return com_send_packet(_channel, &packet);
+    memcpy( data, &command_data, sizeof( *data ) );
+    new_command_data = 0;
+    return( 0 );
 }
 
-int terminal_port_send_motors(const pwm_signals_t *motors)
+int terminal_port_get_r_p_params( ctrl_params_t *params )
 {
-    struct com_packet packet;
-    char buf[PWM_SIGNALS_SIZE];
-
-    pwm_signals_to_stream(motors, buf, PWM_SIGNALS_SIZE );
-    packet.length = packet.buf_length = PWM_SIGNALS_SIZE;
-    packet.type = COMM_PWM_SIGNALS;
-    packet.payload = buf;
-    return com_send_packet(_channel, &packet);
+    memcpy( params, &r_p_params, sizeof( *params ) );
+    new_r_p_params = 0;
+    return( 0 );
 }
 
-int terminal_port_send_motorOffsets(const struct navigation_data *offsets)
+int terminal_port_get_yaw_params( ctrl_params_t *params )
 {
-    struct com_packet packet;
-    char buf[NAVIGATION_PACKET_LENGTH];
-
-    navigation_to_stream(offsets, buf, NAVIGATION_PACKET_LENGTH);
-    packet.length = packet.buf_length = NAVIGATION_PACKET_LENGTH;
-    packet.type = COMM_NAVI_DATA;
-    packet.payload = buf;
-    return com_send_packet(_channel, &packet);
+    memcpy( params, &yaw_params, sizeof( *params ) );
+    new_yaw_params = 0;
+    return( 0 );
 }
 
-int terminal_port_send_state(const int mode, const int state)
+int terminal_port_get_alt_params( ctrl_params_t *params )
 {
-    struct com_packet packet;
-    char buf[2];
-    buf[0] = (char)state;
-    buf[1] = (char)mode;
-    packet.length = packet.buf_length = 2;
-    packet.type = COMM_HELI_STATE;
-    packet.payload = buf;
-    return com_send_packet(_channel, &packet);
+    memcpy( params, &alt_params, sizeof( *params ) );
+    new_alt_params = 0;
+    return( 0 );
 }
 
-static int multiplier = 1;
-void terminal_port_set_multiplier(int m)
+int terminal_port_get_x_y_params( ctrl_params_t *params )
 {
-    multiplier = m;
+    memcpy( params, &x_y_params, sizeof( *params ) );
+    new_x_y_params = 0;
+    return( 0 );
 }
 
-int terminal_port_send_report(const sensor_data_t *sensors,
-    const pwm_signals_t *motors,
-    const pwm_signals_t *motor_offsets,
-    const int state, const int mode)
+int terminal_port_get_base_motor_speed( void )
 {
-    int i = 0;
+    return( base_motor_speed );
+}
+
+int terminal_port_send_sensor_data( const sensor_data_t *data )
+{
+    char buf[ SENSOR_DATA_SIZE ];
+    comm_packet_t packet;
+
+    sensor_data_to_stream( data, buf, SENSOR_DATA_SIZE );
+
+    packet.type     = COMM_SENSOR_DATA;
+    packet.size     = SENSOR_DATA_SIZE;
+    packet.buf_size = SENSOR_DATA_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int terminal_port_send_motor_signals( const motor_signals_t *signals )
+{
+    char buf[ MOTOR_SIGNALS_SIZE ];
+    comm_packet_t packet;
+
+    motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
+
+    packet.type     = COMM_MOTOR_SIGNALS;
+    packet.size     = MOTOR_SIGNALS_SIZE;
+    packet.buf_size = MOTOR_SIGNALS_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int terminal_port_send_motor_offsets( const command_data_t *offsets )
+{
+    char buf[ COMMAND_DATA_SIZE ];
+    comm_packet_t packet;
+
+    command_data_to_stream( offsets, buf, COMMAND_DATA_SIZE );
+
+    packet.type     = COMM_MOTOR_OFFSETS;
+    packet.size     = COMMAND_DATA_SIZE;
+    packet.buf_size = COMMAND_DATA_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int terminal_port_send_state_and_mode( const int state, const int mode )
+{
+    char buf[2] = { (char) state, (char) mode };
+    comm_packet_t packet;
+
+    packet.type     = COMM_STATE_MODE;
+    packet.size     = 2;
+    packet.buf_size = 2;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
+int terminal_port_send_report(
+        const sensor_data_t   *sensors,
+        const motor_signals_t *signals,
+        const command_data_t  *offsets,
+        const int state, const int mode )
+{
     static int counter = 1;
+    char buf[ SENSOR_DATA_SIZE
+            + MOTOR_SIGNALS_SIZE
+            + COMMAND_DATA_SIZE
+            + 2 ]; /* state and mode */
+    comm_packet_t packet;
+    int i = 0;
 
-    if (--counter == 0) {
-        struct com_packet packet;
-        char buf[SENSOR_DATA_SIZE
-            + PWM_SIGNALS_SIZE
-            + NAVIGATION_PACKET_LENGTH
-            + 2]; /* for state and mode */
-
-        sensor_data_to_stream(sensors, &buf[i], SENSOR_DATA_SIZE);
-
+    if( --counter == 0 )
+    {
+        sensor_data_to_stream( sensors, &buf[i], SENSOR_DATA_SIZE );
         i += SENSOR_DATA_SIZE;
-        pwm_signals_to_stream(motors, &buf[i], PWM_SIGNALS_SIZE);
 
-        i += PWM_SIGNALS_SIZE;
-        pwm_signals_to_stream(motor_offsets, &buf[i], PWM_SIGNALS_SIZE);
+        motor_signals_to_stream( signals, &buf[i], MOTOR_SIGNALS_SIZE );
+        i += MOTOR_SIGNALS_SIZE;
 
-        i += PWM_SIGNALS_SIZE;
+        command_data_to_stream( offsets, &buf[i], COMMAND_DATA_SIZE );
+        i += COMMAND_DATA_SIZE;
+
         buf[i++] = (char) state;
         buf[i++] = (char) mode;
 
-        packet.type = COMM_GROUND_REPORT;
-        packet.length = packet.buf_length = i;
-        packet.payload = buf;
-        counter = multiplier;
-        return com_send_packet(_channel, &packet);
+        packet.type     = COMM_GROUND_REPORT;
+        packet.size     = i;
+        packet.buf_size = i;
+        packet.payload  = buf;
+        counter         = multiplier;
+
+        return comm_send_packet( comm_channel, &packet );
     }
 
-    return 0;
+    return( 0 );
 }
 
-int terminal_port_forward(const struct com_packet *packet)
+int terminal_port_forward( const comm_packet_t *packet )
 {
-    /* send data directly to channel */
-    return com_send_packet(_channel, packet);
+    return comm_send_packet( comm_channel, packet );
 }
+
+/* End of file */

@@ -1,7 +1,6 @@
-/* $Id: controller.h,v 1.5 2008/12/18 15:07:18 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -30,10 +29,6 @@
 #include <controller-config.h>
 
 extern int errno;
-
-#ifdef HAVE_TIPTOE
-  #include <tiptoe/tiptoe-controller.h>
-#endif /* HAVE_TIPTOE */
 
 struct controller;
 struct controller_state;
@@ -64,3 +59,5 @@ int controller_init(struct controller *controller, char *name, controller_type t
 int controller_destroy(struct controller *controller);
 
 #endif /* CONTROLLER_H */
+
+/* End of file */

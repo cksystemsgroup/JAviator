@@ -1,7 +1,6 @@
-/* $Id: serial_channel.c,v 1.1 2008/10/16 14:41:13 rtrummer Exp $ */
-
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -23,165 +22,208 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#include "serial_channel.h"
 
 #define _POSIX_SOURCE 1
+
+#include <sys/types.h>
+#include <sys/select.h>
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/select.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
-struct serial_connection
+#include "serial_channel.h"
+
+typedef struct
 {
     int    fd;
     int    baudrate;
-    char   device[SERIAL_MAX_NAME];
+    char   device[ SERIAL_MAX_NAME ];
     struct termios term;
     struct termios oldterm;
-};
 
-static struct serial_connection connection;
+} serial_connection_t;
+
+static serial_connection_t connection;
 
 
-static inline struct serial_connection *serial_get_connection(const struct channel *channel)
+static inline serial_connection_t *serial_get_connection( const comm_channel_t *channel)
 {
-    struct serial_connection *sc = (struct serial_connection *) channel->data;
-    if (!sc) {
-        fprintf(stderr, "ERROR in %s %d: channel not correctly initialized\n",
-            __FILE__, __LINE__);
+    serial_connection_t *sc = (serial_connection_t *) channel->data;
+
+    if( !sc )
+    {
+        fprintf( stderr, "ERROR in %s %d: serial channel not correctly initialized\n",
+            __FILE__, __LINE__ );
     }
-    return sc;
+
+    return( sc );
 }
 
-static int serial_transmit(struct channel *channel, const char *buf, int len)
+static int serial_transmit( comm_channel_t *channel, const char *buf, int len )
 {
+    serial_connection_t *sc = serial_get_connection( channel );
     int res;
-    struct serial_connection *sc = serial_get_connection(channel);
-    if(!sc)
-        return -1;
 
-    do{
-        res = write(sc->fd, buf, len);
-        if (res >= 0) {
+    if( !sc )
+    {
+        return( -1 );
+    }
+
+    do
+    {
+        res = write( sc->fd, buf, len );
+
+        if ( res >= 0 )
+        {
             buf += res;
             len -= res;
         }
-
-    } while (len || (res==-1 && errno == EAGAIN));
-
-    if (res < 0) {
-        perror("write to serial");
-        return res;
     }
-    return 0;
+    while( len || (res == -1 && errno == EAGAIN) );
+
+    if( res < 0 )
+    {
+        fprintf( stderr, "ERROR in %s %d: write to serial port\n",
+            __FILE__, __LINE__ );
+        return( res );
+    }
+
+    return( 0 );
 }
 
-static int serial_receive(struct channel *channel, char *buf, int len)
+static int serial_receive( comm_channel_t *channel, char *buf, int len )
 {
+    serial_connection_t *sc = serial_get_connection( channel );
     int res;
-    struct serial_connection *sc = serial_get_connection(channel);
-    if(!sc)
-        return -1;
 
-    res = read(sc->fd, buf, len);
-    if (!res) {
+    if( !sc )
+    {
+        return( -1 );
+    }
+
+    res = read( sc->fd, buf, len );
+
+    if( !res )
+    {
         errno = EAGAIN;
         res = -1;
     }
+
+    return( res );
+}
+
+static int serial_start( comm_channel_t *channel )
+{
+    return( 0 );
+}
+
+static int serial_flush( comm_channel_t *channel )
+{
+    return( 0 );
+}
+
+static int serial_poll( comm_channel_t *channel )
+{
+    serial_connection_t *sc = serial_get_connection( channel );
+    struct timeval timeout;
+    fd_set readfs;
+    int maxfd;
+    int res;
+
+    if( !sc )
+    {
+        return( -1 );
+    }
+
+    timeout.tv_usec = 0;
+    timeout.tv_sec  = 0;
+    FD_SET( sc->fd, &readfs );
+    maxfd = sc->fd + 1;
+
+    res = select( maxfd, &readfs, NULL, NULL, &timeout );
     return res;
 }
 
-static int serial_start(struct channel *channel)
+static int init_termios( serial_connection_t *sc )
 {
-    return 0;
-}
+    int baudrate, res;
 
-static int serial_flush(struct channel *channel)
-{
-    return 0;
-}
-
-static int serial_poll(struct channel *channel)
-{
-    fd_set readfs;
-    int maxfd;
-    struct timeval timeout;
-    struct serial_connection *sc = serial_get_connection(channel);
-    if(!sc)
-        return -1;
-
-    timeout.tv_usec = 100;
-    timeout.tv_sec = 0;
-    FD_SET(sc->fd, &readfs);
-    maxfd = sc->fd + 1;
-
-    return select(maxfd, &readfs, NULL, NULL, &timeout);
-}
-
-static int init_termios(struct serial_connection *sc)
-{
-    int _brate;
-    int res;
-
-    switch (sc->baudrate) {
+    switch( sc->baudrate )
+    {
         case 38400:
-            _brate = B38400;
+            baudrate = B38400;
             break;
+
         case 57600:
-            _brate = B57600;
+            baudrate = B57600;
             break;
+
         case 115200:
-            _brate = B115200;
+            baudrate = B115200;
             break;
+
         default:
-            fprintf(stderr, "ERROR in %s %d: unknown baudrate\n", __FILE__, __LINE__);
-            return -1;
+            fprintf( stderr, "ERROR in %s %d: invalid baudrate %d\n",
+                __FILE__, __LINE__, sc->baudrate );
+            return( -1 );
     }
 
-    sc->term.c_cflag = _brate |  CS8 | CLOCAL | CREAD;
-    sc->term.c_iflag = IGNPAR;
-    sc->term.c_oflag = 0;
-    sc->term.c_lflag = 0;
-        sc->term.c_cc[VTIME]    = 0;
-        sc->term.c_cc[VMIN]     = 0;     /* non-blocking reads */
+    sc->term.c_cflag     = baudrate | CS8 | CLOCAL | CREAD;
+    sc->term.c_iflag     = IGNPAR;
+    sc->term.c_oflag     = 0;
+    sc->term.c_lflag     = 0;
+    sc->term.c_cc[VTIME] = 0;
+    sc->term.c_cc[VMIN]  = 0;
 
-    res = tcflush(sc->fd, TCIFLUSH);
-    if(res)
-        perror("tcflush");
-    res = tcsetattr(sc->fd, TCSANOW, &sc->term);
-    if(res)
-        perror("tcsetattr");
-    return 0;
+    res = tcflush( sc->fd, TCIFLUSH );
+
+    if( res )
+    {
+        fprintf( stderr, "ERROR in %s %d: tcflush\n",
+            __FILE__, __LINE__ );
+    }
+
+    res = tcsetattr( sc->fd, TCSANOW, &sc->term );
+
+    if( res )
+    {
+        fprintf( stderr, "ERROR in %s %d: tcsetattr\n",
+            __FILE__, __LINE__ );
+    }
+
+    return( 0 );
 }
 
-int serial_channel_init(struct channel *channel, char *interface, int baudrate)
+int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate )
 {
-    int fd;
-    struct serial_connection *sc = serial_get_connection(channel);
-    if(!sc)
-        return -1;
+    serial_connection_t *sc = serial_get_connection( channel );
 
-    printf("open device %s ... ", interface);
-    fd = open(interface, O_RDWR | O_NOCTTY);
-    if (fd < 0) {
-        perror( "open device" );
-        return -1;
+    if( !sc )
+    {
+        return( -1 );
     }
-    printf("success\n");
 
-    sc->fd = fd;
+    sc->fd = open( interface, O_RDWR | O_NOCTTY );// | O_NONBLOCK );
+
+    if( sc->fd < 0 )
+    {
+        fprintf( stderr, "ERROR in %s %d: open device %s\n",
+            __FILE__, __LINE__, interface );
+        return( -1 );
+    }
+
     sc->baudrate = baudrate;
-    strncpy(sc->device, interface, SERIAL_MAX_NAME);
-    tcgetattr(fd, &sc->oldterm);
-    return init_termios(sc);
+    strncpy( sc->device, interface, SERIAL_MAX_NAME );
+    tcgetattr( sc->fd, &sc->oldterm );
+
+    return init_termios( sc );
 }
 
-
-int serial_channel_create( struct channel *channel )
+int serial_channel_create( comm_channel_t *channel )
 {
     if( channel->data == NULL )
     {
@@ -200,14 +242,19 @@ int serial_channel_create( struct channel *channel )
     return( -1 );
 }
 
-int serial_channel_destroy(struct channel *channel)
+int serial_channel_destroy( comm_channel_t *channel )
 {
-    struct serial_connection *sc = serial_get_connection(channel);
-    if(!sc)
-        return -1;
+    serial_connection_t *sc = serial_get_connection( channel );
 
-    tcsetattr(sc->fd, TCSANOW, &sc->oldterm);
-    close(sc->fd);
+    if( !sc )
+    {
+        return( -1 );
+    }
+
+    tcsetattr( sc->fd, TCSANOW, &sc->oldterm );
+    close( sc->fd );
     channel->data = NULL;
-    return 0;
+    return( 0 );
 }
+
+/* End of file */
