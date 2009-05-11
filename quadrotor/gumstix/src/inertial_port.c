@@ -100,7 +100,7 @@ redo:
 
         case st_PAYLOAD:
             retval = EAGAIN;
-            items += comm_channel->receive( comm_channel, comm_buf + 1, DM3_GX1_DATA_SIZE - 1 );
+            items += comm_channel->receive( comm_channel, comm_buf + items, DM3_GX1_DATA_SIZE - items );
             if( items == DM3_GX1_DATA_SIZE )
             {
                 state = st_COMPLETE;
@@ -143,10 +143,10 @@ int inertial_port_tick( void )
 
     if (!new_data) 
     {        
-      //  if (comm_channel->poll(comm_channel) > 0) 
+        if (comm_channel->poll(comm_channel) > 0) 
             res = imu_recv_packet( );
-      //  else
-      //      res = EAGAIN;
+        else
+            res = EAGAIN;
     
         if( res == 0 )
         {
