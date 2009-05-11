@@ -867,7 +867,7 @@ int control_loop_run( )
     }
 
     //javiator_port_send_enable_sensors( 1 );
-    inertial_port_send_start( );
+    inertial_port_send_request( );
     wait_for_next_period( );
 
     loop_count = 0;
@@ -919,7 +919,7 @@ int control_loop_run( )
         }
         else
         {
-            //inertial_port_send_request( );
+            inertial_port_send_request( );
 /*
             fprintf( stdout, "roll: %5d"
                         "     pitch: %5d"
