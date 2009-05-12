@@ -207,7 +207,7 @@ int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate 
         return( -1 );
     }
 
-    sc->fd = open( interface, O_RDWR | O_NOCTTY );// | O_NONBLOCK );
+    sc->fd = open( interface, O_RDWR | O_NOCTTY );//| O_NONBLOCK );
 
     if( sc->fd < 0 )
     {

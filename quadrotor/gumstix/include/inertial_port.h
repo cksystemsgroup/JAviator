@@ -32,6 +32,8 @@
 
 int inertial_port_tick( void );
 
+int inertial_port_tick_one( void );
+
 int inertial_port_init( comm_channel_t *channel );
 
 int inertial_port_send_request( void );

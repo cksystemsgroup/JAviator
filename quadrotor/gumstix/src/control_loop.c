@@ -797,7 +797,7 @@ static inline void do_io( long long deadline )
     while( now < deadline )
     {
         terminal_port_tick( );
-    //    inertial_port_tick( );
+   //     inertial_port_tick( );
         sleep_until( now + 1000 );
         now = get_utime( );
     }
@@ -817,15 +817,16 @@ static int wait_for_next_period( void )
     return( 0 );
 }
 
-#define NUM_STATS 5
+#define NUM_STATS 6
 #define STAT_IMU  0
 #define STAT_SPI  1
 #define STAT_JAV  2
 #define STAT_CMD  3
 #define STAT_REP  4
+#define STAT_IO   5
 
-static long long stats[NUM_STATS] = {0,0,0,0,0};
-static long long max_stats[NUM_STATS] = {0,0,0,0,0};
+static long long stats[NUM_STATS] = {0,0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0,0};
 
 
 static void calc_stats(long long time, int id)
@@ -856,24 +857,23 @@ static void signal_handler(int num)
 int control_loop_run( )
 {
     int first_time = 1;
+    int loop_count = 0;
+    next_period    = get_utime( ) + us_period;
+    altitude_mode  = ALT_MODE_GROUND;
     long long start, end;
-    int loop_count;
-    next_period   = get_utime( ) + us_period;
-    altitude_mode = ALT_MODE_GROUND;
 
     if( ms_period != CONTROLLER_PERIOD )
     {
         javiator_port_send_ctrl_period( ms_period );
     }
 
-    //javiator_port_send_enable_sensors( 1 );
     inertial_port_send_request( );
     wait_for_next_period( );
 
     loop_count = 0;
+
     while( running )
-    {        
-#if 0
+    {
         start = get_utime();
         if( send_motor_signals( ) )
         {
@@ -907,7 +907,6 @@ int control_loop_run( )
         }
         end = get_utime();
         calc_stats(end - start, STAT_JAV);
-#endif
 
         start = get_utime();
         if( get_inertial_data( ) )
@@ -980,7 +979,11 @@ int control_loop_run( )
             loop_count--;
             break;
         }
+
+        start = get_utime();
         wait_for_next_period( );
+        end = get_utime();
+        calc_stats(end-start, STAT_IO);
     }
 
     print_stats(loop_count);
