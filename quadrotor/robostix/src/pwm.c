@@ -155,7 +155,7 @@ void pwm_init( void )
 */
 int8_t pwm_set_signals( const motor_signals_t *signals )
 {
-    uint16_t pwm[4] =
+    int16_t pwm[4] =
     {
 #if( FAST_PWM_MODE == 0 )
 
@@ -178,6 +178,12 @@ int8_t pwm_set_signals( const motor_signals_t *signals )
 
     for( i = 0; i < 4; ++i )
     {
+        if( pwm[i] < 0 )
+        {
+            pwm[i] = 0;
+            res = -1;
+        }
+        else
         if( pwm[i] > PWM_MAX - PWM_MIN )
         {
             pwm[i] = PWM_MAX - PWM_MIN;

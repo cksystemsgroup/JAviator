@@ -79,22 +79,22 @@ typedef struct
 /* Structure for shared JAviator data */
 typedef struct
 {
-    uint16_t    roll;               /*                        | roll    |                       */
-    uint16_t    pitch;              /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
-    uint16_t    yaw;                /*                        | yaw     |                       */
-    uint16_t    droll;              /*                        | droll   |                       */
-    uint16_t    dpitch;             /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
-    uint16_t    dyaw;               /*                        | dyaw    |                       */
-    uint16_t    ddx;                /*                        | ddx     |                       */
-    uint16_t    ddy;                /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
-    uint16_t    ddz;                /*                        | ddz     |                       */
-    uint16_t    ticks;              /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
-    uint16_t    sonar;              /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    pressure;           /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    battery;            /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    state;              /* JAviator state indicator */
-    uint16_t    error;              /* JAviator error indicator */
-    uint16_t    id;                 /* transmisson ID */
+    int16_t     roll;               /*                        | roll    |                       */
+    int16_t     pitch;              /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
+    int16_t     yaw;                /*                        | yaw     |                       */
+    int16_t     droll;              /*                        | droll   |                       */
+    int16_t     dpitch;             /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
+    int16_t     dyaw;               /*                        | dyaw    |                       */
+    int16_t     ddx;                /*                        | ddx     |                       */
+    int16_t     ddy;                /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
+    int16_t     ddz;                /*                        | ddz     |                       */
+    int16_t     ticks;              /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
+    int16_t     sonar;              /* [mV] range 0...5000 (10-bit resolution) */
+    int16_t     pressure;           /* [mV] range 0...5000 (10-bit resolution) */
+    int16_t     battery;            /* [mV] range 0...5000 (10-bit resolution) */
+    int16_t     state;              /* JAviator state indicator */
+    int16_t     error;              /* JAviator error indicator */
+    int16_t     id;                 /* transmisson ID */
 
 } javiator_data_t;
 
@@ -103,10 +103,10 @@ typedef struct
 /* Structure for shared motor signals */
 typedef struct
 {
-    uint16_t    front;              /* [units] If Fast PWM Mode enabled,  */
-    uint16_t    right;              /* [units] then range 0...16000,      */
-    uint16_t    rear;               /* [units] if Fast PWM Mode disabled, */
-    uint16_t    left;               /* [units] then range 0...1000.       */
+    int16_t     front;              /* [units] If Fast PWM Mode enabled,  */
+    int16_t     right;              /* [units] then range 0...16000,      */
+    int16_t     rear;               /* [units] if Fast PWM Mode disabled, */
+    int16_t     left;               /* [units] then range 0...1000.       */
 
 } motor_signals_t;
 

@@ -49,15 +49,15 @@
 #include "us_timer.h"
 
 
-//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-//#define ADJUST_YAW
-//#define ADJUST_Z
-//#define FAST_PWM
+#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+#define ADJUST_YAW
+#define ADJUST_Z
+//#define FAST_PWM              DO NOT use right now!
 
 
 /* filter parameters */
-#define FILTER_FACTOR_NAVI      0.1
+#define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
 #define MEDIAN_BUFFER_SIZE      9
 #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
@@ -300,7 +300,7 @@ static void adjust_z( )
 static int get_javiator_data( void )
 {
     static long long last_run = 0;
-    static uint16_t  last_id  = 0;
+    static int16_t   last_id  = 0;
     long long        now;
     int              res;
 
@@ -312,9 +312,9 @@ static int get_javiator_data( void )
         return( res );
     }
 
-    if( javiator_data.id != (uint16_t)( last_id + 1 ) )
+    if( javiator_data.id != (int16_t)( last_id + 1 ) )
     {
-        fprintf( stderr, "WARNING: control loop lost %u JAviator packet(s)\n",
+        fprintf( stderr, "WARNING: control loop lost %d JAviator packet(s)\n",
             javiator_data.id - last_id );
         now = get_utime( );
 
@@ -354,8 +354,8 @@ static int get_javiator_data( void )
     sensor_data.dz      = sensor_data.z;
 
     /* copy and scale positions */
-    sensor_data.x       = 0;//(int16_t)( javiator_data.pos_x * FACTOR_POSITION );
-    sensor_data.y       = 0;//(int16_t)( javiator_data.pos_y * FACTOR_POSITION );
+    sensor_data.x       = 0;
+    sensor_data.y       = 0;
     sensor_data.z       = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
 
     /* compute linear rates */
@@ -495,10 +495,10 @@ static void filter_and_assign_commands(
         yaw_error -= 2 * MRAD_PI;
     }
 
-    out->roll  = old_commands.roll  + (int)( FILTER_FACTOR_NAVI * (in->roll  - old_commands.roll) );
-    out->pitch = old_commands.pitch + (int)( FILTER_FACTOR_NAVI * (in->pitch - old_commands.pitch) );
-    out->yaw   = old_commands.yaw   + (int)( FILTER_FACTOR_NAVI * yaw_error );
-    out->z     = old_commands.z     + (int)( FILTER_FACTOR_NAVI * (in->z     - old_commands.z) );
+    out->roll  = old_commands.roll  + (int)( FILTER_FACTOR_CMD * (in->roll  - old_commands.roll) );
+    out->pitch = old_commands.pitch + (int)( FILTER_FACTOR_CMD * (in->pitch - old_commands.pitch) );
+    out->yaw   = old_commands.yaw   + (int)( FILTER_FACTOR_CMD * yaw_error );
+    out->z     = old_commands.z     + (int)( FILTER_FACTOR_CMD * (in->z     - old_commands.z) );
 
     memcpy( &old_commands, out, sizeof( old_commands ) );
 }
@@ -785,10 +785,10 @@ static int compute_motor_signals( void )
         }
     }
 
-    motor_signals.front = (uint16_t) signals[0];
-    motor_signals.right = (uint16_t) signals[1];
-    motor_signals.rear  = (uint16_t) signals[2];
-    motor_signals.left  = (uint16_t) signals[3];
+    motor_signals.front = (int16_t) signals[0];
+    motor_signals.right = (int16_t) signals[1];
+    motor_signals.rear  = (int16_t) signals[2];
+    motor_signals.left  = (int16_t) signals[3];
 
     motor_offsets.roll  = (int16_t) uRoll;
     motor_offsets.pitch = (int16_t) uPitch;
@@ -879,7 +879,7 @@ static void calc_stats(long long time, int id)
 {
     stats[id] += time;
 
-    if(time > max_stats[id])
+    if(loop_count > 20 && time > max_stats[id]) // drop the first few stats for max calculation
         max_stats[id] = time;
 }
 
@@ -936,11 +936,6 @@ int control_loop_run( )
         }
         else
         {
-            fprintf( stdout, "sonar from JAviator: %5u"
-                        "     senor_data.z: %5d\r",
-                        javiator_data.sonar,
-                        sensor_data.z );
-            fflush( stdout );
 /*
             fprintf( stdout, "laser: %5u"
                         "     sonar: %5u"

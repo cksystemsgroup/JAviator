@@ -77,7 +77,7 @@
 
 /* Enables/disables the Fast PWM Mode (not suitable for standard R/C servos)
 */
-#define FAST_PWM_MODE       0       /* must be either 0 to disable or 1 to enable */
+#define FAST_PWM_MODE       1       /* must be either 0 to disable or 1 to enable */
 
 /* Selection of the Robostix Expension Board version
 */

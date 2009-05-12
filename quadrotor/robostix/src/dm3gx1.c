@@ -195,16 +195,16 @@ int8_t dm3gx1_get_data( javiator_data_t *buf )
     cli( ); /* disable interrupts */
 
     /* extract sensor data */
-    buf->roll   = (rx_buf[1]  << 8) | rx_buf[2];
-    buf->pitch  = (rx_buf[3]  << 8) | rx_buf[4];
-    buf->yaw    = (rx_buf[5]  << 8) | rx_buf[6];
-    buf->ddx    = (rx_buf[7]  << 8) | rx_buf[8];
-    buf->ddy    = (rx_buf[9]  << 8) | rx_buf[10];
-    buf->ddz    = (rx_buf[11] << 8) | rx_buf[12];
-    buf->droll  = (rx_buf[13] << 8) | rx_buf[14];
-    buf->dpitch = (rx_buf[15] << 8) | rx_buf[16];
-    buf->dyaw   = (rx_buf[17] << 8) | rx_buf[18];
-    buf->ticks  = (rx_buf[19] << 8) | rx_buf[20];
+    buf->roll   = (rx_buf[1]  << 8) | (rx_buf[2]  & 0xFF);
+    buf->pitch  = (rx_buf[3]  << 8) | (rx_buf[4]  & 0xFF);
+    buf->yaw    = (rx_buf[5]  << 8) | (rx_buf[6]  & 0xFF);
+    buf->ddx    = (rx_buf[7]  << 8) | (rx_buf[8]  & 0xFF);
+    buf->ddy    = (rx_buf[9]  << 8) | (rx_buf[10] & 0xFF);
+    buf->ddz    = (rx_buf[11] << 8) | (rx_buf[12] & 0xFF);
+    buf->droll  = (rx_buf[13] << 8) | (rx_buf[14] & 0xFF);
+    buf->dpitch = (rx_buf[15] << 8) | (rx_buf[16] & 0xFF);
+    buf->dyaw   = (rx_buf[17] << 8) | (rx_buf[18] & 0xFF);
+    buf->ticks  = (rx_buf[19] << 8) | (rx_buf[20] & 0xFF);
 
     /* clear new-data indicator */
     new_data = 0;

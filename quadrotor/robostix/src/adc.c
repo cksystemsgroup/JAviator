@@ -115,7 +115,7 @@ int8_t adc_is_new_data( int8_t channel )
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_get_data( int8_t channel, uint16_t *buf )
+int8_t adc_get_data( int8_t channel, int16_t *buf )
 {
     if( channel < 0 || channel > ADC_CHANNELS - 1 )
     {
@@ -131,7 +131,7 @@ int8_t adc_get_data( int8_t channel, uint16_t *buf )
     cli( ); /* disable interrupts */
 
     /* copy result to given buffer */
-    *buf = data_buf[ channel ];
+    *buf = (int16_t) data_buf[ channel ];
 
     /* clear new-data indicator */
     new_data[ channel ] = 0;

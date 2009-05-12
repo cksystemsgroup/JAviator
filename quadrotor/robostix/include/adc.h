@@ -50,7 +50,7 @@ int8_t adc_is_new_data( int8_t channel );
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_get_data( int8_t channel, uint16_t *buf );
+int8_t adc_get_data( int8_t channel, int16_t *buf );
 
 
 #endif /* !ADC_H */
