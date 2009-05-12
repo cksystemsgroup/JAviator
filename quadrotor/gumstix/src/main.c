@@ -30,28 +30,28 @@
 #include "../shared/protocol.h"
 #include "../shared/transfer.h"
 #include "comm_channel.h"
-#include "spi_channel.h"
+//#include "spi_channel.h"
 #include "serial_channel.h"
 #include "socket_channel.h"
 #include "javiator_port.h"
-#include "inertial_port.h"
+//#include "inertial_port.h"
 #include "terminal_port.h"
 #include "control_loop.h"
 
 #define PERIOD_MULTIPLIER   5 /* communicate with terminal every 5th period */
 #define Z_AXIS_CONTROLLER   1 /* enable z-axis controller */
 #define EXEC_CONTROL_LOOP   1 /* execute control loop */
-#define SPI_DEVICE          "/dev/mem"
-#define SPI_BAUDRATE        115200
+//#define SPI_DEVICE          "/dev/mem"
+//#define SPI_BAUDRATE        115200
 #define SERIAL_DEVICE       "/dev/ttyS2"
 #define SERIAL_BAUDRATE     115200
 #define TERMINAL_PORT       7000
 
 static comm_channel_t       javiator_channel;
-static comm_channel_t       inertial_channel;
+//static comm_channel_t       inertial_channel;
 static comm_channel_t       terminal_channel;
 
-
+#if 0
 static int setup_javiator_port( char *device, int baudrate )
 {
     if( spi_channel_create( &javiator_channel ) )
@@ -92,6 +92,30 @@ static int setup_inertial_port( char *device, int baudrate )
     if( inertial_port_init( &inertial_channel ) )
     {
         fprintf( stderr, "ERROR: inertial port not correctly initialized\n" );
+        return( -1 );
+    }
+
+    return( 0 );
+}
+#endif
+
+static int setup_javiator_port( char *device, int baudrate )
+{
+    if( serial_channel_create( &javiator_channel ) )
+    {
+        fprintf( stderr, "ERROR: unable to create serial channel\n" );
+        return( -1 );
+    }
+
+    if( serial_channel_init( &javiator_channel, device, baudrate ) )
+    {
+        fprintf( stderr, "ERROR: cannot initialize serial channel\n" );
+        return( -1 );
+    }
+
+    if( javiator_port_init( &javiator_channel ) )
+    {
+        fprintf( stderr, "ERROR: JAviator port not correctly initialized\n" );
         return( -1 );
     }
 
@@ -192,7 +216,7 @@ int main( int argc, char **argv )
             exec_loop = 0;
         }
     }
-
+#if 0
     printf( "setting up JAviator port ... " );
 
     if( setup_javiator_port( SPI_DEVICE, SPI_BAUDRATE ) )
@@ -208,7 +232,17 @@ int main( int argc, char **argv )
     if( setup_inertial_port( SERIAL_DEVICE, SERIAL_BAUDRATE ) )
     {
         printf( "failed\n" );
-        fprintf( stderr, "ERROR: could not setup the IMU port\n" );
+        fprintf( stderr, "ERROR: could not setup the Inertial port\n" );
+        exit( 1 );
+    }
+#endif
+
+    printf( "setting up JAviator port ... " );
+
+    if( setup_javiator_port( SERIAL_DEVICE, SERIAL_BAUDRATE ) )
+    {
+        printf( "failed\n" );
+        fprintf( stderr, "ERROR: could not setup the JAviator port\n" );
         exit( 1 );
     }
 
@@ -218,7 +252,7 @@ int main( int argc, char **argv )
     if( setup_terminal_port( TERMINAL_PORT, multiplier ) )
     {
         printf( "failed\n" );
-        fprintf( stderr, "ERROR: could not setup the terminal port\n" );
+        fprintf( stderr, "ERROR: could not setup the Terminal port\n" );
         exit( 1 );
     }
 
@@ -232,8 +266,9 @@ int main( int argc, char **argv )
         control_loop_run( );
     }
 
-    spi_channel_destroy   ( &javiator_channel );
-    serial_channel_destroy( &inertial_channel );
+    //spi_channel_destroy   ( &javiator_channel );
+    //serial_channel_destroy( &inertial_channel );
+    serial_channel_destroy( &javiator_channel );
     socket_channel_destroy( &terminal_channel );
 
     return( 0 );

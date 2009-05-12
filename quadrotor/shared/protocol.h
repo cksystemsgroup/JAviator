@@ -41,27 +41,28 @@
 */
 #define COMM_BUF_SIZE       64
 
-/* Message identifiers
+/* Packet identifiers
 */
-#define COMM_GET_NAME       0x01    /* request to send helicopter name */
-#define COMM_ACK_NAME       0x02    /* transmission of helicopter name */
-#define COMM_SHUT_DOWN      0x03    /* request to shut down helicopter */
-#define COMM_TEST_MODE      0x04    /* request to perform a self-test */
-#define COMM_LOG_DATA       0x05    /* request to log all sampled data */
-#define COMM_IDLE_LIMIT     0x06    /* transmission of new idle limit */
-#define COMM_ALT_LIMIT      0x07    /* transmission of new range limit */
-#define COMM_SENSOR_DATA    0x08    /* transmission of sensor data */
-#define COMM_PWM_SIGNALS    0x09    /* transmission of actuator data */
-#define COMM_MOTOR_OFFSETS  0x0A    /* transmission of motor offsets */
-#define COMM_NAVI_DATA      0x0B    /* transmission of navigation data */
-#define COMM_HELI_STATE     0x0C    /* transmission of helicopter state */
-#define COMM_STREAM         0x0D    /* transmission of arbitrary stream */
-#define COMM_GROUND_REPORT  0x0E    /* transmission of ground report */
-#define COMM_TRIM_DATA      0x0F    /* transmission of trim data */
-#define COMM_CTRL_PARAMS    0x10    /* transmission of control params */
-#define COMM_EN_SENSORS     0x11    /* enable/disable senors */
-#define COMM_SWITCH_MODE    0x12    /* request to perform a mode switch */
-#define COMM_PACKET_LIMIT   0x12    /* limit of valid packet types */
+#define COMM_CTRL_PERIOD    0x01    /* transmission of controller period */
+#define COMM_JAVIATOR_DATA  0x02    /* transmission of JAviator data */
+#define COMM_INERTIAL_DATA  0x03    /* transmission of inertial data */
+#define COMM_SENSOR_DATA    0x04    /* transmission of sensor data */
+#define COMM_MOTOR_SIGNALS  0x05    /* transmission of motor signals */
+#define COMM_MOTOR_OFFSETS  0x06    /* transmission of motor offsets */
+#define COMM_STATE_MODE     0x07    /* transmission of state and mode */
+#define COMM_GROUND_REPORT  0x08    /* transmission of ground report */
+#define COMM_COMMAND_DATA   0x09    /* transmission of command data */
+#define COMM_R_P_PARAMS     0x0A    /* transmission of roll/pitch params */
+#define COMM_YAW_PARAMS     0x0B    /* transmission of yaw params */
+#define COMM_ALT_PARAMS     0x0C    /* transmission of altitude params */
+#define COMM_X_Y_PARAMS     0x0D    /* transmission of x/y params */
+#define COMM_IDLE_LIMIT     0x0E    /* transmission of idle limit */
+#define COMM_STREAM         0x0F    /* transmission of arbitrary stream */
+#define COMM_SWITCH_MODE    0x10    /* request to perform a mode switch */
+#define COMM_TEST_MODE      0x11    /* request to switch into test mode */
+#define COMM_SHUT_DOWN      0x12    /* request to perform a shut-down */
+#define COMM_EN_SENSORS     0x13    /* request to enable/disable senors */
+#define COMM_PACKET_LIMIT   0x13    /* limit of valid packet identifiers */
 #define COMM_PACKET_MARK    0xFF    /* used to mark a packet's begin */
 
 

@@ -32,8 +32,8 @@
 #include "ports.h"
 #include "adc.h"
 #include "timer.h"
-#include "spi.h"
-#include "lsm215.h"
+#include "serial.h"
+#include "dm3gx1.h"
 #include "minia.h"
 #include "pwm.h"
 #include "leds.h"
@@ -89,8 +89,8 @@ void controller_init( void )
     ports_init( );
     adc_init( );
     timer_init( );
-    spi_init( );
-    lsm215_init( );
+    serial_init( );
+    dm3gx1_init( );
     minia_init( );
     pwm_init( );
     leds_init( );
@@ -121,7 +121,7 @@ void process_data_packet( void )
     uint16_t checksum;
 
     /* receive packet from communication interface */
-    if( spi_recv_packet( packet ) )
+    if( serial_recv_packet( packet ) )
     {
         javiator_data.error |= JE_RECEIVE_PACKET;
         return;
@@ -249,12 +249,12 @@ void process_en_sensors( uint8_t enable )
 {
     if( enable )
     {
-        lsm215_start( );
+        dm3gx1_start( );
         minia_start( );
     }
     else
     {
-        lsm215_stop( );
+        dm3gx1_stop( );
         minia_stop( );
 
         /* Sensors will be disabled either by the Gumstix after the helicopter
@@ -320,7 +320,7 @@ void check_signals_delay( )
             process_en_sensors( 0 );
 
             /* reset communication interface */
-            spi_reset( );
+            serial_reset( );
 
             /* visualize that a timeout occurred */
             LED_ON( YELLOW );
@@ -348,33 +348,41 @@ void send_javiator_data( void )
     uint8_t data[ JAVIATOR_DATA_SIZE ];
 
     /* encode JAviator data */
-    data[0]  = (uint8_t)( javiator_data.pos_x >> 24 );
-    data[1]  = (uint8_t)( javiator_data.pos_x >> 16 );
-    data[2]  = (uint8_t)( javiator_data.pos_x >> 8 );
-    data[3]  = (uint8_t)( javiator_data.pos_x );
-    data[4]  = (uint8_t)( javiator_data.pos_y >> 24 );
-    data[5]  = (uint8_t)( javiator_data.pos_y >> 16 );
-    data[6]  = (uint8_t)( javiator_data.pos_y >> 8 );
-    data[7]  = (uint8_t)( javiator_data.pos_y );
-    data[8]  = (uint8_t)( javiator_data.laser >> 24 );
-    data[9]  = (uint8_t)( javiator_data.laser >> 16 );
-    data[10] = (uint8_t)( javiator_data.laser >> 8 );
-    data[11] = (uint8_t)( javiator_data.laser );
-    data[12] = (uint8_t)( javiator_data.sonar >> 8 );
-    data[13] = (uint8_t)( javiator_data.sonar );
-    data[14] = (uint8_t)( javiator_data.pressure >> 8 );
-    data[15] = (uint8_t)( javiator_data.pressure );
-    data[16] = (uint8_t)( javiator_data.battery >> 8 );
-    data[17] = (uint8_t)( javiator_data.battery );
-    data[18] = (uint8_t)( javiator_data.state >> 8 );
-    data[19] = (uint8_t)( javiator_data.state );
-    data[20] = (uint8_t)( javiator_data.error >> 8 );
-    data[21] = (uint8_t)( javiator_data.error );
-    data[22] = (uint8_t)( javiator_data.id >> 8 );
-    data[23] = (uint8_t)( javiator_data.id );
+    data[0]  = (uint8_t)( javiator_data.roll >> 8 );
+    data[1]  = (uint8_t)( javiator_data.roll );
+    data[2]  = (uint8_t)( javiator_data.pitch >> 8 );
+    data[3]  = (uint8_t)( javiator_data.pitch );
+    data[4]  = (uint8_t)( javiator_data.yaw >> 8 );
+    data[5]  = (uint8_t)( javiator_data.yaw );
+    data[6]  = (uint8_t)( javiator_data.droll >> 8 );
+    data[7]  = (uint8_t)( javiator_data.droll );
+    data[8]  = (uint8_t)( javiator_data.dpitch >> 8 );
+    data[9]  = (uint8_t)( javiator_data.dpitch );
+    data[10] = (uint8_t)( javiator_data.dyaw >> 8 );
+    data[11] = (uint8_t)( javiator_data.dyaw );
+    data[12] = (uint8_t)( javiator_data.ddx >> 8 );
+    data[13] = (uint8_t)( javiator_data.ddx );
+    data[14] = (uint8_t)( javiator_data.ddy >> 8 );
+    data[15] = (uint8_t)( javiator_data.ddy );
+    data[16] = (uint8_t)( javiator_data.ddz >> 8 );
+    data[17] = (uint8_t)( javiator_data.ddz );
+    data[18] = (uint8_t)( javiator_data.ticks >> 8 );
+    data[19] = (uint8_t)( javiator_data.ticks );
+    data[20] = (uint8_t)( javiator_data.sonar >> 8 );
+    data[21] = (uint8_t)( javiator_data.sonar );
+    data[22] = (uint8_t)( javiator_data.pressure >> 8 );
+    data[23] = (uint8_t)( javiator_data.pressure );
+    data[24] = (uint8_t)( javiator_data.battery >> 8 );
+    data[25] = (uint8_t)( javiator_data.battery );
+    data[26] = (uint8_t)( javiator_data.state >> 8 );
+    data[27] = (uint8_t)( javiator_data.state );
+    data[28] = (uint8_t)( javiator_data.error >> 8 );
+    data[29] = (uint8_t)( javiator_data.error );
+    data[30] = (uint8_t)( javiator_data.id >> 8 );
+    data[31] = (uint8_t)( javiator_data.id );
 
-    /* send JAviator data to the controller */
-    spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
+    /* send JAviator data to the Gumstix */
+    serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
 
     /* clear state and error indicator */
     javiator_data.state = 0;
@@ -405,21 +413,21 @@ int main( void )
         }
 
         /* check if a new packet is available */
-        if( spi_is_new_packet( ) )
+        if( serial_is_new_packet( ) )
         {
             process_data_packet( );
         }
 
         /* check if new laser data available */
-        if( lsm215_is_new_data( ) )
+        if( dm3gx1_is_new_data( ) )
         {
-            if( lsm215_get_data( &javiator_data.laser ) )
+            if( dm3gx1_get_data( &javiator_data ) )
             {
-                javiator_data.error |= JE_LASER_GET_DATA;
+                javiator_data.error |= JE_IMU_GET_DATA;
             }
             else
             {
-                javiator_data.state |= JS_NEW_LASER_DATA;
+                javiator_data.state |= JS_NEW_IMU_DATA;
             }
         }
 

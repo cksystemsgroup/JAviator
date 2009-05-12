@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   transfer.h     Definition of Gumstix-Robostix-shared data types.        */
+/*   transfer.h     Definition of shared constants and data types.           */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -29,50 +29,88 @@
 
 /*****************************************************************************/
 /*                                                                           */
-/*   Robostix/Gumstix Definitions                                            */
+/*   Shared Definitions                                                      */
 /*                                                                           */
 /*****************************************************************************/
 
 /* Controller period */
-#define CONTROLLER_PERIOD   14  /* [ms] */
+#define CONTROLLER_PERIOD   14      /* [ms] */
 
-/* Robostix States */
-#define RS_SHUT_DOWN_MODE   1   /* device is in shut-down mode */
-#define RS_NEW_LASER_DATA   2   /* laser data have been updated */
+/* JAviator States */
+#define JS_PERIOD_UPDATED   0x0001  /* controller period has been updated */
+#define JS_SHUT_DOWN_MODE   0x0002  /* JAviator is in shut-down mode */
+#define JS_NEW_IMU_DATA     0x0004  /* IMU data have been updated */
+#define JS_NEW_LASER_DATA   0x0008  /* laser data have been updated */
+#define JS_NEW_SONAR_DATA   0x0010  /* sonar data have been updated */
+#define JS_NEW_PRESS_DATA   0x0020  /* pressure data have been updated */
+#define JS_NEW_BATT_DATA    0x0040  /* battery data have been updated */
 
-/* Robostix Errors */
-#define RE_RECEIVE_PACKET   1   /* error while receiving packet */
-#define RE_INVALID_DATA     2   /* invalid data and/or checksum */
-#define RE_INVALID_SIZE     4   /* invalid size of received data */
-#define RE_LASER_GET_DATA   8   /* error while receiving laser data */
-#define RE_OUT_OF_RANGE     16  /* one or more signals out of range */
+/* JAviator Errors */
+#define JE_RECEIVE_PACKET   0x0001  /* error while receiving packet */
+#define JE_INVALID_DATA     0x0002  /* invalid data and/or checksum */
+#define JE_UNKNOWN_TYPE     0x0004  /* unknown or invalid packet type */
+#define JE_INVALID_SIZE     0x0008  /* invalid size of received data */
+#define JE_OUT_OF_RANGE     0x0010  /* one or more signals out of range */
+#define JE_IMU_GET_DATA     0x0020  /* error while receiving IMU data */
+#define JE_LASER_GET_DATA   0x0040  /* error while receiving laser data */
+#define JE_SONAR_GET_DATA   0x0080  /* error while receiving sonar data */
+#define JE_PRESS_GET_DATA   0x0100  /* error while receiving pressure data */
+#define JE_BATT_GET_DATA    0x0200  /* error while receiving battery data */
 
-/* Structure for shared Gumstix data */
+#if 0
+/* Structure for shared JAviator data */
 typedef struct
 {
-    int16_t     front;          /* [units] if Fast PWM Mode enabled, */
-    int16_t     right;          /* [units] then range 0...16000, */
-    int16_t     rear;           /* [units] if Fast PWM Mode disabled, */
-    int16_t     left;           /* [units] then range 0...1000. */
+    uint32_t    pos_x;              /* [?] range ? */
+    uint32_t    pos_y;              /* [?] range ? */
+    uint32_t    laser;              /* [1/10mm] range 0...5000000 */
+    uint16_t    sonar;              /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    pressure;           /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    battery;            /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    state;              /* JAviator state indicator */
+    uint16_t    error;              /* JAviator error indicator */
+    uint16_t    id;                 /* transmisson ID */
 
-} pwm_signals_t;
+} javiator_data_t;
 
-#define PWM_SIGNALS_SIZE    8   /* byte size of pwm_signals_t */
+#define JAVIATOR_DATA_SIZE  24      /* byte size of javiator_data_t */
+#endif
 
-/* Structure for shared Robostix data */
+/* Structure for shared JAviator data */
 typedef struct
 {
-    uint32_t    laser;          /* [1/10mm] range 0...5000000 */
-    uint16_t    sonar;          /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    pressure;       /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    battery;        /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    sequence;       /* incremented with each send operation */
-    uint8_t     state;          /* controller state indicator */
-    uint8_t     error;          /* controller error indicator */
+    uint16_t    roll;               /*                        | roll    |                       */
+    uint16_t    pitch;              /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
+    uint16_t    yaw;                /*                        | yaw     |                       */
+    uint16_t    droll;              /*                        | droll   |                       */
+    uint16_t    dpitch;             /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
+    uint16_t    dyaw;               /*                        | dyaw    |                       */
+    uint16_t    ddx;                /*                        | ddx     |                       */
+    uint16_t    ddy;                /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
+    uint16_t    ddz;                /*                        | ddz     |                       */
+    uint16_t    ticks;              /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
+    uint16_t    sonar;              /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    pressure;           /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    battery;            /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t    state;              /* JAviator state indicator */
+    uint16_t    error;              /* JAviator error indicator */
+    uint16_t    id;                 /* transmisson ID */
 
-} sensor_data_t;
+} javiator_data_t;
 
-#define SENSOR_DATA_SIZE    14  /* byte size of sensor_data_t */
+#define JAVIATOR_DATA_SIZE  32      /* byte size of javiator_data_t */
+
+/* Structure for shared motor signals */
+typedef struct
+{
+    uint16_t    front;              /* [units] If Fast PWM Mode enabled,  */
+    uint16_t    right;              /* [units] then range 0...16000,      */
+    uint16_t    rear;               /* [units] if Fast PWM Mode disabled, */
+    uint16_t    left;               /* [units] then range 0...1000.       */
+
+} motor_signals_t;
+
+#define MOTOR_SIGNALS_SIZE  8       /* byte size of motor_signals_t */
 
 
 #endif /* !TRANSFER_H */

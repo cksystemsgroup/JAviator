@@ -79,7 +79,7 @@ static inline int is_valid_data( const uint8_t *data, int size )
     return( checksum == 0 );
 }
 
-int imu_recv_packet( int max_bytes )
+int imu_recv_packet( void )
 {
     static comm_state_t state = st_TYPE;
     static int items = 0;
@@ -94,40 +94,25 @@ redo:
             if( items == 1 && comm_buf[0] == CMD_DESIRED_DATA )
             {
                 state = st_PAYLOAD;
-
-                if( max_bytes )
-                {
-                    goto redo;
-                }
+                goto redo;
             }
             break;
 
         case st_PAYLOAD:
             retval = EAGAIN;
-            if( max_bytes )
+            items += comm_channel->receive( comm_channel, comm_buf + items, DM3_GX1_DATA_SIZE - items );
+            if( items == DM3_GX1_DATA_SIZE )
             {
-                items += comm_channel->receive( comm_channel, comm_buf + items, DM3_GX1_DATA_SIZE - items );
-                if( items == DM3_GX1_DATA_SIZE )
-                {
-                    state = st_COMPLETE;
-                    goto redo;
-                }
-            }
-            else
-            {
-                items += comm_channel->receive( comm_channel, comm_buf + items, 1 );
-                if( items == DM3_GX1_DATA_SIZE )
-                {
-                    state = st_COMPLETE;
-                }
+                state = st_COMPLETE;
+                goto redo;
             }
             break;
 
         case st_COMPLETE:
             if( is_valid_data( (uint8_t *) comm_buf, DM3_GX1_DATA_SIZE ) )
             {
-                retval = 0;
                 new_data = 1;
+                retval = 0;
             }
             else
             {
@@ -159,39 +144,13 @@ int inertial_port_tick( void )
 
     if( !new_data ) 
     { 
-        res = imu_recv_packet( 1 );
+        res = imu_recv_packet( );
     
         if( res == 0 )
         {
             parse_inertial_data( );
         }
         else
-        if( res == EAGAIN )
-        {
-            return( res );
-        }
-        else
-        if( res == -1 )
-        {            
-            fprintf( stderr, "ERROR: invalid data from IMU channel\n" );
-        }
-        else
-        {
-            fprintf( stderr, "ERROR: cannot receive from IMU channel\n" );
-        }
-    }
-
-    return( res );
-}
-
-int inertial_port_tick_one( void )
-{
-    int res = 0;
-
-    if( !new_data ) 
-    { 
-        res = imu_recv_packet( 0 );
-    
         if( res == EAGAIN )
         {
             return( res );
@@ -239,7 +198,7 @@ int inertial_port_get_data( inertial_data_t *data )
 {
     int res;
 
-    while( !new_data )
+    do
     {
         res = inertial_port_tick( );
 
@@ -257,7 +216,7 @@ int inertial_port_get_data( inertial_data_t *data )
         {
             return( 1 );
         }
-    }
+    }while( !new_data );
 
     memcpy( data, &inertial_data, sizeof( *data ) );
     new_data = 0;
