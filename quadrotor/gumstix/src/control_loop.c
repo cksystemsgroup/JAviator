@@ -506,8 +506,7 @@ static void filter_and_assign_commands(
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
-    static command_data_t commands = { 0, 0, 0, 0 };
-    command_data_t new_commands;
+    static command_data_t commands = { 0, 0, 0, 0 };    
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -550,15 +549,7 @@ static int get_command_data( void )
     else
     if( terminal_port_is_new_command_data( ) )
     {
-        if( terminal_port_get_command_data( &new_commands ) != -1 )
-        {
-            memcpy( &commands, &new_commands, sizeof( commands ) );
-/*
-            fprintf( stdout, "   roll: %5d   pitch: %5d   yaw: %5d   z: %5d\r",
-                        commands.roll, commands.pitch, commands.yaw, commands.z );
-            fflush( stdout );
-*/
-        }
+        terminal_port_get_command_data( &commands );
     }
 
     filter_and_assign_commands( &commands, &command_data );
@@ -855,24 +846,27 @@ static int wait_for_next_period( void )
     return( 0 );
 }
 
-#define NUM_STATS 6
-#define STAT_IMU  0
-#define STAT_SPI  1
-#define STAT_JAV  2
-#define STAT_CMD  3
-#define STAT_REP  4
-#define STAT_IO   5
+#define NUM_STATS        7
+#define STAT_IMU         0
+#define STAT_TO_JAV      1
+#define STAT_FROM_JAV    2
+#define STAT_FROM_TERM   3
+#define STAT_TO_TERM     4
+#define STAT_CONTROL     5
+#define STAT_IO          6
+
 
 static int loop_count = 0;
-static long long stats[NUM_STATS] = {0,0,0,0,0,0};
-static long long max_stats[NUM_STATS] = {0,0,0,0,0,0};
+static long long stats[NUM_STATS] = {0,0,0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0};
 static char *stats_name[NUM_STATS] = {
     "IMU",
-    "SPI",
-    "JAV",
-    "CMD",
-    "REP",
-    "IO"
+    "to javiator",
+    "from javiator",
+    "from terminal",
+    "to terminal",
+    "IO",
+    "control"
 };
 
 static void calc_stats(long long time, int id)
@@ -886,10 +880,11 @@ static void calc_stats(long long time, int id)
 static void print_stats(int loops)
 {
     int i;
-
-    printf("Loop Statistics: \n\n");
-    for (i=0;i<NUM_STATS; ++i) {
-        printf("\t%s %8lld us\tmax %8lldus\n", stats_name[i], stats[i]/loops, max_stats[i]);
+    if (loops) {
+        printf("Loop Statistics: \n\n");
+        for (i=0;i<NUM_STATS; ++i) {
+            printf("\t%s %8lld us\tmax %8lldus\n", stats_name[i], stats[i]/loops, max_stats[i]);
+        }
     }
 }
 
@@ -924,7 +919,7 @@ int control_loop_run( )
             break;
         }
         end = get_utime();
-        calc_stats(end - start, STAT_SPI);
+        calc_stats(end - start, STAT_TO_JAV);
 
         start = get_utime();
         if( get_javiator_data( ) )
@@ -949,7 +944,7 @@ int control_loop_run( )
 */
         }
         end = get_utime();
-        calc_stats(end - start, STAT_JAV);
+        calc_stats(end - start, STAT_FROM_JAV);
 #if 0
         start = get_utime();
         if( get_inertial_data( ) )
@@ -989,13 +984,12 @@ int control_loop_run( )
         else
         {
             first_time = 1;
-        }
-        end = get_utime();
-        calc_stats(end - start, STAT_CMD);
-
-        start = get_utime();
+        }        
         get_command_data( );
+        end = get_utime();
+        calc_stats(end - start, STAT_FROM_TERM);
 
+        start = get_utime(); 
         switch( altitude_mode )
         {
             case ALT_MODE_GROUND:
@@ -1013,10 +1007,13 @@ int control_loop_run( )
             default:
                 fprintf( stderr, "ERROR: invalid altitude mode %d\n", altitude_mode );
         }
+        end = get_utime();
+        calc_stats(end - start, STAT_CONTROL);
 
+        start = get_utime();
         send_report_to_terminal( );
         end = get_utime();
-        calc_stats(end - start, STAT_REP);
+        calc_stats(end - start, STAT_TO_TERM);
 
         if (++loop_count < 0) {
             printf("WARNING: stats overrun\n");
