@@ -37,8 +37,6 @@
 #include <ctype.h>
 
 #include "../shared/protocol.h"
-#include "inertial_port.h"
-//#include "terminal_port.h"
 #include "spi_channel.h"
 
 /* Base clock rate */
@@ -169,25 +167,15 @@ static inline spi_connection_t *spi_get_connection( const comm_channel_t *channe
     return( sc );
 }
 
-static inline void yield_other_tasks( void )
-{
-    inertial_port_tick_one( );
-    //terminal_port_tick_one( );
-}
-
 static inline char spi_tx_rx( spi_connection_t *sc, char tx )
 {
     /* wait for TX FIFO Level to become 0 */
     while( (get_ssp2( sc, SSSR_2 ) & TFL) )
-    {
-        yield_other_tasks( );
-    }
+        ;
 
     /* wait for TX FIFO not to be full */
     while( !(get_ssp2( sc, SSSR_2 ) & TNF) )
-    {
-        yield_other_tasks( );
-    }
+        ;
 
     /* turn on Chip Select */
     set_gpio( sc, GPCR2, get_gpio( sc, GPCR2 ) | PS11 );
@@ -200,15 +188,11 @@ static inline char spi_tx_rx( spi_connection_t *sc, char tx )
 
     /* wait for TX FIFO not to be full */
     while( !(get_ssp2( sc, SSSR_2 ) & TNF) )
-    {
-        yield_other_tasks( );
-    }
+        ;
 
     /* wait for SSP2 port to become idle or RX FIFO not to be empty */
     while( (get_ssp2( sc, SSSR_2 ) & BSY) || !(get_ssp2( sc, SSSR_2 ) & RNE) )
-    {
-        yield_other_tasks( );
-    }
+        ;
 
     /* read RX from data register */
     return( (char) get_ssp2( sc, SSDR_2 ) );
