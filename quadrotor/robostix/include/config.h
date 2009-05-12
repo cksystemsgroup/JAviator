@@ -47,9 +47,9 @@
 */
 #define MIN_VALID_PACKETS   1000    /* should be adapted to chosen baudrate */
 
-/* Time to wait before interacting when not receiving motor signals anymore
+/* Periods to wait before interacting when not receiving motor signals anymore
 */
-#define SIGNALS_TIMEOUT     200     /* [ms] must be adapted to controller period */
+#define PERIODS_TO_WAIT     10      /* should not be less than 10 periods */
 
 /* Selection of UART channel used for communication with the Gumstix
 */

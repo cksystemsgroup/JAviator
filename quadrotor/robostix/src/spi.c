@@ -72,7 +72,7 @@ void spi_init( void )
 */
 uint8_t spi_is_new_packet( void )
 {
-   return( new_data );
+    return( new_data );
 }
 
 /* Copies the received data packet to the given buffer.
@@ -172,9 +172,9 @@ SIGNAL( SIG_SPI )
             tx_items = 0;
         }
     }
-    else
+    else /* transmit null-byte */
     {
-        SPDR = 0; /* transmit null-byte */
+        SPDR = 0;
     }
 
     /* check RX data stream for packet marks and payload size */
@@ -202,7 +202,7 @@ SIGNAL( SIG_SPI )
         /* second header byte contains payload size */
         rx_items += rx_buf[3];
 
-         /* check for valid packet size */
+        /* check for valid packet size */
         if( rx_items > COMM_BUF_SIZE )
         {
             rx_items = 0;

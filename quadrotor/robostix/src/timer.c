@@ -52,7 +52,7 @@ typedef struct
 
 /* Global variables */
 static timer_event_t        timer_event[ MAX_TIMER_EVENTS ];
-static volatile uint8_t     event_count;
+static volatile int8_t      event_count;
 
 
 /*****************************************************************************/
@@ -74,15 +74,15 @@ void timer_init( void )
     event_count = 0;
 }
 
-/* Adds a new entry to the timer event list.
-   Returns 0 if successful, -1 otherwise.
+/* Adds a new event to the timer event list.
+   Returns the event's ID if successful, -1 otherwise.
 */
-extern int8_t timer_add_event( uint8_t *flag, uint16_t period )
+int8_t timer_add_event( uint8_t *flag, uint16_t period )
 {
-    /* check for valid event counter */
+    /* check if event can be added */
     if( event_count == MAX_TIMER_EVENTS )
     {
-        return( -1 ); /* no more timer events can be added */
+        return( -1 );
     }
 
     /* initialize new event list entry */
@@ -92,6 +92,28 @@ extern int8_t timer_add_event( uint8_t *flag, uint16_t period )
 
     /* increment event counter */
     ++event_count;
+
+    /* return ID of new event */
+    return( event_count - 1 );
+}
+
+/* Sets the given period for the event with the given ID.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t timer_set_event( int8_t id, uint16_t period )
+{
+    /* check for valid event ID */
+    if( id < 0 || id > event_count - 1 )
+    {
+        return( -1 );
+    }
+
+    cli( ); /* disable interrupts */
+
+    /* set new period value */
+    timer_event[ id ].period = period;
+
+    sei( ); /* enable interrupts */
 
     return( 0 );
 }
@@ -107,7 +129,7 @@ extern int8_t timer_add_event( uint8_t *flag, uint16_t period )
 */
 SIGNAL( SIG_OVERFLOW0 )
 {
-    uint8_t i = 0;
+    int8_t i = 0;
 
     /* reload counter offset */
     TCNT0 = TCNT0_OFFSET;
@@ -115,7 +137,7 @@ SIGNAL( SIG_OVERFLOW0 )
     /* iterate over timer events */
     while( i < event_count )
     {
-        if( ++timer_event[i].ticks == timer_event[i].period )
+        if( ++timer_event[i].ticks >= timer_event[i].period )
         {
             timer_event[i].ticks = 0;
             *timer_event[i].flag = 1;

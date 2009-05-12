@@ -35,11 +35,22 @@
 
 /* Initializes the Analog/Digital Converter
 */
-void     adc_init( void );
+void   adc_init( void );
 
-/* Returns the conversion result for the given channel
+/* Adds a new channel to the ADC channel list.
+   Returns 0 if successful, -1 otherwise.
 */
-uint16_t adc_convert( uint8_t channel );
+int8_t adc_add_channel( int8_t channel );
+
+/* Returns -1 if the given channel is invalid or
+   disabled, 1 if new data available, 0 otherwise
+*/
+int8_t adc_is_new_data( int8_t channel );
+
+/* Copies the sampled data to the given buffer.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t adc_get_data( int8_t channel, uint16_t *buf );
 
 
 #endif /* !ADC_H */

@@ -153,9 +153,9 @@ void pwm_init( void )
    Returns 0 if all signals were valid, or -1 if one or more
    signals were out of range and had to be adjusted.
 */
-int8_t pwm_set_signals( const pwm_signals_t *signals )
+int8_t pwm_set_signals( const motor_signals_t *signals )
 {
-    int16_t pwm[4] =
+    uint16_t pwm[4] =
     {
 #if( FAST_PWM_MODE == 0 )
 
@@ -181,12 +181,6 @@ int8_t pwm_set_signals( const pwm_signals_t *signals )
         if( pwm[i] > PWM_MAX - PWM_MIN )
         {
             pwm[i] = PWM_MAX - PWM_MIN;
-            res = -1;
-        }
-        else
-        if( pwm[i] < 0 )
-        {
-            pwm[i] = 0;
             res = -1;
         }
     }

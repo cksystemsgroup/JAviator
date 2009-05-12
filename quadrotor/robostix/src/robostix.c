@@ -48,20 +48,22 @@
 /* Global variables */
 static volatile uint8_t     flag_shut_down;
 static volatile uint8_t     flag_check_delay;
-static volatile int16_t     signals_delay;
+static volatile uint8_t     periods_passed;
+static volatile int8_t      id_check_delay;
 
 /* Global structures */
-static sensor_data_t        sensor_data;
-static pwm_signals_t        pwm_signals;
+static javiator_data_t      javiator_data;
+static motor_signals_t      motor_signals;
 
 /* Forward declarations */
 void controller_init        ( void );
 void process_data_packet    ( void );
+void process_ctrl_period    ( uint8_t );
+void process_motor_signals  ( const uint8_t *, uint8_t );
 void process_shut_down      ( void );
 void process_en_sensors     ( uint8_t );
-void process_pwm_signals    ( const uint8_t *, uint8_t );
 void check_signals_delay    ( void );
-void send_sensor_data       ( void );
+void send_javiator_data     ( void );
 
 
 /*****************************************************************************/
@@ -77,11 +79,11 @@ void controller_init( void )
     /* initialize variables */
     flag_shut_down   = 0;
     flag_check_delay = 0;
-    signals_delay    = -SIGNALS_TIMEOUT;
+    periods_passed   = 0;
 
     /* clear data structures */
-    memset( &sensor_data, 0, sizeof( sensor_data ) );
-    memset( &pwm_signals, 0, sizeof( pwm_signals ) );
+    memset( &javiator_data, 0, sizeof( javiator_data ) );
+    memset( &motor_signals, 0, sizeof( motor_signals ) );
 
     /* initialize hardware */
     ports_init( );
@@ -93,8 +95,13 @@ void controller_init( void )
     pwm_init( );
     leds_init( );
 
-    /* register desired timer events */
-    timer_add_event( (uint8_t *) &flag_check_delay, CONTROLLER_PERIOD );
+    /* register ADC channels */
+    adc_add_channel( ADC_CH_MINIA );
+    adc_add_channel( ADC_CH_MPX4115A );
+    adc_add_channel( ADC_CH_BATTERY );
+
+    /* register timer events */
+    id_check_delay = timer_add_event( (uint8_t *) &flag_check_delay, CONTROLLER_PERIOD );
 
     /* set Robostix signal LEDs */
     LED_OFF( RED );
@@ -116,8 +123,7 @@ void process_data_packet( void )
     /* receive packet from communication interface */
     if( spi_recv_packet( packet ) )
     {
-        /* notify that an error occurred */
-        sensor_data.error |= RE_RECEIVE_PACKET;
+        javiator_data.error |= JE_RECEIVE_PACKET;
         return;
     }
 
@@ -135,8 +141,7 @@ void process_data_packet( void )
     /* check for non-zero checksum */
     if( checksum )
     {
-        /* notify that an error occurred */
-        sensor_data.error |= RE_INVALID_DATA;
+        javiator_data.error |= JE_INVALID_DATA;
         valid_packets = 0;
         LED_ON( RED );
         return;
@@ -150,6 +155,14 @@ void process_data_packet( void )
     /* call packet-dependent function */
     switch( packet[0] )
     {
+        case COMM_CTRL_PERIOD:
+            process_ctrl_period( packet[2] );
+            break;
+
+        case COMM_MOTOR_SIGNALS:
+            process_motor_signals( packet + 2, packet[1] );
+            break;
+
         case COMM_SHUT_DOWN:
             process_shut_down( );
             break;
@@ -158,13 +171,63 @@ void process_data_packet( void )
             process_en_sensors( packet[2] );
             break;
 
-        case COMM_PWM_SIGNALS:
-            process_pwm_signals( packet + 2, packet[1] );
-            break;
-
         default:
-            return;
+            javiator_data.error |= JE_UNKNOWN_TYPE;
     }
+}
+
+/* Processes COMM_CTRL_PERIOD messages
+*/
+void process_ctrl_period( uint8_t period )
+{
+    /* check for valid update of period */
+    if( !timer_set_event( id_check_delay, period ) )
+    {
+        javiator_data.state |= JS_PERIOD_UPDATED;
+    }
+}
+
+/* Processes COMM_MOTOR_SIGNALS messages
+*/
+void process_motor_signals( const uint8_t *data, uint8_t size )
+{
+    static uint8_t toggle_blue = 0;
+
+    /* reset counter when receiving new motor signals */
+    periods_passed = 0;
+
+    /* ignore received motor signals if shut-down flag is set */
+    if( !flag_shut_down )
+    {
+        /* check for correct data size before extracting */
+        if( size == MOTOR_SIGNALS_SIZE )
+        {
+            motor_signals.front = (data[0] << 8) | data[1];
+            motor_signals.right = (data[2] << 8) | data[3];
+            motor_signals.rear  = (data[4] << 8) | data[5];
+            motor_signals.left  = (data[6] << 8) | data[7];
+
+            /* check for invalid signals */
+            if( pwm_set_signals( &motor_signals ) )
+            {
+                javiator_data.error |= JE_OUT_OF_RANGE;
+            }
+
+            /* visualize that motors have been updated */
+            if( (++toggle_blue & 0x0F) == 0 )
+            {
+                LED_TOGGLE( BLUE );
+            }
+        }
+        else
+        {
+            javiator_data.error |= JE_INVALID_SIZE;
+            LED_OFF( BLUE );
+        }
+    }
+
+    /* send JAviator data to controller */
+    send_javiator_data( );
 }
 
 /* Processes COMM_SHUT_DOWN messages
@@ -172,8 +235,8 @@ void process_data_packet( void )
 void process_shut_down( void )
 {
     /* clear and set motor signals */
-    memset( &pwm_signals, 0, sizeof( pwm_signals ) );
-    pwm_set_signals( &pwm_signals );
+    memset( &motor_signals, 0, sizeof( motor_signals ) );
+    pwm_set_signals( &motor_signals );
 
     /* set shut-down flag */
     flag_shut_down = 1;
@@ -206,50 +269,6 @@ void process_en_sensors( uint8_t enable )
     }
 }
 
-/* Processes COMM_PWM_SIGNALS messages
-*/
-void process_pwm_signals( const uint8_t *data, uint8_t size )
-{
-    static uint8_t toggle_blue = 0;
-
-    signals_delay = 0;
-
-    /* ignore received motor signals if shut-down flag is set */
-    if( !flag_shut_down )
-    {
-        /* check for correct data size before extracting */
-        if( size == PWM_SIGNALS_SIZE )
-        {
-            pwm_signals.front = (data[0] << 8) | (data[1] & 0xFF);
-            pwm_signals.right = (data[2] << 8) | (data[3] & 0xFF);
-            pwm_signals.rear  = (data[4] << 8) | (data[5] & 0xFF);
-            pwm_signals.left  = (data[6] << 8) | (data[7] & 0xFF);
-
-            /* check for invalid signals */
-            if( pwm_set_signals( &pwm_signals ) )
-            {
-                /* notify that an error occurred */
-                sensor_data.error |= RE_OUT_OF_RANGE;
-            }
-
-            /* visualize that motors have been updated */
-            if( (++toggle_blue & 0x0F) == 0 )
-            {
-                LED_TOGGLE( BLUE );
-            }
-        }
-        else
-        {
-            /* notify that an error occurred */
-            sensor_data.error |= RE_INVALID_SIZE;
-            LED_OFF( BLUE );
-        }
-    }
-
-    /* send new sensor data to the Gumstix */
-    send_sensor_data( );
-}
-
 /* Checks if new motor signals arrive without delay
 */
 void check_signals_delay( )
@@ -257,47 +276,45 @@ void check_signals_delay( )
     static uint8_t first_timeout = 1;
     static uint8_t toggle_yellow = 0;
 
-    signals_delay += CONTROLLER_PERIOD;
-
-    /* check if a timeout occurred */
-    if( signals_delay > SIGNALS_TIMEOUT )
+    /* check for exceeded waiting time */
+    if( ++periods_passed > PERIODS_TO_WAIT )
     {
         /* ensure counter cannot overflow */
-        signals_delay = SIGNALS_TIMEOUT;
+        periods_passed = PERIODS_TO_WAIT;
 
         /* DO NOT modify signals in shut-down mode! */
         if( !flag_shut_down )
         {
-            if( pwm_signals.front > 0 ||
-                pwm_signals.right > 0 ||
-                pwm_signals.rear  > 0 ||
-                pwm_signals.left  > 0 )
+            if( motor_signals.front > 0 ||
+                motor_signals.right > 0 ||
+                motor_signals.rear  > 0 ||
+                motor_signals.left  > 0 )
             {
                 /* we're possibly airborne, so reduce
                    signals to force descending */
-                --pwm_signals.front;
-                --pwm_signals.right;
-                --pwm_signals.rear;
-                --pwm_signals.left;
+                --motor_signals.front;
+                --motor_signals.right;
+                --motor_signals.rear;
+                --motor_signals.left;
             }
             else
             {
                 /* we're possibly grounded, so keep
                    signals set to the minimum */
-                pwm_signals.front = 0;
-                pwm_signals.right = 0;
-                pwm_signals.rear  = 0;
-                pwm_signals.left  = 0;
+                motor_signals.front = 0;
+                motor_signals.right = 0;
+                motor_signals.rear  = 0;
+                motor_signals.left  = 0;
             }
 
-            pwm_set_signals( &pwm_signals );
+            pwm_set_signals( &motor_signals );
         }
 
         /* check if this is the first timeout */
         if( first_timeout )
         {
             first_timeout = 0;
-            sensor_data.sequence = 0;
+            javiator_data.id = 0;
 
             /* disable sensors to save power */
             process_en_sensors( 0 );
@@ -324,64 +341,47 @@ void check_signals_delay( )
     flag_check_delay = 0;
 }
 
-/* Sends the sampled sensor data to the Gumstix
+/* Sends the JAviator data to the controller
 */
-void send_sensor_data( void )
+void send_javiator_data( void )
 {
-    uint8_t data[ SENSOR_DATA_SIZE ];
+    uint8_t data[ JAVIATOR_DATA_SIZE ];
 
-    /* check if shut-down flag is set */
-    if( flag_shut_down )
-    {
-        /* indicate that we're in shut-down mode */
-        sensor_data.state |= RS_SHUT_DOWN_MODE;
-    }
+    /* encode JAviator data */
+    data[0]  = (uint8_t)( javiator_data.pos_x >> 24 );
+    data[1]  = (uint8_t)( javiator_data.pos_x >> 16 );
+    data[2]  = (uint8_t)( javiator_data.pos_x >> 8 );
+    data[3]  = (uint8_t)( javiator_data.pos_x );
+    data[4]  = (uint8_t)( javiator_data.pos_y >> 24 );
+    data[5]  = (uint8_t)( javiator_data.pos_y >> 16 );
+    data[6]  = (uint8_t)( javiator_data.pos_y >> 8 );
+    data[7]  = (uint8_t)( javiator_data.pos_y );
+    data[8]  = (uint8_t)( javiator_data.laser >> 24 );
+    data[9]  = (uint8_t)( javiator_data.laser >> 16 );
+    data[10] = (uint8_t)( javiator_data.laser >> 8 );
+    data[11] = (uint8_t)( javiator_data.laser );
+    data[12] = (uint8_t)( javiator_data.sonar >> 8 );
+    data[13] = (uint8_t)( javiator_data.sonar );
+    data[14] = (uint8_t)( javiator_data.pressure >> 8 );
+    data[15] = (uint8_t)( javiator_data.pressure );
+    data[16] = (uint8_t)( javiator_data.battery >> 8 );
+    data[17] = (uint8_t)( javiator_data.battery );
+    data[18] = (uint8_t)( javiator_data.state >> 8 );
+    data[19] = (uint8_t)( javiator_data.state );
+    data[20] = (uint8_t)( javiator_data.error >> 8 );
+    data[21] = (uint8_t)( javiator_data.error );
+    data[22] = (uint8_t)( javiator_data.id >> 8 );
+    data[23] = (uint8_t)( javiator_data.id );
 
-    /* check if new laser data available */
-    if( lsm215_is_new_data( ) )
-    {
-        if( lsm215_get_data( &sensor_data.laser ) )
-        {
-            /* notify that an error occurred */
-            sensor_data.error |= RE_LASER_GET_DATA;
-        }
-        else
-        {
-            /* notify that laser data have been updated */
-            sensor_data.state |= RS_NEW_LASER_DATA;
-        }
-    }
-
-    /* get ADC conversions */
-    sensor_data.sonar    = adc_convert( ADC_CH_MINIA );
-    sensor_data.pressure = adc_convert( ADC_CH_MPX4115A );
-    sensor_data.battery  = adc_convert( ADC_CH_BATTERY );
-
-    /* encode sensor data */
-    data[0]  = (uint8_t)( sensor_data.laser >> 24 );
-    data[1]  = (uint8_t)( sensor_data.laser >> 16 );
-    data[2]  = (uint8_t)( sensor_data.laser >> 8 );
-    data[3]  = (uint8_t)( sensor_data.laser );
-    data[4]  = (uint8_t)( sensor_data.sonar >> 8 );
-    data[5]  = (uint8_t)( sensor_data.sonar );
-    data[6]  = (uint8_t)( sensor_data.pressure >> 8 );
-    data[7]  = (uint8_t)( sensor_data.pressure );
-    data[8]  = (uint8_t)( sensor_data.battery >> 8 );
-    data[9]  = (uint8_t)( sensor_data.battery );
-    data[10] = (uint8_t)( sensor_data.sequence >> 8 );
-    data[11] = (uint8_t)( sensor_data.sequence );
-    data[12] = (uint8_t)( sensor_data.state );
-    data[13] = (uint8_t)( sensor_data.error );
-
-    /* send encoded data to the Gumstix */
-    spi_send_packet( COMM_SENSOR_DATA, data, SENSOR_DATA_SIZE );
+    /* send JAviator data to the controller */
+    spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
 
     /* clear state and error indicator */
-    sensor_data.state = 0;
-    sensor_data.error = 0;
+    javiator_data.state = 0;
+    javiator_data.error = 0;
 
-    /* increment sequence number */
-    ++sensor_data.sequence;
+    /* increment transmission ID */
+    ++javiator_data.id;
 }
 
 /* Initializes and runs the controller
@@ -392,16 +392,74 @@ int main( void )
 
     while( 1 )
     {
-        /* check if a new packet is available */
-        if( spi_is_new_packet( ) )
+        /* check if shut-down flag is set */
+        if( flag_shut_down )
         {
-            process_data_packet( );
+            javiator_data.state |= JS_SHUT_DOWN_MODE;
         }
 
         /* check if signals arrive in time */
         if( flag_check_delay )
         {
             check_signals_delay( );
+        }
+
+        /* check if a new packet is available */
+        if( spi_is_new_packet( ) )
+        {
+            process_data_packet( );
+        }
+
+        /* check if new laser data available */
+        if( lsm215_is_new_data( ) )
+        {
+            if( lsm215_get_data( &javiator_data.laser ) )
+            {
+                javiator_data.error |= JE_LASER_GET_DATA;
+            }
+            else
+            {
+                javiator_data.state |= JS_NEW_LASER_DATA;
+            }
+        }
+
+        /* check if new sonar data available */
+        if( adc_is_new_data( ADC_CH_MINIA ) )
+        {
+            if( adc_get_data( ADC_CH_MINIA, &javiator_data.sonar ) )
+            {
+                javiator_data.error |= JE_SONAR_GET_DATA;
+            }
+            else
+            {
+                javiator_data.state |= JS_NEW_SONAR_DATA;
+            }
+        }
+
+        /* check if new pressure data available */
+        if( adc_is_new_data( ADC_CH_MPX4115A ) )
+        {
+            if( adc_get_data( ADC_CH_MPX4115A, &javiator_data.pressure ) )
+            {
+                javiator_data.error |= JE_PRESS_GET_DATA;
+            }
+            else
+            {
+                javiator_data.state |= JS_NEW_PRESS_DATA;
+            }
+        }
+
+        /* check if new battery data available */
+        if( adc_is_new_data( ADC_CH_BATTERY ) )
+        {
+            if( adc_get_data( ADC_CH_BATTERY, &javiator_data.battery ) )
+            {
+                javiator_data.error |= JE_BATT_GET_DATA;
+            }
+            else
+            {
+                javiator_data.state |= JS_NEW_BATT_DATA;
+            }
         }
     }
 

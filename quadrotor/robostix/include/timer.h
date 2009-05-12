@@ -37,10 +37,15 @@
 */
 void   timer_init( void );
 
-/* Adds a new entry to the timer event list.
-   Returns 0 if successful, -1 otherwise.
+/* Adds a new event to the timer event list.
+   Returns the event's ID if successful, -1 otherwise.
 */
 int8_t timer_add_event( uint8_t *flag, uint16_t period );
+
+/* Sets the given period for the event with the given ID.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t timer_set_event( int8_t id, uint16_t period );
 
 
 #endif /* !TIMER_H */

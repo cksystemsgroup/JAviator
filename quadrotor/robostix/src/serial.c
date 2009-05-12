@@ -134,7 +134,7 @@ void serial_init( void )
 */
 uint8_t serial_is_new_packet( void )
 {
-   return( new_data );
+    return( new_data );
 }
 
 /* Copies the received data packet to the given buffer.

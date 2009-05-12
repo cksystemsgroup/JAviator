@@ -171,7 +171,7 @@ void lsm215_stop( void )
 */
 uint8_t lsm215_is_new_data( void )
 {
-   return( new_data );
+    return( new_data );
 }
 
 /* Copies the sampled data to the given buffer.

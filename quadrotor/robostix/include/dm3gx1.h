@@ -38,29 +38,29 @@ typedef struct
 {
     /* Euler angles
     */
-    int16_t     roll;       /*              | roll  |                               */
-    int16_t     pitch;      /*      [deg] = | pitch | * 360 / 65536                 */
-    int16_t     yaw;        /*              | yaw   |                               */
+    uint16_t    roll;       /*                        | roll    |                       */
+    uint16_t    pitch;      /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
+    uint16_t    yaw;        /*                        | yaw     |                       */
 
     /* angular rates
     */
-    int16_t     droll;      /*              | droll  |                              */
-    int16_t     dpitch;     /*    [rad/s] = | dpitch | / (32768000 / 8500)          */
-    int16_t     dyaw;       /*              | dyaw   |                              */
-
-    /* angular accelerations
-    */
-    int16_t     ddroll;     /*              | droll_{k}  - droll_{k-1}  |           */
-    int16_t     ddpitch;    /*  [rad/s^2] = | dpitch_{k} - dpitch_{k-1} | / period  */
-    int16_t     ddyaw;      /*              | dyaw_{k}   - dyaw_{k-1}   |           */
+    uint16_t    droll;      /*                        | droll   |                       */
+    uint16_t    dpitch;     /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
+    uint16_t    dyaw;       /*                        | dyaw    |                       */
 
     /* linear accelerations
     */
-    int16_t     ddx;        /*              | ddx |                                 */
-    int16_t     ddy;        /*        [G] = | ddy | / (32768000 / 7000)             */
-    int16_t     ddz;        /*              | ddz |                                 */
+    uint16_t    ddx;        /*                        | ddx     |                       */
+    uint16_t    ddy;        /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
+    uint16_t    ddz;        /*                        | ddz     |                       */
+
+    /* timer ticks
+    */
+    uint16_t    ticks;      /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
 
 } dm3gx1_data_t;
+
+#define DM3_GX1_DATA_SIZE   20  /* byte size of dm3gx1_data_t */
 
 
 /*****************************************************************************/

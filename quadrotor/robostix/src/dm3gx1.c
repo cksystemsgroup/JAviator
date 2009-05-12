@@ -177,7 +177,7 @@ void dm3gx1_stop( void )
 */
 uint8_t dm3gx1_is_new_data( void )
 {
-   return( new_data );
+    return( new_data );
 }
 
 /* Copies the sampled data to the given buffer.
@@ -193,30 +193,17 @@ int8_t dm3gx1_get_data( dm3gx1_data_t *buf )
 
     cli( ); /* disable interrupts */
 
-    /* extract Euler angles */
-    buf->roll    = (rx_buf[1]  << 8) | (rx_buf[2]  & 0xFF);
-    buf->pitch   = (rx_buf[3]  << 8) | (rx_buf[4]  & 0xFF);
-    buf->yaw     = (rx_buf[5]  << 8) | (rx_buf[6]  & 0xFF);
-
-    /* extract linear accelerations */
-    buf->ddx     = (rx_buf[7]  << 8) | (rx_buf[8]  & 0xFF);
-    buf->ddy     = (rx_buf[9]  << 8) | (rx_buf[10] & 0xFF);
-    buf->ddz     = (rx_buf[11] << 8) | (rx_buf[12] & 0xFF);
-
-    /* save old angular rates */
-    buf->ddroll  = buf->droll;
-    buf->ddpitch = buf->dpitch;
-    buf->ddyaw   = buf->dyaw;
-
-    /* extract angular rates */
-    buf->droll   = (rx_buf[13] << 8) | (rx_buf[14] & 0xFF);
-    buf->dpitch  = (rx_buf[15] << 8) | (rx_buf[16] & 0xFF);
-    buf->dyaw    = (rx_buf[17] << 8) | (rx_buf[18] & 0xFF);
-
-    /* compute angular accelerations */
-    buf->ddroll  = buf->droll  - buf->ddroll;
-    buf->ddpitch = buf->dpitch - buf->ddpitch;
-    buf->ddyaw   = buf->dyaw   - buf->ddyaw;
+    /* extract sensor data */
+    buf->roll   = (rx_buf[1]  << 8) | rx_buf[2];
+    buf->pitch  = (rx_buf[3]  << 8) | rx_buf[4];
+    buf->yaw    = (rx_buf[5]  << 8) | rx_buf[6];
+    buf->ddx    = (rx_buf[7]  << 8) | rx_buf[8];
+    buf->ddy    = (rx_buf[9]  << 8) | rx_buf[10];
+    buf->ddz    = (rx_buf[11] << 8) | rx_buf[12];
+    buf->droll  = (rx_buf[13] << 8) | rx_buf[14];
+    buf->dpitch = (rx_buf[15] << 8) | rx_buf[16];
+    buf->dyaw   = (rx_buf[17] << 8) | rx_buf[18];
+    buf->ticks  = (rx_buf[19] << 8) | rx_buf[20];
 
     /* clear new-data indicator */
     new_data = 0;

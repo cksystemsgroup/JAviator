@@ -43,7 +43,7 @@ void   pwm_init( void );
    Returns 0 if all signals were valid, or -1 if one or more
    signals were out of range and had to be adjusted.
 */
-int8_t pwm_set_signals( const pwm_signals_t *signals );
+int8_t pwm_set_signals( const motor_signals_t *signals );
 
 
 #endif /* !PWM_H */
