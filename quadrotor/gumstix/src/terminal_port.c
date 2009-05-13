@@ -20,19 +20,20 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "../shared/protocol.h"
 #include "../shared/transfer.h"
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"
+
 #include "terminal_port.h"
 #include "inertial_port.h"
 
@@ -55,6 +56,17 @@ static volatile int     new_alt_params;
 static volatile int     new_x_y_params;
 static volatile int     new_command_data;
 
+static pthread_mutex_t terminal_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static inline void lock(void)
+{
+	pthread_mutex_lock(&terminal_lock);
+}
+
+static inline void unlock(void)
+{
+	pthread_mutex_unlock(&terminal_lock);
+}
 
 static inline int set_idle_limit( const comm_packet_t *packet )
 {
@@ -116,45 +128,57 @@ static inline int parse_x_y_params_packet( const comm_packet_t *packet )
 
 static int process_data_packet( const comm_packet_t *packet )
 {
+	int retval;
     if( !packet )
     {
         return( -1 );
     }
 
+	lock();
     switch( packet->type )
     {
         case COMM_COMMAND_DATA:
-            return parse_command_data_packet( packet );
+            retval = parse_command_data_packet( packet );
+			break;
 
         case COMM_R_P_PARAMS:
-            return parse_r_p_params_packet( packet );
+            retval = parse_r_p_params_packet( packet );
+			break;
 
         case COMM_YAW_PARAMS:
-            return parse_yaw_params_packet( packet );
+            retval = parse_yaw_params_packet( packet );
+			break;
 
         case COMM_ALT_PARAMS:
-            return parse_alt_params_packet( packet );
+            retval = parse_alt_params_packet( packet );
+			break;
 
         case COMM_X_Y_PARAMS:
-            return parse_x_y_params_packet( packet );
+            retval = parse_x_y_params_packet( packet );
+			break;
 
         case COMM_IDLE_LIMIT:
-            return set_idle_limit( packet );
+            retval = set_idle_limit( packet );
+			break;
 
         case COMM_TEST_MODE:
-            return set_test_mode( packet );
+            retval = set_test_mode( packet );
+			break;
 
         case COMM_SWITCH_MODE:
-            return set_mode_switch( );
+            retval = set_mode_switch( );
+			break;
 
         case COMM_SHUT_DOWN:
-            return set_shut_down( );
+            retval = set_shut_down( );
+			break;
 
         default:
+			unlock();
             return javiator_port_forward( packet );
     }
-
-    return( -1 );
+	unlock();
+    return( retval );
 }
 
 int terminal_port_tick( void )
@@ -183,6 +207,37 @@ int terminal_port_tick( void )
     return( res );
 }
 
+static int running;
+static pthread_t thread;
+static void *terminal_thread(void *arg)
+{
+	while (running) {
+		comm_channel->poll(comm_channel, 0);
+		terminal_port_tick();
+	}
+
+	return NULL;
+}
+
+static void start_terminal_thread(void)
+{
+	struct sched_param param;
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	
+	sched_getparam(0, &param);
+	if (param.sched_priority > 0) {
+		param.sched_priority--;
+		pthread_attr_setschedparam(&attr, &param);		
+		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+		pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+	}
+
+	pthread_create(&thread, &attr, terminal_thread, NULL);
+
+}
+
 int terminal_port_init( comm_channel_t *channel )
 {
     static int already_initialized = 0;
@@ -201,6 +256,8 @@ int terminal_port_init( comm_channel_t *channel )
         comm_packet.payload  = comm_packet_buf;
         already_initialized  = 1;
 
+		running = 1;
+		start_terminal_thread();
         return( 0 );
     }
 
@@ -263,36 +320,46 @@ int terminal_port_is_shut_down( void )
 
 int terminal_port_get_command_data( command_data_t *data )
 {
+	lock();
     memcpy( data, &command_data, sizeof( *data ) );
     new_command_data = 0;
+	unlock();
     return( 0 );
 }
 
 int terminal_port_get_r_p_params( ctrl_params_t *params )
 {
+	lock();
     memcpy( params, &r_p_params, sizeof( *params ) );
     new_r_p_params = 0;
+	unlock();
     return( 0 );
 }
 
 int terminal_port_get_yaw_params( ctrl_params_t *params )
 {
+	lock();
     memcpy( params, &yaw_params, sizeof( *params ) );
     new_yaw_params = 0;
+	unlock();
     return( 0 );
 }
 
 int terminal_port_get_alt_params( ctrl_params_t *params )
 {
+	lock();
     memcpy( params, &alt_params, sizeof( *params ) );
     new_alt_params = 0;
+	unlock();
     return( 0 );
 }
 
 int terminal_port_get_x_y_params( ctrl_params_t *params )
 {
+	lock();
     memcpy( params, &x_y_params, sizeof( *params ) );
     new_x_y_params = 0;
+	unlock();
     return( 0 );
 }
 
