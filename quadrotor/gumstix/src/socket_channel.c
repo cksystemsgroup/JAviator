@@ -237,10 +237,10 @@ static int socket_flush( comm_channel_t *channel )
     return( 0 );
 }
 
-static int server_socket_poll( comm_channel_t *channel )
+static int server_socket_poll( comm_channel_t *channel, long timeout )
 {
     socket_connection_t *sc = socket_get_connection( channel );
-    struct timeval timeout;
+    struct timeval tv;
     fd_set readfs;
     int maxfd;
 
@@ -249,9 +249,13 @@ static int server_socket_poll( comm_channel_t *channel )
         return( -1 );
     }
 
-    timeout.tv_usec = 100;
-    timeout.tv_sec  = 0;
-
+	if (timeout > 0) {
+	    tv.tv_usec = (timeout * 1000) % 1000000;
+    	tv.tv_sec  = timeout/1000;
+	} else if (timeout < 0) {
+	    tv.tv_usec = 0;
+    	tv.tv_sec  = 0;
+	}
     if( !sc->connected )
     {
         FD_SET( sc->accept_fd, &readfs );
@@ -263,7 +267,7 @@ static int server_socket_poll( comm_channel_t *channel )
         maxfd = sc->fd + 1;
     }
 
-    return select( maxfd, &readfs, NULL, NULL, &timeout );
+    return select( maxfd, &readfs, NULL, NULL, timeout?&tv:0 );
 }
 
 static int client_socket_connect( socket_connection_t *sc )

@@ -126,10 +126,10 @@ static int serial_flush( comm_channel_t *channel )
     return( 0 );
 }
 
-static int serial_poll( comm_channel_t *channel )
+static int serial_poll( comm_channel_t *channel, long timeout )
 {
     serial_connection_t *sc = serial_get_connection( channel );
-    struct timeval timeout;
+    struct timeval tv;
     fd_set readfs;
     int maxfd;
     int res;
@@ -138,13 +138,18 @@ static int serial_poll( comm_channel_t *channel )
     {
         return( -1 );
     }
+	if (timeout > 0) {
+	    tv.tv_usec = (timeout * 1000) % 1000000;
+    	tv.tv_sec  = timeout/1000;
+	} else if (timeout < 0) {
+	    tv.tv_usec = 0;
+    	tv.tv_sec  = 0;
+	}
 
-    timeout.tv_usec = 0;
-    timeout.tv_sec  = 0;
     FD_SET( sc->fd, &readfs );
     maxfd = sc->fd + 1;
 
-    res = select( maxfd, &readfs, NULL, NULL, &timeout );
+    res = select( maxfd, &readfs, NULL, NULL, timeout?&tv:0 );
     return res;
 }
 

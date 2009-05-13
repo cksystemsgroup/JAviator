@@ -310,7 +310,7 @@ static int spi_flush( comm_channel_t *channel )
     return( 0 );
 }
 
-static int spi_poll( comm_channel_t *channel )
+static int spi_poll( comm_channel_t *channel, long timeout )
 {
     return( 0 );
 }

@@ -47,7 +47,7 @@ typedef int (*transmit)( comm_channel_t *channel, const char *buf, int len );
 typedef int (*receive)( comm_channel_t *channel, char *buf, int len );
 typedef int (*start)( comm_channel_t *channel );
 typedef int (*flush)( comm_channel_t *channel );
-typedef int (*poll)( comm_channel_t *channel );
+typedef int (*poll)( comm_channel_t *channel, long poll );
 
 /* Structure for representing a communication channel */
 struct channel
