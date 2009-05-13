@@ -49,9 +49,9 @@
 #include "us_timer.h"
 
 
-#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-#define ADJUST_YAW
+//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+//#define ADJUST_YAW
 #define ADJUST_Z
 //#define FAST_PWM              DO NOT use right now!
 

@@ -1,5 +1,11 @@
 syntax: glob
+traces
+launch
+classes
+CVS
+.cvsignore
 *.o
+*.class
 *.d
 *.hex
 *.elf
