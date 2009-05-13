@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_builddir) $(CONTROLLER_CFLAGS)
 noinst_LIBRARIES = libcontroller-platform.a
 bin_PROGRAMS = control
 control_LDADD = libcontroller-platform.a
-control_LDFLAGS = -lrt -lm
+control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
     butter_filter.c \
     command_data.c \
