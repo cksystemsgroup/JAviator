@@ -834,19 +834,15 @@ static inline void do_io( long long deadline )
 
 static int wait_for_next_period( void )
 {
-    do_io( next_period - IO_JITTER );
-
-    if( sleep_until( next_period ) )
-    {
+    if( sleep_until( next_period ) ) {
         fprintf( stderr, "error in sleep_until\n" );
         exit( 1 );
     }
-
     next_period += us_period;
     return( 0 );
 }
 
-#define NUM_STATS        7
+#define NUM_STATS        8
 #define STAT_IMU         0
 #define STAT_TO_JAV      1
 #define STAT_FROM_JAV    2
@@ -854,19 +850,21 @@ static int wait_for_next_period( void )
 #define STAT_TO_TERM     4
 #define STAT_CONTROL     5
 #define STAT_IO          6
+#define STAT_ALL         7
 
 
 static int loop_count = 0;
-static long long stats[NUM_STATS] = {0,0,0,0,0,0,0};
-static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0};
+static long long stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
 static char *stats_name[NUM_STATS] = {
-    "IMU",
-    "to javiator",
-    "from javiator",
-    "from terminal",
-    "to terminal",
-    "IO",
-    "control"
+    "IMU           ",
+    "to javiator   ",
+    "from javiator ",
+    "from terminal ",
+    "to terminal   ",
+    "control       ",
+    "IO            ",
+	"complete loop "
 };
 
 static void calc_stats(long long time, int id)
@@ -902,6 +900,7 @@ int control_loop_run( )
     next_period    = get_utime( ) + us_period;
     altitude_mode  = ALT_MODE_GROUND;
     long long start, end;
+	long long loop_start;
 
     if( ms_period != CONTROLLER_PERIOD )
     {
@@ -913,7 +912,7 @@ int control_loop_run( )
 
     while( running )
     {
-        start = get_utime();
+        start = loop_start = get_utime();
         if( send_motor_signals( ) )
         {
             break;
@@ -1025,6 +1024,8 @@ int control_loop_run( )
         wait_for_next_period( );
         end = get_utime();
         calc_stats(end-start, STAT_IO);
+
+        calc_stats(end-loop_start, STAT_ALL);
     }
 
     print_stats(loop_count);
