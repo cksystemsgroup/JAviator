@@ -86,11 +86,13 @@ public class ControlTerminal extends Frame
     											"median_z,kalman_z,mode";
 */
     public static final String  DATA_STRING   = "z," +
-                                                "z_filtered," +
-                                                "z_estimated," +
-                                                "dz_estimated,ddz," +
-                                                "ddz_filtered," +
-                                                "uz";
+                                                "z fil," +
+                                                "z est," +
+                                                "dz est," +
+                                                "ddz," +
+                                                "ddz fil," +
+                                                "uz," +
+                                                "z cmd";
 
     public ControlTerminal( )
     {
@@ -378,7 +380,8 @@ public class ControlTerminal extends Frame
 	            (short) data.dz_estimated + ',' +
 	            (short) data.ddz          + ',' +
 	            (short) data.ddz_filtered + ',' +
-	            (short) data.uz           + ',' + '\n';
+	            (short) data.uz           + ',' +
+	            (short) data.z_cmd        + ',' + '\n';
 
 	        try
 	        {

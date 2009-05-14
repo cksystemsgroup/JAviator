@@ -53,7 +53,7 @@
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 //#define ADJUST_YAW
-#define ADJUST_Z
+//#define ADJUST_Z
 //#define FAST_PWM              DO NOT use right now!
 
 /* controller modes */
@@ -707,7 +707,7 @@ static inline double filter_ddz( void )
 
 static inline double filter_dz( double z, double ddz )
 {
-    return apply_kalman_filter( &z_kalman_filter, z, ddz, (double) ms_period / 1000.0 );
+    return apply_kalman_filter( &z_kalman_filter, z, -ddz, (double) ms_period / 1000.0 );
 }
 
 static int compute_motor_signals( void )
@@ -724,7 +724,7 @@ static int compute_motor_signals( void )
 
     z_filtered   = filter_z( );
     ddz_filtered = filter_ddz( );
-    dz_estimated = filter_dz( z_filtered/1000.0, -ddz_filtered/1000.0 );
+    dz_estimated = filter_dz( z_filtered/1000.0, ddz_filtered/1000.0 );
     z_estimated  = z_kalman_filter.z;
 
     if( revving_step < (base_motor_speed / motor_revving_add) )
@@ -794,6 +794,7 @@ static int compute_motor_signals( void )
     trace_data.ddz          = (int16_t)( sensor_data.ddz );
     trace_data.ddz_filtered = (int16_t)( ddz_filtered );
     trace_data.uz           = (int16_t)( uz_new );
+    trace_data.z_cmd        = (int16_t)( command_data.z );
 
     uz_old                  = uz_new;
 
