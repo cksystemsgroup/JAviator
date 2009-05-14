@@ -30,6 +30,7 @@ import javiator.util.ReportToGround;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.CommandData;
+import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
 
@@ -91,6 +92,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
     protected SensorData      sensorData   = null;
     protected MotorSignals    motorSignals = null;
     protected CommandData     motorOffsets = null;
+    protected TraceData       traceData    = null;
 
     protected Transceiver( ControlTerminal parent )
     {
@@ -100,6 +102,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
         sensorData   = new SensorData( );
         motorSignals = new MotorSignals( );
         motorOffsets = new CommandData( );
+        traceData    = new TraceData( );
     }
 
     protected void setLinked( boolean linked )
@@ -221,6 +224,11 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 report.motorOffsets.copyTo( motorOffsets );
                 parent.digitalMeter.setMotorOffsets( motorOffsets );
                 parent.digitalMeter.setStateAndMode( report.stateAndMode.state, report.stateAndMode.mode );
+                break;
+
+            case PacketType.COMM_TRACE_DATA:
+                traceData.fromPacket( packet );
+	            parent.setTraceData( traceData );
                 break;
 
             default:

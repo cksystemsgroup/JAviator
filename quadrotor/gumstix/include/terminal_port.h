@@ -33,6 +33,7 @@
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "ctrl_params.h"
+#include "trace_data.h"
 
 
 int terminal_port_tick( void );
@@ -84,6 +85,8 @@ int terminal_port_send_report(
         const motor_signals_t *signals,
         const command_data_t  *offsets,
         const int state, const int mode );
+
+int terminal_port_send_trace_data( const trace_data_t *data );
 
 int terminal_port_forward( const comm_packet_t *packet );
 

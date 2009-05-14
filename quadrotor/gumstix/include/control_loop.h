@@ -27,12 +27,6 @@
 #define CONTROL_LOOP_H
 
 
-/* Plant parameters */
-#define GRAVITY         9.81    /* [m/s^2] gravitational acceleration */
-#define JAVIATOR_MASS   2.3     /* [kg] total mass of the JAviator */
-#define THRUST_DELAY    0.1     /* [s] delay in response of rotors */
-
-
 int control_loop_setup( int period, int control_z );
 
 int control_loop_run( void );

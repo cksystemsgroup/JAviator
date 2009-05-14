@@ -52,6 +52,7 @@ import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.CommandData;
 import javiator.util.ControlParams;
+import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
 
@@ -71,9 +72,9 @@ public class ControlTerminal extends Frame
 
     public static final boolean SMALL_DISPLAY = true;
     public static final boolean SHOW_3DWINDOW = false;
-    public static final boolean SHOW_DIAGRAMS = true;
+    public static final boolean SHOW_DIAGRAMS = false;
 
-    public static final String  LOG_FILE_NAME = "traces/barometric_sensor.csv";
+    public static final String  LOG_FILE_NAME = "traces/z_dz_ddz_uz.csv";
 /*
     public static final String  DATA_STRING   = "roll,pitch,yaw," +
     											"droll,dpitch,dyaw," +
@@ -84,7 +85,12 @@ public class ControlTerminal extends Frame
     											"navi_roll,navi_pitch,navi_yaw,navi_z," +
     											"median_z,kalman_z,mode";
 */
-    public static final String  DATA_STRING   = "mV";
+    public static final String  DATA_STRING   = "z," +
+                                                "z_filtered," +
+                                                "z_estimated," +
+                                                "dz_estimated,ddz," +
+                                                "ddz_filtered," +
+                                                "uz";
 
     public ControlTerminal( )
     {
@@ -334,10 +340,9 @@ public class ControlTerminal extends Frame
         {
 	        batteryLabel.setForeground( Color.RED );
         }
-
+        /*
         if( logData && logFile != null )
         {
-/*
             ActuatorData   motor = motorMeter.getMotorSignals( );
             NavigationData navi  = getNaviData( );
 	        String         csv   = NIL +
@@ -349,8 +354,6 @@ public class ControlTerminal extends Frame
 	            (short) motor.front + ',' + (short) motor.right  + ',' + (short) motor.rear + ',' + (short) motor.left + ',' +
 	            (short) navi.roll   + ',' + (short) navi.pitch   + ',' + (short) navi.yaw   + ',' + (short) navi.z     + ',' +
 	            (short) data.x      + ',' + (short) data.y       + ',' + motorMeter.getHeliMode() + '\n';
-*/
-        	String csv = NIL;
 
 	        try
 	        {
@@ -359,6 +362,31 @@ public class ControlTerminal extends Frame
 	        catch( Exception e )
 	        {
 	            System.err.println( "ControlTerminal.setSensorData: " + e.getMessage( ) );
+	        }
+        }
+        */
+    }
+
+    public void setTraceData( TraceData data )
+    {
+        if( logData && logFile != null )
+        {
+	        String csv = NIL +
+	            (short) data.z            + ',' +
+	            (short) data.z_filtered   + ',' +
+	            (short) data.z_estimated  + ',' +
+	            (short) data.dz_estimated + ',' +
+	            (short) data.ddz          + ',' +
+	            (short) data.ddz_filtered + ',' +
+	            (short) data.uz           + ',' + '\n';
+
+	        try
+	        {
+	            logFile.write( csv );
+	        }
+	        catch( Exception e )
+	        {
+	            System.err.println( "ControlTerminal.setTraceData: " + e.getMessage( ) );
 	        }
         }
     }

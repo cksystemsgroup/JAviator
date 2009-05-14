@@ -97,7 +97,7 @@ void controller_init( void )
 
     /* register ADC channels */
     adc_add_channel( ADC_CH_MINIA );
-    adc_add_channel( ADC_CH_MPX4115A );
+    /*adc_add_channel( ADC_CH_MPX4115A );*/
     adc_add_channel( ADC_CH_BATTERY );
 
     /* register timer events */
@@ -445,6 +445,7 @@ int main( void )
         }
 
         /* check if new pressure data available */
+#if 0
         if( adc_is_new_data( ADC_CH_MPX4115A ) )
         {
             if( adc_get_data( ADC_CH_MPX4115A, &javiator_data.pressure ) )
@@ -456,7 +457,7 @@ int main( void )
                 javiator_data.state |= JS_NEW_PRESS_DATA;
             }
         }
-
+#endif
         /* check if new battery data available */
         if( adc_is_new_data( ADC_CH_BATTERY ) )
         {

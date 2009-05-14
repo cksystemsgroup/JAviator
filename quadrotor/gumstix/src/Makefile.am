@@ -26,6 +26,7 @@ control_SOURCES = \
     socket_channel.c \
     spi_channel.c \
     terminal_port.c \
+    trace_data.c \
     us_timer.c
 
 libcontroller_platform_a_SOURCES =

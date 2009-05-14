@@ -168,7 +168,21 @@ int terminal_port_tick( void )
     else
     if( res == EAGAIN )
     {
-        res = 0;
+        res = 0;int terminal_port_send_sensor_data( const sensor_data_t *data )
+{
+    char buf[ SENSOR_DATA_SIZE ];
+    comm_packet_t packet;
+
+    sensor_data_to_stream( data, buf, SENSOR_DATA_SIZE );
+
+    packet.type     = COMM_SENSOR_DATA;
+    packet.size     = SENSOR_DATA_SIZE;
+    packet.buf_size = SENSOR_DATA_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
+}
+
     }
     else
     if( res == -1 )
@@ -397,6 +411,21 @@ int terminal_port_send_report(
     }
 
     return( 0 );
+}
+
+int terminal_port_send_trace_data( const trace_data_t *data )
+{
+    char buf[ TRACE_DATA_SIZE ];
+    comm_packet_t packet;
+
+    trace_data_to_stream( data, buf, TRACE_DATA_SIZE );
+
+    packet.type     = COMM_TRACE_DATA;
+    packet.size     = TRACE_DATA_SIZE;
+    packet.buf_size = TRACE_DATA_SIZE;
+    packet.payload  = buf;
+
+    return comm_send_packet( comm_channel, &packet );
 }
 
 int terminal_port_forward( const comm_packet_t *packet )
