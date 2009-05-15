@@ -49,11 +49,12 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-//#define ADJUST_YAW
-//#define ADJUST_Z
+//#define APPLY_LARGE_SIZE_MEDIAN_FILTER
+#define ADJUST_YAW
+#define ADJUST_Z
 //#define FAST_PWM              DO NOT use right now!
 
 /* controller modes */
@@ -64,8 +65,14 @@
 /* filter parameters */
 #define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
-#define MEDIAN_BUFFER_SIZE      9
-#define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
+
+#ifdef APPLY_LARGE_SIZE_MEDIAN_FILTER
+  #define MEDIAN_BUFFER_SIZE      15
+  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+#else
+  #define MEDIAN_BUFFER_SIZE      9
+  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
+#endif
 
 /* plant parameters */
 #define JAVIATOR_MASS           2.3                 /* [kg] total mass of the JAviator */
@@ -88,7 +95,7 @@
 #define FACTOR_LINEAR_RATE      1.0                 /* [?]      --> [?] */
 #define FACTOR_LINEAR_ACCEL     9810.0/4681.0       /* [units]  --> [mm/s^2] (4681=32768000/7000) */
 #define FACTOR_LASER            0.1                 /* [1/10mm] --> [mm] */
-#define FACTOR_SONAR            5000.0/1024.0       /* [0-5V]   --> [mm] */
+#define FACTOR_SONAR            5000.0/1024.0       /* [0-5V] --> [mm] */
 #define FACTOR_PRESSURE         5000.0/1024.0       /* [0-5V]   --> [mm] */
 #define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18V] */
 #define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
@@ -379,23 +386,25 @@ static int get_javiator_data( void )
     /* copy and scale battery level */
     sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
 
-    /* compute sine/cosine values */
-    sin_roll            = sin( sensor_data.roll/1000.0 );
-    cos_roll            = cos( sensor_data.roll/1000.0 );
-    sin_pitch           = sin( sensor_data.pitch/1000.0 );
-    cos_pitch           = cos( sensor_data.pitch/1000.0 );
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    sin_yaw             = sin( sensor_data.yaw/1000.0 );
-    cos_yaw             = cos( sensor_data.yaw/1000.0 );
-#endif
-
 #ifdef ADJUST_YAW
-    adjust_yaw( ); // correct at this place???
+    /* IMPORTANT: yaw angle must be adjusted BEFORE
+       computation of sine/cosine values */
+    adjust_yaw( );
 #endif
 
 #ifdef ADJUST_Z
     adjust_z( );
+#endif
+
+    /* compute sine/cosine values */
+    sin_roll  = sin( sensor_data.roll/1000.0 );
+    cos_roll  = cos( sensor_data.roll/1000.0 );
+    sin_pitch = sin( sensor_data.pitch/1000.0 );
+    cos_pitch = cos( sensor_data.pitch/1000.0 );
+
+#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+    sin_yaw   = sin( sensor_data.yaw/1000.0 );
+    cos_yaw   = cos( sensor_data.yaw/1000.0 );
 #endif
 
     return( 0 );
@@ -449,7 +458,8 @@ static int get_inertial_data( void )
     /* save old angular rates */
     sensor_data.ddroll  = sensor_data.droll;
     sensor_data.ddpitch = sensor_data.dpitch;
-    sensor_data.ddyaw   = sensor_data.dyaw;
+    sensor_data.ddyaw   = sensor_data.dyaw;    /* IMPORTANT: yaw angle must be adjusted BEFORE
+       computation of sine/cosine values */
 
     /* copy and scale angular rates */
     sensor_data.droll   = (int16_t)( inertial_data.droll  * FACTOR_ANGULAR_RATE );
@@ -466,19 +476,21 @@ static int get_inertial_data( void )
     sensor_data.ddy     = (int16_t)( inertial_data.ddy * FACTOR_LINEAR_ACCEL );
     sensor_data.ddz     = (int16_t)( inertial_data.ddz * FACTOR_LINEAR_ACCEL );
 
-    /* compute sine/cosine values */
-    sin_roll            = sin( sensor_data.roll/1000.0 );
-    cos_roll            = cos( sensor_data.roll/1000.0 );
-    sin_pitch           = sin( sensor_data.pitch/1000.0 );
-    cos_pitch           = cos( sensor_data.pitch/1000.0 );
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    sin_yaw             = sin( sensor_data.yaw/1000.0 );
-    cos_yaw             = cos( sensor_data.yaw/1000.0 );
+#ifdef ADJUST_YAW
+    /* IMPORTANT: yaw angle must be adjusted BEFORE
+       computation of sine/cosine values */
+    adjust_yaw( );
 #endif
 
-#ifdef ADJUST_YAW
-    adjust_yaw( );
+    /* compute sine/cosine values */
+    sin_roll  = sin( sensor_data.roll/1000.0 );
+    cos_roll  = cos( sensor_data.roll/1000.0 );
+    sin_pitch = sin( sensor_data.pitch/1000.0 );
+    cos_pitch = cos( sensor_data.pitch/1000.0 );
+
+#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+    sin_yaw   = sin( sensor_data.yaw/1000.0 );
+    cos_yaw   = cos( sensor_data.yaw/1000.0 );
 #endif
 
     return( 0 );
@@ -512,7 +524,11 @@ static void filter_and_assign_commands(
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
-    static command_data_t commands = { 0, 0, 0, 0 };    
+    static command_data_t commands = { 0, 0, 0, 0 };
+
+#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+    int16_t rotated_roll, rotated_pitch;
+#endif
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -562,12 +578,16 @@ static int get_command_data( void )
 
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
     /* apply rotation matrix to roll and pitch commands */
-    command_data.roll  = (int16_t)( command_data.roll  * cos_yaw
-                                  - command_data.pitch * sin_yaw );
-    command_data.pitch = (int16_t)( command_data.roll  * sin_yaw
-                                  + command_data.pitch * cos_yaw );
+    rotated_roll  = (int16_t)( command_data.roll  * cos_yaw
+                             + command_data.pitch * sin_yaw );
+    rotated_pitch = (int16_t)( command_data.roll  * sin_yaw
+                             - command_data.pitch * cos_yaw );
+
+    command_data.roll  =  rotated_roll;
+    command_data.pitch = -rotated_pitch;
 #endif
 
+    /* check for new control parameters */
     get_control_params( );
 
     return( 0 );
@@ -649,9 +669,9 @@ static inline double filter_z( void )
     int i, j;
 
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-    sensor_data.z = (int16_t)( -SONAR_POS_ROLL  * sin_pitch
-                             +  SONAR_POS_PITCH * cos_pitch * sin_roll
-                             +  sensor_data.z   * cos_pitch * cos_roll );
+    sensor_data.z = (int16_t)( SONAR_POS_ROLL  * sin_pitch * -1.0
+                             + SONAR_POS_PITCH * cos_pitch * sin_roll
+                             + sensor_data.z   * cos_pitch * cos_roll );
 #endif
 
     for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
@@ -688,17 +708,16 @@ static inline double filter_z( void )
         median_buffer[j] = sensor_data.z;
     }
 
-    return( (double) median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ] );
+    return( (double) median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ] / 1000.0 );
 }
 
 static inline double filter_ddz( void )
 {
     static double filtered_ddz = 0;
 
-    double new_ddz = GRAVITY
-        - sensor_data.ddx * sin_pitch
-        + sensor_data.ddy * cos_pitch * sin_roll
-        + sensor_data.ddz * cos_pitch * cos_roll;
+    double new_ddz = ( sensor_data.ddx * sin_pitch * -1.0
+                     + sensor_data.ddy * cos_pitch * sin_roll
+                     + sensor_data.ddz * cos_pitch * cos_roll ) / 1000.0 + GRAVITY;
 
     filtered_ddz = filtered_ddz + FILTER_FACTOR_DDZ * (new_ddz - filtered_ddz);
 
@@ -707,7 +726,7 @@ static inline double filter_ddz( void )
 
 static inline double filter_dz( double z, double ddz )
 {
-    return apply_kalman_filter( &z_kalman_filter, z, -ddz, (double) ms_period / 1000.0 );
+    return apply_kalman_filter( &z_kalman_filter, z, ddz, ms_period / 1000.0 );
 }
 
 static int compute_motor_signals( void )
@@ -724,7 +743,7 @@ static int compute_motor_signals( void )
 
     z_filtered   = filter_z( );
     ddz_filtered = filter_ddz( );
-    dz_estimated = filter_dz( z_filtered/1000.0, ddz_filtered/1000.0 );
+    dz_estimated = filter_dz( z_filtered, -ddz_filtered );
     z_estimated  = z_kalman_filter.z;
 
     if( revving_step < (base_motor_speed / motor_revving_add) )
@@ -747,7 +766,7 @@ static int compute_motor_signals( void )
         if( compute_z )
         {
             uz_new = base_motor_speed + do_control( &ctrl_z, z_estimated,
-                command_data.z/1000.0, dz_estimated, ddz_filtered/1000.0 )*1000.0;
+                command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
         }
         else
         {
@@ -788,11 +807,11 @@ static int compute_motor_signals( void )
     motor_offsets.z         = (int16_t)( uz_new );
 
     trace_data.z            = (int16_t)( sensor_data.z );
-    trace_data.z_filtered   = (int16_t)( z_filtered );
+    trace_data.z_filtered   = (int16_t)( z_filtered*1000.0 );
     trace_data.z_estimated  = (int16_t)( z_estimated*1000.0 );
     trace_data.dz_estimated = (int16_t)( dz_estimated*1000.0 );
     trace_data.ddz          = (int16_t)( sensor_data.ddz );
-    trace_data.ddz_filtered = (int16_t)( ddz_filtered );
+    trace_data.ddz_filtered = (int16_t)( ddz_filtered*1000.0 );
     trace_data.uz           = (int16_t)( uz_new );
     trace_data.z_cmd        = (int16_t)( command_data.z );
 
