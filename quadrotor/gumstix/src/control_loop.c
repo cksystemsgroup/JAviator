@@ -37,10 +37,10 @@
 #include "communication.h"
 #include "javiator_port.h"
 #include "terminal_port.h"
-//#include "inertial_port.h"
+#include "inertial_port.h"
 #include "command_data.h"
 #include "javiator_data.h"
-//#include "inertial_data.h"
+#include "inertial_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "ctrl_params.h"
@@ -760,20 +760,20 @@ static inline double filter_dz( double z, double ddz )
 
 static int compute_motor_signals( void )
 {
-    double zFiltered   = 0;    // median-filtered z
-    double zEst        = 0;    // kalman-estimated z
-    double dzEst       = 0;    // kalman-estimated dz
-    double ddzFiltered = 0;    // low-pass-filtered ddz
-    double uRoll       = 0;
-    double uPitch      = 0;
-    double uYaw        = 0;
-    double uZnew       = 0;
+    double z_filtered    = 0;    // median-filtered z
+    double z_estimated   = 0;    // kalman-estimated z
+    double dz_estimated = 0;    // kalman-estimated dz
+    double ddz_filtered  = 0;    // low-pass-filtered ddz
+    double uroll         = 0;
+    double upitch        = 0;
+    double uyaw          = 0;
+    double uz_new        = 0;
     int    i, signals[4];
 
-    zFiltered   = filter_z( );                          // apply median filter
-    ddzFiltered = filter_ddz( );                        // apply low-pass filter
-    dzEst       = filter_dz( zFiltered, -ddzFiltered ); // apply kalman filter
-    zEst        = z_kalman_filter.z;                    // use z from kalman filter
+    z_filtered   = filter_z( );                          // apply median filter
+    ddz_filtered = filter_ddz( );                        // apply low-pass filter
+    dz_estimated       = filter_dz( z_filtered, -ddz_filtered ); // apply kalman filter
+    z_estimated = z_kalman_filter.z;                    // use z from kalman filter
 
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
