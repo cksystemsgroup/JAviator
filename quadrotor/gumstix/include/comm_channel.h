@@ -36,10 +36,11 @@ typedef struct channel comm_channel_t;
 /* Enums for indicating a specific channel type */
 typedef enum
 {
-    CH_SPI,
+    CH_SPI = 1,
+    CH_SPI_DEV,
     CH_SERIAL,
     CH_SOCKET,
-
+	CH_MAX_TYPE,
 } channel_type_t;
 
 /* Function pointers used by a communication channel */

@@ -96,6 +96,7 @@ redo:
         packet->bytes_in_payload = 0;
     }
 
+//	printf("state %d\n", packet->state);
     switch( packet->state )
     {
         case st_MARK1:

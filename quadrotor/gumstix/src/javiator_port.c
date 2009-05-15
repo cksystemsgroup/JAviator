@@ -27,6 +27,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
+#include <sched.h>
 
 #include "../shared/protocol.h"
 #include "../shared/transfer.h"
@@ -113,6 +115,40 @@ int javiator_port_send_motor_signals( const motor_signals_t *signals )
     return comm_send_packet( comm_channel, &packet );
 }
 
+static int running;
+static pthread_t thread;
+static void *javiator_thread(void *arg)
+{
+	int res;
+	while (running) {
+		comm_channel->poll(comm_channel, 0);
+		
+		res = comm_recv_packet( comm_channel, &comm_packet );
+	}
+
+	return NULL;
+}
+
+static void start_javiator_thread(void)
+{
+	struct sched_param param;
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	
+	sched_getparam(0, &param);
+	if (param.sched_priority > 0) {
+		param.sched_priority++;
+		pthread_attr_setschedparam(&attr, &param);		
+		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+		pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+	}
+
+	pthread_create(&thread, &attr, javiator_thread, NULL);
+
+}
+
+
 int javiator_port_init( comm_channel_t *channel )
 {
     motor_signals_t signals = { 0, 0, 0, 0 };
@@ -162,7 +198,7 @@ int javiator_port_get_data( javiator_data_t *data )
 
         if( res == EAGAIN )
         {
-            if( ++attempts > 10 )
+            if( ++attempts > 1000 )
             {
                 return( -1 );
             }
@@ -175,8 +211,7 @@ int javiator_port_get_data( javiator_data_t *data )
         {
             return( -1 );
         }
-    }
-    while( !new_data );
+    } while( !new_data );
 
     memcpy( data, &javiator_data, sizeof( *data ) );
     new_data = 0;

@@ -25,6 +25,7 @@ control_SOURCES = \
     serial_channel.c \
     socket_channel.c \
     spi_channel.c \
+    spi_dev_channel.c \
     terminal_port.c \
     us_timer.c
 

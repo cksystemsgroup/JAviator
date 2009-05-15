@@ -140,7 +140,32 @@ static double cos_yaw   = 0;
 static double sin_yaw   = 0;
 #endif
 
+#define NUM_STATS        8
+#define STAT_IMU         0
+#define STAT_TO_JAV      1
+#define STAT_FROM_JAV    2
+#define STAT_FROM_TERM   3
+#define STAT_TO_TERM     4
+#define STAT_CONTROL     5
+#define STAT_SLEEP       6
+#define STAT_ALL         7
+
+
+static int loop_count = 0;
+static long long stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
+static char *stats_name[NUM_STATS] = {
+    "IMU           ",
+    "to javiator   ",
+    "from javiator ",
+    "from terminal ",
+    "to terminal   ",
+    "control       ",
+    "sleep time    ",
+	"complete loop "
+};
 static void signal_handler(int num);
+static void print_stats(void);
 
 /****************************************
  *    control loop code                 *
@@ -312,10 +337,11 @@ static int get_javiator_data( void )
         return( res );
     }
 
+#if 0
     if( javiator_data.id != (int16_t)( last_id + 1 ) )
     {
         fprintf( stderr, "WARNING: control loop lost %d JAviator packet(s)\n",
-            javiator_data.id - last_id );
+            javiator_data.id - last_id -1 );
         now = get_utime( );
 
         if( now - last_run > us_period )
@@ -324,6 +350,7 @@ static int get_javiator_data( void )
                 now - last_run, now - last_run - us_period );
         }
     }
+#endif
 
     last_run = get_utime( );
     last_id  = javiator_data.id;
@@ -522,6 +549,11 @@ static int get_command_data( void )
     else
     if( terminal_port_is_mode_switch( ) )
     {
+		printf("Mode Switch...\n");
+		print_stats();
+		loop_count = 0;
+		memset(stats, 0, sizeof(stats));
+		memset(max_stats, 0, sizeof(max_stats));
         switch( altitude_mode )
         {
             case ALT_MODE_GROUND:
@@ -842,54 +874,30 @@ static int wait_for_next_period( void )
     return( 0 );
 }
 
-#define NUM_STATS        8
-#define STAT_IMU         0
-#define STAT_TO_JAV      1
-#define STAT_FROM_JAV    2
-#define STAT_FROM_TERM   3
-#define STAT_TO_TERM     4
-#define STAT_CONTROL     5
-#define STAT_IO          6
-#define STAT_ALL         7
-
-
-static int loop_count = 0;
-static long long stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
-static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
-static char *stats_name[NUM_STATS] = {
-    "IMU           ",
-    "to javiator   ",
-    "from javiator ",
-    "from terminal ",
-    "to terminal   ",
-    "control       ",
-    "IO            ",
-	"complete loop "
-};
 
 static void calc_stats(long long time, int id)
 {
     stats[id] += time;
 
-    if(loop_count > 20 && time > max_stats[id]) // drop the first few stats for max calculation
+    if(loop_count > 10 && time > max_stats[id]) 
+		// drop the first few stats for max calculation
         max_stats[id] = time;
 }
 
-static void print_stats(int loops)
+static void print_stats()
 {
     int i;
-    if (loops) {
-        printf("Loop Statistics: \n\n");
+    if (loop_count) {
+        printf("Loop Statistics:\n");
         for (i=0;i<NUM_STATS; ++i) {
-            printf("\t%s %8lld us\tmax %8lldus\n", stats_name[i], stats[i]/loops, max_stats[i]);
+            printf("\t%s %8lld us\tmax %8lldus\n", stats_name[i], stats[i]/loop_count, max_stats[i]);
         }
     }
 }
 
-
 static void signal_handler(int num)
 {
-    print_stats(loop_count);
+    print_stats();
 }
 
 /* the control loop for our helicopter */
@@ -1013,22 +1021,22 @@ int control_loop_run( )
         send_report_to_terminal( );
         end = get_utime();
         calc_stats(end - start, STAT_TO_TERM);
+        calc_stats(end-loop_start, STAT_ALL);
+
+        start = get_utime();
+        wait_for_next_period( );
+        end = get_utime();
+        calc_stats(end-start, STAT_SLEEP);
+
 
         if (++loop_count < 0) {
             printf("WARNING: stats overrun\n");
             loop_count = 0;
             memset(stats, 0, sizeof(stats));
         }
-
-        start = get_utime();
-        wait_for_next_period( );
-        end = get_utime();
-        calc_stats(end-start, STAT_IO);
-
-        calc_stats(end-loop_start, STAT_ALL);
     }
 
-    print_stats(loop_count);
+    print_stats();
 
     return( 0 );
 }

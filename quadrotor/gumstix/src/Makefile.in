@@ -64,7 +64,8 @@ am_control_OBJECTS = butter_filter.$(OBJEXT) command_data.$(OBJEXT) \
 	pid_controller.$(OBJEXT) pidd_controller.$(OBJEXT) \
 	sensor_data.$(OBJEXT) serial_channel.$(OBJEXT) \
 	socket_channel.$(OBJEXT) spi_channel.$(OBJEXT) \
-	terminal_port.$(OBJEXT) us_timer.$(OBJEXT)
+	spi_dev_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
+	us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -208,6 +209,7 @@ control_SOURCES = \
     serial_channel.c \
     socket_channel.c \
     spi_channel.c \
+    spi_dev_channel.c \
     terminal_port.c \
     us_timer.c
 
@@ -304,6 +306,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_channel.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_dev_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/terminal_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/us_timer.Po@am__quote@
 
