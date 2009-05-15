@@ -1,4 +1,5 @@
 syntax: glob
+.metadata
 traces
 launch
 classes
