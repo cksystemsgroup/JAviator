@@ -1,7 +1,7 @@
 
 TARGET = robostix
 
-COMMON_OBJS = ports.o adc.o timer.o serial.o dm3gx1.o minia.o pwm.o leds.o
+COMMON_OBJS = ports.o adc.o timer.o serial.o dm3gx1.o minia.o pwm.o leds.o spi.o
 
 include Rules.mk
 
