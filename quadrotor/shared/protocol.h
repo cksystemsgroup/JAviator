@@ -51,18 +51,19 @@
 #define COMM_MOTOR_OFFSETS  0x06    /* transmission of motor offsets */
 #define COMM_STATE_MODE     0x07    /* transmission of state and mode */
 #define COMM_GROUND_REPORT  0x08    /* transmission of ground report */
-#define COMM_COMMAND_DATA   0x09    /* transmission of command data */
-#define COMM_R_P_PARAMS     0x0A    /* transmission of roll/pitch params */
-#define COMM_YAW_PARAMS     0x0B    /* transmission of yaw params */
-#define COMM_ALT_PARAMS     0x0C    /* transmission of altitude params */
-#define COMM_X_Y_PARAMS     0x0D    /* transmission of x/y params */
-#define COMM_IDLE_LIMIT     0x0E    /* transmission of idle limit */
-#define COMM_STREAM         0x0F    /* transmission of arbitrary stream */
-#define COMM_SWITCH_MODE    0x10    /* request to perform a mode switch */
-#define COMM_TEST_MODE      0x11    /* request to switch into test mode */
-#define COMM_SHUT_DOWN      0x12    /* request to perform a shut-down */
-#define COMM_EN_SENSORS     0x13    /* request to enable/disable senors */
-#define COMM_PACKET_LIMIT   0x13    /* limit of valid packet identifiers */
+#define COMM_TRACE_DATA     0x09    /* transmission of trace data */
+#define COMM_COMMAND_DATA   0x0A    /* transmission of command data */
+#define COMM_R_P_PARAMS     0x0B    /* transmission of roll/pitch params */
+#define COMM_YAW_PARAMS     0x0C    /* transmission of yaw params */
+#define COMM_ALT_PARAMS     0x0D    /* transmission of altitude params */
+#define COMM_X_Y_PARAMS     0x0E    /* transmission of x/y params */
+#define COMM_IDLE_LIMIT     0x0F    /* transmission of idle limit */
+#define COMM_STREAM         0x10    /* transmission of arbitrary stream */
+#define COMM_SWITCH_MODE    0x11    /* request to perform a mode switch */
+#define COMM_TEST_MODE      0x12    /* request to switch into test mode */
+#define COMM_SHUT_DOWN      0x13    /* request to perform a shut-down */
+#define COMM_EN_SENSORS     0x14    /* request to enable/disable senors */
+#define COMM_PACKET_LIMIT   0x14    /* limit of valid packet identifiers */
 #define COMM_PACKET_MARK    0xFF    /* used to mark a packet's begin */
 
 

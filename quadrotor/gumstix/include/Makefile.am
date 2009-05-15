@@ -20,5 +20,6 @@ nobase_noinst_HEADERS = \
     socket_channel.h \
     spi_channel.h \
     terminal_port.h \
+    trace_data.h \
     us_timer.h
 
