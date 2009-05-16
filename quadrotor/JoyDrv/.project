@@ -3,6 +3,7 @@
 	<name>JoyDrv</name>
 	<comment></comment>
 	<projects>
+		<project>ControlTerminal</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

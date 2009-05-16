@@ -3,7 +3,8 @@
 	<name>ControlTerminal</name>
 	<comment></comment>
 	<projects>
-		<project>JControl</project>
+		<project>JAviator3D</project>
+		<project>JoyDrv</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

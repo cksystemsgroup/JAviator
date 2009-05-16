@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+<<<<<<< /home/rtrummer/workspace/JAviator/quadrotor/ControlTerminal/.classpath
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/JoyDrv"/>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/JAviator3D"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-6-sun"/>
+=======
 	<classpathentry combineaccessrules="false" kind="src" path="/JoyDrv"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/JAviator3D"/>
+<<<<<<< /home/rtrummer/workspace/JAviator/quadrotor/ControlTerminal/.classpath
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+>>>>>>> /tmp/.classpath~other.LvqNhg
+=======
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+>>>>>>> /tmp/.classpath~other.GA5Z_8
 	<classpathentry kind="output" path="classes"/>
 </classpath>

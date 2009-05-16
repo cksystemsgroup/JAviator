@@ -49,7 +49,7 @@
 #include "us_timer.h"
 
 #define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 //#define APPLY_LARGE_SIZE_MEDIAN_FILTER
 #define ADJUST_YAW
@@ -96,8 +96,8 @@
 #define FACTOR_LINEAR_RATE      1.0                 /* [?]      --> [?] */
 #define FACTOR_LINEAR_ACCEL     9810.0/4681.0       /* [units]  --> [mm/s^2] (4681=32768000/7000) */
 #define FACTOR_LASER            0.1                 /* [1/10mm] --> [mm] */
-#define FACTOR_SONAR            5000.0/1024.0       /* [0-5V] --> [mm] */
-#define FACTOR_PRESSURE         5000.0/1024.0       /* [0-5V]   --> [mm] */
+#define FACTOR_SONAR            7000.0/1024.0       /* [0-5V]   --> [0-7000mm] */
+#define FACTOR_PRESSURE         1.0                 /* [0-5V]   --> [0-???] */
 #define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18V] */
 #define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
 
@@ -142,10 +142,10 @@ static motor_signals_t  motor_signals;
 static command_data_t   motor_offsets;
 static trace_data_t     trace_data;
 
-static double   sin_roll  = 0;
-static double   cos_roll  = 0;
-static double   sin_pitch = 0;
-static double   cos_pitch = 0;
+static double sin_roll  = 0;
+static double cos_roll  = 0;
+static double sin_pitch = 0;
+static double cos_pitch = 0;
 
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 static double sin_yaw   = 0;
@@ -762,7 +762,7 @@ static int compute_motor_signals( void )
 {
     double z_filtered    = 0;    // median-filtered z
     double z_estimated   = 0;    // kalman-estimated z
-    double dz_estimated = 0;    // kalman-estimated dz
+    double dz_estimated  = 0;    // kalman-estimated dz
     double ddz_filtered  = 0;    // low-pass-filtered ddz
     double uroll         = 0;
     double upitch        = 0;
@@ -772,8 +772,8 @@ static int compute_motor_signals( void )
 
     z_filtered   = filter_z( );                          // apply median filter
     ddz_filtered = filter_ddz( );                        // apply low-pass filter
-    dz_estimated       = filter_dz( z_filtered, -ddz_filtered ); // apply kalman filter
-    z_estimated = z_kalman_filter.z;                    // use z from kalman filter
+    dz_estimated = filter_dz( z_filtered, -ddz_filtered ); // apply kalman filter
+    z_estimated  = z_kalman_filter.z;                    // use z from kalman filter
 
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
