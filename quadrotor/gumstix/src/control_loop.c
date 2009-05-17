@@ -44,6 +44,7 @@
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "ctrl_params.h"
+#include "trace_data.h"
 #include "filter_params.h"
 #include "kalman_filter.h"
 #include "us_timer.h"
@@ -52,6 +53,7 @@
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 //#define APPLY_LARGE_SIZE_MEDIAN_FILTER
+//#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
 //#define FAST_PWM              DO NOT use right now!
@@ -760,26 +762,50 @@ static inline double filter_dz( double z, double ddz )
 
 static int compute_motor_signals( void )
 {
-    double z_filtered    = 0;    // median-filtered z
-    double z_estimated   = 0;    // kalman-estimated z
-    double dz_estimated  = 0;    // kalman-estimated dz
-    double ddz_filtered  = 0;    // low-pass-filtered ddz
-    double uroll         = 0;
-    double upitch        = 0;
-    double uyaw          = 0;
-    double uz_new        = 0;
-    int    i, signals[4];
+    double z_filtered   = 0;    /* median-filtered z */
+    double z_estimated  = 0;    /* kalman-estimated z */
+    double dz_estimated = 0;    /* kalman-estimated dz */
+    double ddz_filtered = 0;    /* low-pass-filtered ddz */
+    double uroll        = 0;
+    double upitch       = 0;
+    double uyaw         = 0;
+    double uz_new       = 0;
+    int i, signals[4];
 
-    z_filtered   = filter_z( );                          // apply median filter
-    ddz_filtered = filter_ddz( );                        // apply low-pass filter
-    dz_estimated = filter_dz( z_filtered, -ddz_filtered ); // apply kalman filter
-    z_estimated  = z_kalman_filter.z;                    // use z from kalman filter
+    z_filtered   = filter_z( );
+    ddz_filtered = filter_ddz( );
+    dz_estimated = filter_dz( z_filtered, -ddz_filtered );
+    z_estimated  = z_kalman_filter.z;
 
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+    /* If the z-value measured by the sonar sensor is less
+       than 1cm, then the heli is still settled and has not
+       lifted off so far or it is hovering the remaining
+       13cm (minimum sonar range) over the ground. */
+    if( z_estimated < 0.01 )
+    {
+        /* If the z-command issued by the user is greater
+           than 0, then the heli will be revved up until
+           the z-value measured by the sonar sensor exceeds
+           1cm, otherwise it is assumed the user wants to
+           land and the heli is revved down until it
+           settles on the ground. */
+        if( command_data.z > 0 )
+        {
+            uz_new = uz_old + motor_revving_add;
+        }
+        else
+        {
+            uz_new = uz_old - motor_revving_add;
+        }
+    }
+#else
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
         uz_new = uz_old + motor_revving_add;
         ++revving_step;
     }
+#endif
     else
     {
         uroll  = do_control( &ctrl_roll,
@@ -1050,6 +1076,7 @@ int control_loop_run( )
 
         start = get_utime();
         send_report_to_terminal( );
+        send_trace_data_to_terminal( );
         end = get_utime();
         calc_stats(end - start, STAT_TO_TERM);
         calc_stats(end-loop_start, STAT_ALL);

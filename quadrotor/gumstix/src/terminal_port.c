@@ -33,9 +33,8 @@
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"
-
-#include "terminal_port.h"
 #include "inertial_port.h"
+#include "terminal_port.h"
 
 static command_data_t   command_data;
 static ctrl_params_t    r_p_params;
@@ -192,7 +191,9 @@ int terminal_port_tick( void )
     else
     if( res == EAGAIN )
     {
-        res = 0;int terminal_port_send_sensor_data( const sensor_data_t *data )
+        res = 0;
+/*
+int terminal_port_send_sensor_data( const sensor_data_t *data )
 {
     char buf[ SENSOR_DATA_SIZE ];
     comm_packet_t packet;
@@ -206,7 +207,7 @@ int terminal_port_tick( void )
 
     return comm_send_packet( comm_channel, &packet );
 }
-
+*/
     }
     else
     if( res == -1 )
