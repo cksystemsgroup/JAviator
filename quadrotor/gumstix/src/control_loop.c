@@ -66,8 +66,6 @@
 /* filter parameters */
 #define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
-#define MEDIAN_BUFFER_SIZE      9
-#define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
 
 #ifdef APPLY_LARGE_SIZE_MEDIAN_FILTER
   #define MEDIAN_BUFFER_SIZE      15
@@ -300,6 +298,50 @@ static void get_control_params( void )
     }
 }
 
+/* TODO: make median buffer generic for general usage
+         (also used to filter sensor_data.z ) */
+static void filter_battery( )
+{
+    static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
+    int i, j;
+
+    for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
+    {
+        if( sensor_data.battery < median_buffer[i] )
+        {
+            break;
+        }
+    }
+
+    if( i < MEDIAN_BUFFER_SIZE )
+    {
+        j = MEDIAN_BUFFER_SIZE - 1;
+
+        while( j > i )
+        {
+            median_buffer[j] = median_buffer[j-1];
+            --j;
+        }
+
+        median_buffer[j] = sensor_data.battery;
+    }
+    else
+    {
+        i = MEDIAN_BUFFER_SIZE - 1;
+        j = 0;
+
+        while( j < i )
+        {
+            median_buffer[j] = median_buffer[j+1];
+            ++j;
+        }
+
+        median_buffer[j] = sensor_data.battery;
+    }
+
+    sensor_data.battery = median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ];
+}
+
 #ifdef ADJUST_YAW
 static void adjust_yaw( )
 {
@@ -342,7 +384,7 @@ static int get_javiator_data( void )
 {
     static long long last_run = 0;
     static int16_t   last_id  = 0;
-    long long        now;
+    //long long        now;
     int              res;
 
     res = javiator_port_get_data( &javiator_data );
@@ -413,6 +455,9 @@ static int get_javiator_data( void )
 
     /* copy and scale battery level */
     sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
+
+    /* apply filter to battery data */
+    filter_battery( );
 
 #ifdef ADJUST_YAW
     /* IMPORTANT: yaw angle must be adjusted BEFORE
@@ -694,6 +739,8 @@ static inline double do_control( struct controller *ctrl,
     return ctrl->control( ctrl, current_angle, desired_angle, angular_velocity, angular_acceleration );
 }
 
+/* TODO: make median buffer generic for general usage
+         (also used to filter sensor_data.battery ) */
 static inline double filter_z( void )
 {
     static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;

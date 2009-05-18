@@ -3,7 +3,6 @@
 	<name>JAviator3D</name>
 	<comment></comment>
 	<projects>
-		<project>ControlTerminal</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
