@@ -156,6 +156,7 @@ static double cos_yaw   = 0;
 
 /* function pointer */
 static void signal_handler( int num );
+static void int_handler(int num);
 
 #define NUM_STATS        8
 #define STAT_IMU         0
@@ -225,6 +226,11 @@ int control_loop_setup( int period, int control_z )
 
     if (sigaction(SIGUSR1, &act, NULL))
         perror("sigaction");
+
+	act.sa_handler  = int_handler;
+    if (sigaction(SIGINT, &act, NULL))
+        perror("sigaction");
+
 
     return( 0 );
 }
@@ -353,8 +359,7 @@ static int get_javiator_data( void )
         return( res );
     }
 
-#if 0
-    if( javiator_data.id != (int16_t)( last_id + 1 ) )
+    if( javiator_data.id != (int16_t)(last_id + 1) )
     {
         fprintf( stderr, "WARNING: control loop lost %d JAviator packet(s)\n",
             javiator_data.id - last_id -1 );
@@ -366,7 +371,6 @@ static int get_javiator_data( void )
                 now - last_run, now - last_run - us_period );
         }
     }
-#endif
 
     last_run = get_utime( );
     last_id  = javiator_data.id;
@@ -955,6 +959,11 @@ static void print_stats()
 static void signal_handler(int num)
 {
     print_stats();
+}
+
+static void int_handler(int num)
+{
+	running = 0;
 }
 
 /* the control loop for our helicopter */
