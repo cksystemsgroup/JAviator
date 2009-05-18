@@ -83,7 +83,8 @@
 #define GRAVITY                 9.81                /* [m/s^2] gravitational acceleration */
 
 /* controller parameters */
-#define COMMAND_THRESHOLD       35                  /* max delay (iterations to wait) */
+#define ALTITUDE_THRESHOLD      3000                /* [mm] threshold for accepting sonar signals */
+#define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
 #define MRAD_PI                 3142                /* [mrad] */
 #define IO_JITTER               1000                /* [us] I/O time window */
 #define IMU_DELAY               10                  /* [ms] */
@@ -386,6 +387,7 @@ static int get_javiator_data( void )
     static int16_t   last_id  = 0;
     //long long        now;
     int              res;
+    int16_t          sonar_signal;
 
     res = javiator_port_get_data( &javiator_data );
 
@@ -441,7 +443,13 @@ static int get_javiator_data( void )
     /* copy and scale positions */
     sensor_data.x       = 0;
     sensor_data.y       = 0;
-    sensor_data.z       = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+    sonar_signal        = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+
+    /* check for valid sonar signal */
+    if( sonar_signal < ALTITUDE_THRESHOLD )
+    {
+        sensor_data.z   = sonar_signal;
+    }
 
     /* compute linear rates */
     sensor_data.dx      = (int16_t)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );

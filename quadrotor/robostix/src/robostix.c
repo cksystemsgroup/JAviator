@@ -33,11 +33,11 @@
 #include "adc.h"
 #include "timer.h"
 #include "serial.h"
+#include "spi.h"
 #include "dm3gx1.h"
 #include "minia.h"
 #include "pwm.h"
 #include "leds.h"
-#include "spi.h"
 
 
 /*****************************************************************************/
@@ -89,9 +89,9 @@ void controller_init( void )
     /* initialize hardware */
     ports_init( );
     adc_init( );
-	spi_init( );
     timer_init( );
     serial_init( );
+	spi_init( );
     dm3gx1_init( );
     minia_init( );
     pwm_init( );
@@ -121,10 +121,9 @@ void process_data_packet( void )
     static uint16_t valid_packets = 0;
     uint8_t  packet[ COMM_BUF_SIZE ], size;
     uint16_t checksum;
-	LED_TOGGLE( BLUE );
 
     /* receive packet from communication interface */
-    if( serial_recv_packet( packet ) && spi_recv_packet(packet) )
+    if( serial_recv_packet( packet ) && spi_recv_packet( packet ) )
     {
         javiator_data.error |= JE_RECEIVE_PACKET;
         return;
@@ -229,7 +228,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
         }
     }
 
-    /* send JAviator data to controller */
+    /* send JAviator data to the Gumstix */
     send_javiator_data( );
 }
 
@@ -386,7 +385,7 @@ void send_javiator_data( void )
 
     /* send JAviator data to the Gumstix */
     serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
-	spi_send_packet(COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE);
+	spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
 
     /* clear state and error indicator */
     javiator_data.state = 0;
@@ -417,7 +416,7 @@ int main( void )
         }
 
         /* check if a new packet is available */
-        if( serial_is_new_packet( ) || spi_is_new_packet( ))
+        if( serial_is_new_packet( ) || spi_is_new_packet( ) )
         {
             process_data_packet( );
         }
