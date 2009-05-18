@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry exported="true" kind="lib" path="Joystick.jar" sourcepath=""/>
-<<<<<<< /home/rtrummer/workspace/JAviator/quadrotor/JoyDrv/.classpath
-<<<<<<< /home/rtrummer/workspace/JAviator/quadrotor/JoyDrv/.classpath
-	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-6-sun"/>
-=======
+	<classpathentry kind="src" path=""/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
->>>>>>> /tmp/.classpath~other.lN3XI_
-=======
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
->>>>>>> /tmp/.classpath~other.ZLX-dt
 	<classpathentry kind="output" path="bin"/>
 </classpath>
