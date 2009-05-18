@@ -152,7 +152,7 @@ redo:
             retval = EAGAIN;
             res = _receive( channel, &c, 1 );
             if( res != 1 )
-            { 
+            {
                 break;
             }
             if( c > packet->buf_size )

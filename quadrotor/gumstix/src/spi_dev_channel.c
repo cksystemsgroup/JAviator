@@ -40,19 +40,99 @@
 
 #define DEV_NAME "/dev/robostix-spi2.0"
 #define BUF_SIZE 64
+#define N_BUF    2
 
 #include "../shared/protocol.h"
 #include "spi_channel.h"
 
-struct spi_connection
+struct spi_data;
+struct spi_data
 {
 	uint8_t rx_buf[BUF_SIZE];
-    int  fd;
 	int r_idx;
 	int data_ready;
+	struct spi_data *next;
 };
 
-struct spi_connection connection;
+struct spi_connection
+{
+    int  fd;
+	struct spi_data data[N_BUF];
+	struct spi_data *free;
+	struct spi_data *pending;
+	pthread_mutex_t lock;
+};
+
+static inline void lock(struct spi_connection *sc)
+{
+	pthread_mutex_lock(&sc->lock);
+}
+
+static inline void unlock(struct spi_connection *sc)
+{
+	pthread_mutex_unlock(&sc->lock);
+}
+
+#define make_helper(name)                                                \
+static inline struct spi_data *get_##name(struct spi_connection *sc)  \
+{                                                                        \
+	struct spi_data *data = sc->##name;                                    \
+	if (data)                                                            \
+		sc->##name = data->next;                                           \
+                                                                         \
+	return data;                                                         \
+}                                                                        \
+                                                                         \
+static inline struct spi_data *get_##name(struct spi_connection *sc)  \
+{                                                                        \
+	struct spi_data *data;                                               \
+	lock(sc);                                                            \
+	data = __get_##name(sc);                                          \
+	unlock(sc);                                                          \
+	return data;                                                         \
+}                                                                        \
+                                                                         \
+static inline void __put_##name(struct spi_connection *sc, struct spi_data *data)  \
+{                                                                                     \
+	data->next = sc->##name;                                                            \
+	sc->##name## = data->next;                                                            \
+}                                                                                     \
+                                                                                      \
+static inline void put_##name(struct spi_connection *sc, struct spi_data *data)    \
+{                                                                                     \
+	lock(sc);                                                                         \
+	__put_##name(sc, data);                                                        \
+	unlock(sc);                                                                       \
+}                                                                                     \
+
+make_helper(free);
+make_helper(pending);
+
+
+static inline struct spi_data *get_active_pending(struct spi_connection *sc)
+{
+	struct spi_data *data;
+	lock(sc);
+	if(sc->active) {
+		data = sc->active
+	} else {
+		data = __get_pending(sc);
+		sc->active = data;
+	}
+	unlock(sc);
+}
+
+static inline void put_active_pending(struct spi_connection *sc, struct spi_data *data)
+{
+	assert(data == sc->active);
+	assert(data->r_idx <= data->data_ready);
+	if(data->r_idx == data->data_ready) {
+		lock(sc);
+		sc->active = NULL;
+		__put_free(data);
+		unlock(sc);
+	}
+}
 
 static inline struct spi_connection *spi_get_connection(const comm_channel_t *channel)
 {
@@ -83,18 +163,49 @@ static int spi_transmit( comm_channel_t *channel, const char *tx_buf, int tx_ite
 static int spi_receive( comm_channel_t *channel, char *buf, int len )
 {
     struct spi_connection *sc = spi_get_connection( channel );
+	struct spi_data *data;
 	int count;
 
-#if 0
-	count = min(len, BUF_SIZE);
-	if (sc->data_ready) {
-		memcpy(buf, sc->rx_buf + sc->r_idx, count);
-		sc->r_idx += count;
-		if (sc->r_idx == BUF_SIZE)
-			sc->r_idx = 0;
+	data = get_active_pending(sc);
+	if (data) {
+		count = min(len, data->data_ready - data->r_idx);
+		memcpy(buf, data->rx_buf + data->r_idx, count);
+		data->r_idx += count;
+		put_active_pending(sc, data);
+	} else {
+		count = -1;
+		errno = EAGAIN;
 	}
-#endif
-	return read(sc->fd, buf + 2, len);
+
+	return count;
+}
+
+static void *spi_thread(void *arg)
+{
+	struct spi_connection *sc = (struct spi_connection *)arg;
+	struct spi_data *data;
+	int res;
+
+	while (1) {
+		data = get_free(sc);
+		if (data == NULL) {
+			/* FIXME: use condition variable to wait for free data */
+			printf("ERROR %s %d: spi buffer underrun\n", __FILE__, __LINE__);
+			break;
+		}
+		/* reading always blocks until one complete packet is ready
+		 * rx_buf is filled with exactly one packet
+		 */
+		res = read(sc->fd, data->rx_buf, BUF_SIZE);
+		if (res <= 0) {
+			perror("read spi device");
+			put_free(sc, data);
+		}  else {
+			data->data_ready = res;
+			data->r_idx = 0;
+			put_pending(sc, data);
+		}
+	}
 }
 
 static int spi_start( comm_channel_t *channel )
@@ -149,12 +260,16 @@ int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate
     return( 0 );
 }
 
+struct spi_connection connection;
+
 int spi_dev_channel_create( comm_channel_t *channel )
 {
     if( channel->data == NULL )
     {
         memset( &connection, 0, sizeof( connection ) );
-        channel->type     = CH_SPI;
+		pthread_mutex_init(&connection.lock);
+
+        channel->type     = CH_SPI_DEV;
         channel->transmit = spi_transmit;
         channel->receive  = spi_receive;
         channel->start    = spi_start;
