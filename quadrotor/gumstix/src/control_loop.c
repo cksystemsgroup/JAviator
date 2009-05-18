@@ -445,7 +445,9 @@ static int get_javiator_data( void )
     sensor_data.y       = 0;
     sonar_signal        = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
 
-    /* check for valid sonar signal */
+    /* Since the sonar signal takes on values close to the maximum as soon as
+       the sensor does not receive an echo anymore, this check is intended to
+       avoid outliers resulting from occasional echo loss. */
     if( sonar_signal < ALTITUDE_THRESHOLD )
     {
         sensor_data.z   = sonar_signal;

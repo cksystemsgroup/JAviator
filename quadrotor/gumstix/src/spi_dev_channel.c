@@ -83,10 +83,9 @@ static int spi_transmit( comm_channel_t *channel, const char *tx_buf, int tx_ite
 static int spi_receive( comm_channel_t *channel, char *buf, int len )
 {
     struct spi_connection *sc = spi_get_connection( channel );
-	int count;
-
 #if 0
-	count = min(len, BUF_SIZE);
+	int count = min(len, BUF_SIZE);
+
 	if (sc->data_ready) {
 		memcpy(buf, sc->rx_buf + sc->r_idx, count);
 		sc->r_idx += count;
