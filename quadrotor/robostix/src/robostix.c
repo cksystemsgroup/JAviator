@@ -50,6 +50,8 @@
 static volatile uint8_t     flag_shut_down;
 static volatile uint8_t     flag_check_delay;
 static volatile uint8_t     flag_new_signals;
+static volatile uint8_t     flag_send_serial;
+static volatile uint8_t     flag_send_spi;
 
 /* Global structures */
 static javiator_data_t      javiator_data;
@@ -79,6 +81,8 @@ void controller_init( void )
     flag_shut_down   = 0;
     flag_check_delay = 0;
     flag_new_signals = 0;
+    flag_send_serial = 0;
+    flag_send_spi    = 0;
 
     /* clear data structures */
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -122,10 +126,21 @@ void process_data_packet( void )
     uint16_t checksum;
 
     /* receive packet from communication interface */
-    if( serial_recv_packet( packet ) && spi_recv_packet( packet ) )
+    if( serial_recv_packet( packet ) )
     {
-        javiator_data.error |= JE_RECEIVE_PACKET;
-        return;
+        if( spi_recv_packet( packet ) )
+        {
+            javiator_data.error |= JE_RECEIVE_PACKET;
+            return;
+        }
+        else
+        {
+            flag_send_spi = 1;
+        }
+    }
+    else
+    {
+        flag_send_serial = 1;
     }
 
     /* check for valid packet content */
@@ -358,8 +373,17 @@ void send_javiator_data( void )
     data[31] = (uint8_t)( javiator_data.id );
 
     /* send JAviator data to the Gumstix */
-    serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
-	spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
+    if( flag_send_serial )
+    {
+        flag_send_serial = 0;
+        serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
+    }
+    else
+    if( flag_send_spi )
+    {
+        flag_send_spi = 0;
+	    spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
+    }
 
     /* clear state and error indicator */
     javiator_data.state = 0;
