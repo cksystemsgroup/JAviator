@@ -391,6 +391,9 @@ void send_javiator_data( void )
 
     /* increment transmission ID */
     ++javiator_data.id;
+
+    /* start next ADC cycle */
+    adc_convert( );
 }
 
 /* Initializes and runs the controller

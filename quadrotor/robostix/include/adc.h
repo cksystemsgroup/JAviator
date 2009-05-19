@@ -37,6 +37,11 @@
 */
 void   adc_init( void );
 
+/* Performs a conversion for all registered channels.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t adc_convert( void );
+
 /* Adds a new channel to the ADC channel list.
    Returns 0 if successful, -1 otherwise.
 */
