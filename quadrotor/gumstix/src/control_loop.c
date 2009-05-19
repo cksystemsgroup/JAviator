@@ -391,7 +391,7 @@ static int get_javiator_data( void )
 {
     static long long last_run = 0;
     static int16_t   last_id  = 0;
-    //long long        now;
+    long long        now;
     int              res;
     int16_t          sonar_signal;
 

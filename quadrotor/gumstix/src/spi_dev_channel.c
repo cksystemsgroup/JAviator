@@ -239,7 +239,6 @@ static void *spi_thread(void *arg)
 			//print_data(data);
 			put_pending(sc, data);
 		}
->>>>>>> /tmp/spi_dev_channel.c~other.3ND0ov
 	}
 	return NULL;
 }
