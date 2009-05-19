@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "dm3gx1.h"
+#include "leds.h"
 
 
 /*****************************************************************************/
@@ -124,7 +125,7 @@ void dm3gx1_init( void )
     UCSRnA = 0x02; /* double-speed mode */
 
     /* enable receive-complete interrupt, receiver, and transmitter */
-    UCSRnB = (1 << RXCIEn) | (1 << RXENn) | (1 << TXENn);
+    UCSRnB = (1 << TXENn) | (1 << RXENn);
 
     /* set frame format: parity none, 1 stop bit, 8 data bits */
     UCSRnC = (1 << UCSZn1) | (1 << UCSZn0);
@@ -177,6 +178,30 @@ void dm3gx1_stop( void )
 */
 uint8_t dm3gx1_is_new_data( void )
 {
+	if (UCSRnA & (1<<RXC)) {
+		/* indicate that the receive buffer is being updated
+		   and thus data are no longer secure to be copied */
+		new_data = 0;
+
+		rx_buf[ rx_index ] = UDRn;
+
+		/* check for synchronization with IMU sensor */
+		if( !(rx_index == 0 && rx_buf[0] != CMD_DESIRED_DATA) )
+		{
+			/* check for end of RX data stream */
+			if( ++rx_index == RX_DATA_SIZE )
+			{
+				/* check for valid packet content */
+				if( is_valid_data( rx_buf, RX_DATA_SIZE ) )
+				{
+					new_data = 1;
+				}
+
+				rx_index = 0;
+			}
+		}
+
+	}
     return( new_data );
 }
 
@@ -191,8 +216,6 @@ int8_t dm3gx1_get_data( javiator_data_t *buf )
     {
         return( -1 );
     }
-
-    cli( ); /* disable interrupts */
 
     /* extract sensor data */
     buf->roll   = (rx_buf[1]  << 8) | (rx_buf[2]  & 0xFF);
@@ -209,8 +232,6 @@ int8_t dm3gx1_get_data( javiator_data_t *buf )
     /* clear new-data indicator */
     new_data = 0;
 
-    sei( ); /* enable interrupts */
-
     return( 0 );
 }
 
@@ -225,8 +246,8 @@ void dm3gx1_set_max_baudrate( void )
     UBRRnL = 0x19; /* baudrate low byte */
     UCSRnA = 0x00; /* no double-speed mode */
 
-    /* enable receive-complete interrupt, receiver, and transmitter */
-    UCSRnB = (1 << RXCIEn) | (1 << RXENn) | (1 << TXENn);
+    /* enable, receiver, and transmitter */
+    UCSRnB =  (1 << TXENn) | (1 << RXENn);
 
     /* set address 44 to value 21 */
     tx_buf[ tx_items++ ] = 0x09;
@@ -322,35 +343,6 @@ SIGNAL( SIG_UARTn_DATA )
     else
     {
         UDRn = tx_buf[ tx_index++ ];
-    }
-}
-
-/* UARTn Receive Complete callback function
-*/
-SIGNAL( SIG_UARTn_RECV )
-{
-    /* indicate that the receive buffer is being updated
-       and thus data are no longer secure to be copied */
-    new_data = 0;
-
-    rx_buf[ rx_index ] = UDRn;
-
-    /* check for synchronization with IMU sensor */
-    if( rx_index == 0 && rx_buf[0] != CMD_DESIRED_DATA )
-    {
-        return; /* wait for next byte to come */
-    }
-
-    /* check for end of RX data stream */
-    if( ++rx_index == RX_DATA_SIZE )
-    {
-        /* check for valid packet content */
-        if( is_valid_data( rx_buf, RX_DATA_SIZE ) )
-        {
-            new_data = 1;
-        }
-
-        rx_index = 0;
     }
 }
 

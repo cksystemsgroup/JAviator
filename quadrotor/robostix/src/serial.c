@@ -116,8 +116,8 @@ void serial_init( void )
     UBRRnL = 0x10; /* baudrate low byte */
     UCSRnA = 0x02; /* double-speed mode */
 
-    /* enable receive-complete interrupt, receiver, and transmitter */
-    UCSRnB = (1 << RXCIEn) | (1 << RXENn) | (1 << TXENn);
+    /* enable receiver, and transmitter */
+    UCSRnB = (1 << RXENn) | (1 << TXENn);
 
     /* set frame format: parity none, 1 stop bit, 8 data bits */
     UCSRnC = (1 << UCSZn1) | (1 << UCSZn0);
@@ -134,6 +134,55 @@ void serial_init( void )
 */
 uint8_t serial_is_new_packet( void )
 {
+	if (UCSRnA & (1<<RXC)) {
+		rx_buf[ rx_index ] = UDRn;
+
+		if( rx_index == 0 )
+		{
+			/* check for first packet mark */
+			if( rx_buf[0] == COMM_PACKET_MARK )
+			{
+				rx_items = COMM_OVERHEAD;
+			}
+		}
+		else
+			if( rx_index == 1 )
+			{
+				/* check for second packet mark */
+				if( rx_buf[1] != COMM_PACKET_MARK )
+				{
+					rx_items = 0;
+					rx_index = 0;
+				}
+			}
+			else
+				if( rx_index == 3 )
+				{
+					/* second header byte contains payload size */
+					rx_items += rx_buf[3];
+
+					/* check for valid packet size */
+					if( rx_items > COMM_BUF_SIZE )
+					{
+						rx_items = 0;
+						rx_index = 0;
+					}
+				}
+
+		/* check for end of RX data stream */
+		if( rx_items && ++rx_index == rx_items )
+		{
+			/* check for valid packet content */
+			if( is_valid_data( rx_buf + 2, rx_items - 2 ) )
+			{
+				new_data = 1;
+			}
+
+			rx_items = 0;
+			rx_index = 0;
+		}
+	}
+
     return( new_data );
 }
 
@@ -251,62 +300,6 @@ SIGNAL( SIG_UARTn_DATA )
     else
     {
         UDRn = tx_buf[ tx_index++ ];
-    }
-}
-
-/* UARTn Receive Complete callback function
-*/
-SIGNAL( SIG_UARTn_RECV )
-{
-    /* indicate that the receive buffer is being updated
-       and thus data are no longer secure to be copied */
-    new_data = 0;
-
-    rx_buf[ rx_index ] = UDRn;
-
-    if( rx_index == 0 )
-    {
-        /* check for first packet mark */
-        if( rx_buf[0] == COMM_PACKET_MARK )
-        {
-            rx_items = COMM_OVERHEAD;
-        }
-    }
-    else
-    if( rx_index == 1 )
-    {
-        /* check for second packet mark */
-        if( rx_buf[1] != COMM_PACKET_MARK )
-        {
-            rx_items = 0;
-            rx_index = 0;
-        }
-    }
-    else
-    if( rx_index == 3 )
-    {
-        /* second header byte contains payload size */
-        rx_items += rx_buf[3];
-
-        /* check for valid packet size */
-        if( rx_items > COMM_BUF_SIZE )
-        {
-            rx_items = 0;
-            rx_index = 0;
-        }
-    }
-
-    /* check for end of RX data stream */
-    if( rx_items && ++rx_index == rx_items )
-    {
-        /* check for valid packet content */
-        if( is_valid_data( rx_buf + 2, rx_items - 2 ) )
-        {
-            new_data = 1;
-        }
-
-        rx_items = 0;
-        rx_index = 0;
     }
 }
 
