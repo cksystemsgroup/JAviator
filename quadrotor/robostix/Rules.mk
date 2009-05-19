@@ -23,7 +23,7 @@ AVR_MCU_FLAGS = -mmcu=$(AVR_MCU)
 vpath %.c ./src
 vpath %.s ../shared
 
-CFLAGS   += -Os -Wall 
+CFLAGS   += -O3 -Wall 
 CPPFLAGS += $(AVR_MCU_FLAGS) -I . -I ./include -I ./src
 LDFLAGS  += $(AVR_MCU_FLAGS) -Wl,-Map,$(basename $@).map
 
