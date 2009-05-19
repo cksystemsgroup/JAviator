@@ -217,7 +217,8 @@ redo:
             }
             else
             {
-                retval = -1;
+                retval = EAGAIN;
+				fprintf(stderr, "WARNING: checksum error from javiator\n");
                 packet->state = 0;
             } 
             break;

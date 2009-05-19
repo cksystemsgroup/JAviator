@@ -77,7 +77,7 @@ static inline int socket_connection_accept( socket_connection_t *sc )
 
     if( sc->fd > 0 )
     {
-        saved_fd = fcntl( sc->fd, F_GETFL ) | O_NONBLOCK;
+        saved_fd = fcntl( sc->fd, F_GETFL );// | O_NONBLOCK;
         fcntl( sc->fd, F_SETFL, saved_fd );
 
         if( setsockopt( sc->fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof( flag ) ) )
@@ -183,7 +183,9 @@ static int server_socket_transmit( comm_channel_t *channel, const char *buf, int
 
     if( !sc->connected )
     {
-        res = socket_connection_accept( sc );
+		errno = EAGAIN;
+		return -1;
+        //res = socket_connection_accept( sc );
     }
 
     if( sc->connected )
@@ -267,7 +269,7 @@ static int server_socket_poll( comm_channel_t *channel, long timeout )
         maxfd = sc->fd + 1;
     }
 
-    return select( maxfd, &readfs, NULL, NULL, timeout?&tv:0 );
+    return select( maxfd, &readfs, NULL, NULL, timeout?&tv:NULL );
 }
 
 static int client_socket_connect( socket_connection_t *sc )
@@ -362,7 +364,7 @@ static int server_socket_init( socket_connection_t *sc, int port )
         return( -1 );
     }
 
-    saved_fd = fcntl( sc->accept_fd, F_GETFL ) | O_NONBLOCK;
+    saved_fd = fcntl( sc->accept_fd, F_GETFL );// | O_NONBLOCK;
     fcntl( sc->accept_fd, F_SETFL, saved_fd );
 
     if( listen( sc->accept_fd, 3 ) < 0 )
