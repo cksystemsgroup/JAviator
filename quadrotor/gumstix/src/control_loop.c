@@ -1020,20 +1020,11 @@ static void signal_handler(int num)
 /* the control loop for our helicopter */
 int control_loop_run( )
 {
-    int first_time = 1;
-    
+    int first_time = 1;    
     next_period    = get_utime( ) + us_period;
     altitude_mode  = ALT_MODE_GROUND;
     long long start, end;
 	long long loop_start;
-
-    if( ms_period != CONTROLLER_PERIOD )
-    {
-        javiator_port_send_ctrl_period( ms_period );
-    }
-
-    //inertial_port_send_request( );
-    //wait_for_next_period( );
 
     while( running )
     {
