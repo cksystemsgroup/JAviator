@@ -852,9 +852,12 @@ static int compute_motor_signals( void )
             uz_new = uz_old + motor_revving_add;
         }
         else
+        if( uz_old > 0 )
         {
             uz_new = uz_old - motor_revving_add;
         }
+
+        base_motor_speed = uz_new;
     }
 #else
     if( revving_step < (base_motor_speed / motor_revving_add) )
