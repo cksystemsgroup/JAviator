@@ -219,10 +219,7 @@ static void *spi_thread(void *arg)
 		lock(sc);
 		data = __get_free(sc);
 		while (data == NULL) {
-			/* FIXME: use condition variable to wait for free data */
-			printf("ERROR %s %d: spi buffer underrun\n", __FILE__, __LINE__);
 			pthread_cond_wait(&sc->cond, &sc->lock);
-			//break;
 			data = __get_free(sc);
 		}
 		unlock(sc);
