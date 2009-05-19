@@ -26,6 +26,7 @@
 
 #include "../shared/protocol.h"
 #include "spi.h"
+#include "leds.h"
 
 
 /*****************************************************************************/
@@ -43,6 +44,9 @@ static volatile uint8_t     tx_index;
 static volatile uint8_t     rx_index;
 static volatile uint8_t     new_data;
 
+static volatile uint8_t     spi_int_flag = 0;
+static volatile uint8_t     spi_rx;
+static volatile uint8_t     spi_tx;
 
 /*****************************************************************************/
 /*                                                                           */
@@ -72,6 +76,75 @@ void spi_init( void )
 */
 uint8_t spi_is_new_packet( void )
 {
+	if (spi_int_flag) {
+		spi_int_flag = 0;
+
+		new_data = 0;
+		rx_buf[ rx_index ] = spi_rx;
+
+		/* check for TX items to transmit */
+		if( tx_items )
+		{
+			spi_tx = tx_buf[ tx_index ];
+
+			/* check for end of TX data stream */
+			if( ++tx_index == tx_items )
+			{
+				tx_items = 0;
+			}
+		}
+		else /* transmit null-byte */
+		{
+			spi_tx = 0;
+		}
+
+		/* check RX data stream for packet marks and payload size */
+		if( rx_index == 0 )
+		{
+			/* check for first packet mark */
+			if( rx_buf[0] == COMM_PACKET_MARK )
+			{
+				rx_items = COMM_OVERHEAD;
+			}
+		}
+		else
+			if( rx_index == 1 )
+			{
+				/* check for second packet mark */
+				if( rx_buf[1] != COMM_PACKET_MARK )
+				{
+					rx_items = 0;
+					rx_index = 0;
+				}
+			}
+			else
+				if( rx_index == 3 )
+				{
+					/* second header byte contains payload size */
+					rx_items += rx_buf[3];
+
+					/* check for valid packet size */
+					if( rx_items > COMM_BUF_SIZE )
+					{
+						rx_items = 0;
+						rx_index = 0;
+					}
+				}
+
+		/* check for end of RX data stream */
+		if( rx_items && ++rx_index == rx_items )
+		{
+			rx_items = 0;
+		}
+
+		/* check for end of transmission */
+		if( !tx_items && !rx_items )
+		{
+			tx_index = 0;
+			rx_index = 0;
+			new_data = 1;
+		}
+	}
     return( new_data );
 }
 
@@ -86,15 +159,12 @@ int8_t spi_recv_packet( uint8_t *buf )
         return( -1 );
     }
 
-    cli( ); /* disable interrupts */
 
     /* copy received data packet to given buffer */
     memcpy( buf, rx_buf + 2, rx_buf[3] + COMM_OVERHEAD - 2 );
 
     /* clear new-data indicator */
     new_data = 0;
-
-    sei( ); /* enable interrupts */
 
     return( 0 );
 }
@@ -157,72 +227,9 @@ SIGNAL( SIG_SPI )
 {
     /* indicate that the receive buffer is being updated
        and thus data are no longer secure to be copied */
-    new_data = 0;
-
-    rx_buf[ rx_index ] = SPDR;
-
-    /* check for TX items to transmit */
-    if( tx_items )
-    {
-        SPDR = tx_buf[ tx_index ];
-
-        /* check for end of TX data stream */
-        if( ++tx_index == tx_items )
-        {
-            tx_items = 0;
-        }
-    }
-    else /* transmit null-byte */
-    {
-        SPDR = 0;
-    }
-
-    /* check RX data stream for packet marks and payload size */
-    if( rx_index == 0 )
-    {
-        /* check for first packet mark */
-        if( rx_buf[0] == COMM_PACKET_MARK )
-        {
-            rx_items = COMM_OVERHEAD;
-        }
-    }
-    else
-    if( rx_index == 1 )
-    {
-        /* check for second packet mark */
-        if( rx_buf[1] != COMM_PACKET_MARK )
-        {
-            rx_items = 0;
-            rx_index = 0;
-        }
-    }
-    else
-    if( rx_index == 3 )
-    {
-        /* second header byte contains payload size */
-        rx_items += rx_buf[3];
-
-        /* check for valid packet size */
-        if( rx_items > COMM_BUF_SIZE )
-        {
-            rx_items = 0;
-            rx_index = 0;
-        }
-    }
-
-    /* check for end of RX data stream */
-    if( rx_items && ++rx_index == rx_items )
-    {
-        rx_items = 0;
-    }
-
-    /* check for end of transmission */
-    if( !tx_items && !rx_items )
-    {
-        tx_index = 0;
-        rx_index = 0;
-        new_data = 1;
-    }
+	SPDR = spi_tx;
+	spi_rx = SPDR;
+	spi_int_flag = 1;
 }
 
 /* End of file */
