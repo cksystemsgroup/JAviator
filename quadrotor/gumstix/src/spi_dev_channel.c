@@ -41,7 +41,7 @@
 
 #define DEV_NAME "/dev/robostix-spi2.0"
 #define BUF_SIZE 64
-#define N_BUF    2
+#define N_BUF    16
 
 #include "../shared/protocol.h"
 #include "spi_channel.h"
@@ -58,13 +58,25 @@ struct spi_data
 struct spi_connection
 {
 	int  fd;
+	pthread_t thread;
 
 	struct spi_data *active;
 	struct spi_data data[N_BUF];
 	struct spi_data *list_free;
 	struct spi_data *list_pending;
 	pthread_mutex_t lock;
+	pthread_cond_t cond;
 };
+
+static void print_data(struct spi_data *data)
+{
+	int i;
+
+	for(i=0;i<data->data_ready;++i) {
+		printf("%2x ", data->rx_buf[i]);
+	}
+	printf("\n");
+}
 
 static inline void lock(struct spi_connection *sc)
 {
@@ -98,7 +110,7 @@ static inline struct spi_data *get_##name(struct spi_connection *sc)     \
 static inline void __put_##name(struct spi_connection *sc, struct spi_data *data) \
 {                                                                                 \
 	data->next = sc->list_##name;                                                 \
-	sc->list_##name = data->next;                                                 \
+	sc->list_##name = data;                                                       \
 }                                                                                 \
                                                                                   \
 static inline void put_##name(struct spi_connection *sc, struct spi_data *data)   \
@@ -136,6 +148,7 @@ static inline void put_active_pending(struct spi_connection *sc, struct spi_data
 		data->r_idx = 0;
 		data->data_ready = 0;
 		__put_free(sc, data);
+		pthread_cond_broadcast(&sc->cond);
 		unlock(sc);
 	}
 }
@@ -152,16 +165,26 @@ static inline struct spi_connection *spi_get_connection(const comm_channel_t *ch
     return sc;
 }
 
-static int spi_transmit( comm_channel_t *channel, const char *tx_buf, int tx_items )
+static int spi_transmit(comm_channel_t *channel, const char *tx_buf, int tx_items)
 {
     struct spi_connection *sc = spi_get_connection( channel );
-
+	int sent, ret;
     if (!sc || tx_items < COMM_OVERHEAD || tx_items > COMM_BUF_SIZE) {
         return( -1 );
     }
 
-	write(sc->fd, tx_buf, tx_items);
-
+	sent = 0;
+	do {
+		ret = write(sc->fd, tx_buf + sent, tx_items);
+		if (ret<0) {
+			perror("spi_transmit");
+			if(errno != EAGAIN)
+				return ret;
+		} else {
+			sent += ret;
+			tx_items -= ret;
+		}
+	} while(tx_items);
     return 0;
 }
 
@@ -180,6 +203,7 @@ static int spi_receive( comm_channel_t *channel, char *buf, int len )
 		put_active_pending(sc, data);
 	} else {
 		count = -1;
+		printf("spi_receive: no pending data\n");
 		errno = EAGAIN;
 	}
 
@@ -193,12 +217,16 @@ static void *spi_thread(void *arg)
 	int res;
 
 	while (1) {
-		data = get_free(sc);
-		if (data == NULL) {
+		lock(sc);
+		data = __get_free(sc);
+		while (data == NULL) {
 			/* FIXME: use condition variable to wait for free data */
 			printf("ERROR %s %d: spi buffer underrun\n", __FILE__, __LINE__);
-			break;
+			pthread_cond_wait(&sc->cond, &sc->lock);
+			//break;
+			data = __get_free(sc);
 		}
+		unlock(sc);
 		/* reading always blocks until one complete packet is ready
 		 * rx_buf is filled with exactly one packet
 		 */
@@ -206,13 +234,16 @@ static void *spi_thread(void *arg)
 		if (res <= 0) {
 			perror("read spi device");
 			put_free(sc, data);
-		}  else {
+		} else {
 			data->data_ready = res;
 			data->r_idx = 0;
+			//print_data(data);
 			put_pending(sc, data);
 		}
 	}
+	return NULL;
 }
+
 
 static int spi_start( comm_channel_t *channel )
 {
@@ -263,6 +294,18 @@ int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate
 		return -1;
 	}
 
+	struct sched_param param;
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	sched_getparam(0, &param);
+	if (param.sched_priority > 0) {
+		/* javiator connection got a higher priority than the controller */
+		param.sched_priority++;
+		pthread_attr_setschedparam(&attr, &param);
+		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+		pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+	}
+	pthread_create(&sc->thread, &attr, spi_thread, sc);
     return( 0 );
 }
 
@@ -270,11 +313,15 @@ struct spi_connection connection;
 
 int spi_dev_channel_create( comm_channel_t *channel )
 {
+	int i;
     if( channel->data == NULL )
     {
         memset( &connection, 0, sizeof( connection ) );
 		pthread_mutex_init(&connection.lock, NULL);
-
+		pthread_cond_init(&connection.cond, NULL);
+		for(i=0;i<N_BUF;++i) {
+			put_free(&connection, &connection.data[i]);
+		}
         channel->type     = CH_SPI_DEV;
         channel->transmit = spi_transmit;
         channel->receive  = spi_receive;
