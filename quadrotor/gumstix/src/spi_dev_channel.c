@@ -36,7 +36,8 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <pthread.h>
-
+#include <assert.h>
+#include <errno.h>
 
 #define DEV_NAME "/dev/robostix-spi2.0"
 #define BUF_SIZE 64
@@ -56,10 +57,12 @@ struct spi_data
 
 struct spi_connection
 {
-    int  fd;
+	int  fd;
+
+	struct spi_data *active;
 	struct spi_data data[N_BUF];
-	struct spi_data *free;
-	struct spi_data *pending;
+	struct spi_data *list_free;
+	struct spi_data *list_pending;
 	pthread_mutex_t lock;
 };
 
@@ -74,36 +77,36 @@ static inline void unlock(struct spi_connection *sc)
 }
 
 #define make_helper(name)                                                \
-static inline struct spi_data *get_##name(struct spi_connection *sc)  \
+static inline struct spi_data *__get_##name(struct spi_connection *sc)   \
 {                                                                        \
-	struct spi_data *data = sc->##name;                                    \
+	struct spi_data *data = sc->list_##name;                             \
 	if (data)                                                            \
-		sc->##name = data->next;                                           \
+		sc->list_##name = data->next;                                    \
                                                                          \
 	return data;                                                         \
 }                                                                        \
                                                                          \
-static inline struct spi_data *get_##name(struct spi_connection *sc)  \
+static inline struct spi_data *get_##name(struct spi_connection *sc)     \
 {                                                                        \
 	struct spi_data *data;                                               \
 	lock(sc);                                                            \
-	data = __get_##name(sc);                                          \
+	data = __get_##name(sc);                                             \
 	unlock(sc);                                                          \
 	return data;                                                         \
 }                                                                        \
                                                                          \
-static inline void __put_##name(struct spi_connection *sc, struct spi_data *data)  \
-{                                                                                     \
-	data->next = sc->##name;                                                            \
-	sc->##name## = data->next;                                                            \
-}                                                                                     \
-                                                                                      \
-static inline void put_##name(struct spi_connection *sc, struct spi_data *data)    \
-{                                                                                     \
-	lock(sc);                                                                         \
-	__put_##name(sc, data);                                                        \
-	unlock(sc);                                                                       \
-}                                                                                     \
+static inline void __put_##name(struct spi_connection *sc, struct spi_data *data) \
+{                                                                                 \
+	data->next = sc->list_##name;                                                 \
+	sc->list_##name = data->next;                                                 \
+}                                                                                 \
+                                                                                  \
+static inline void put_##name(struct spi_connection *sc, struct spi_data *data)   \
+{                                                                                 \
+	lock(sc);                                                                     \
+	__put_##name(sc, data);                                                       \
+	unlock(sc);                                                                   \
+}                                                                                 \
 
 make_helper(free);
 make_helper(pending);
@@ -114,12 +117,13 @@ static inline struct spi_data *get_active_pending(struct spi_connection *sc)
 	struct spi_data *data;
 	lock(sc);
 	if(sc->active) {
-		data = sc->active
+		data = sc->active;
 	} else {
 		data = __get_pending(sc);
 		sc->active = data;
 	}
 	unlock(sc);
+	return data;
 }
 
 static inline void put_active_pending(struct spi_connection *sc, struct spi_data *data)
@@ -129,7 +133,9 @@ static inline void put_active_pending(struct spi_connection *sc, struct spi_data
 	if(data->r_idx == data->data_ready) {
 		lock(sc);
 		sc->active = NULL;
-		__put_free(data);
+		data->r_idx = 0;
+		data->data_ready = 0;
+		__put_free(sc, data);
 		unlock(sc);
 	}
 }
@@ -267,7 +273,7 @@ int spi_dev_channel_create( comm_channel_t *channel )
     if( channel->data == NULL )
     {
         memset( &connection, 0, sizeof( connection ) );
-		pthread_mutex_init(&connection.lock);
+		pthread_mutex_init(&connection.lock, NULL);
 
         channel->type     = CH_SPI_DEV;
         channel->transmit = spi_transmit;
