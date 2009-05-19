@@ -66,8 +66,6 @@
 /* filter parameters */
 #define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
-#define MEDIAN_BUFFER_SIZE      9
-#define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
 
 #ifdef APPLY_LARGE_SIZE_MEDIAN_FILTER
   #define MEDIAN_BUFFER_SIZE      15
@@ -85,7 +83,8 @@
 #define GRAVITY                 9.81                /* [m/s^2] gravitational acceleration */
 
 /* controller parameters */
-#define COMMAND_THRESHOLD       35                  /* max delay (iterations to wait) */
+#define ALTITUDE_THRESHOLD      3000                /* [mm] threshold for accepting sonar signals */
+#define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
 #define MRAD_PI                 3142                /* [mrad] */
 #define IO_JITTER               1000                /* [us] I/O time window */
 #define IMU_DELAY               10                  /* [ms] */
@@ -306,6 +305,50 @@ static void get_control_params( void )
     }
 }
 
+/* TODO: make median buffer generic for general usage
+         (also used to filter sensor_data.z ) */
+static void filter_battery( )
+{
+    static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
+    int i, j;
+
+    for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
+    {
+        if( sensor_data.battery < median_buffer[i] )
+        {
+            break;
+        }
+    }
+
+    if( i < MEDIAN_BUFFER_SIZE )
+    {
+        j = MEDIAN_BUFFER_SIZE - 1;
+
+        while( j > i )
+        {
+            median_buffer[j] = median_buffer[j-1];
+            --j;
+        }
+
+        median_buffer[j] = sensor_data.battery;
+    }
+    else
+    {
+        i = MEDIAN_BUFFER_SIZE - 1;
+        j = 0;
+
+        while( j < i )
+        {
+            median_buffer[j] = median_buffer[j+1];
+            ++j;
+        }
+
+        median_buffer[j] = sensor_data.battery;
+    }
+
+    sensor_data.battery = median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ];
+}
+
 #ifdef ADJUST_YAW
 static void adjust_yaw( )
 {
@@ -348,8 +391,9 @@ static int get_javiator_data( void )
 {
     static long long last_run = 0;
     static int16_t   last_id  = 0;
-    long long        now;
+    //long long        now;
     int              res;
+    int16_t          sonar_signal;
 
     res = javiator_port_get_data( &javiator_data );
 
@@ -403,7 +447,15 @@ static int get_javiator_data( void )
     /* copy and scale positions */
     sensor_data.x       = 0;
     sensor_data.y       = 0;
-    sensor_data.z       = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+    sonar_signal        = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+
+    /* Since the sonar signal takes on values close to the maximum as soon as
+       the sensor does not receive an echo anymore, this check is intended to
+       avoid outliers resulting from occasional echo loss. */
+    if( sonar_signal < ALTITUDE_THRESHOLD )
+    {
+        sensor_data.z   = sonar_signal;
+    }
 
     /* compute linear rates */
     sensor_data.dx      = (int16_t)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );
@@ -417,6 +469,9 @@ static int get_javiator_data( void )
 
     /* copy and scale battery level */
     sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
+
+    /* apply filter to battery data */
+    filter_battery( );
 
 #ifdef ADJUST_YAW
     /* IMPORTANT: yaw angle must be adjusted BEFORE
@@ -698,6 +753,8 @@ static inline double do_control( struct controller *ctrl,
     return ctrl->control( ctrl, current_angle, desired_angle, angular_velocity, angular_acceleration );
 }
 
+/* TODO: make median buffer generic for general usage
+         (also used to filter sensor_data.battery ) */
 static inline double filter_z( void )
 {
     static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
@@ -799,9 +856,12 @@ static int compute_motor_signals( void )
             uz_new = uz_old + motor_revving_add;
         }
         else
+        if( uz_old > 0 )
         {
             uz_new = uz_old - motor_revving_add;
         }
+
+        base_motor_speed = uz_new;
     }
 #else
     if( revving_step < (base_motor_speed / motor_revving_add) )
@@ -969,20 +1029,11 @@ static void int_handler(int num)
 /* the control loop for our helicopter */
 int control_loop_run( )
 {
-    int first_time = 1;
-    
+    int first_time = 1;    
     next_period    = get_utime( ) + us_period;
     altitude_mode  = ALT_MODE_GROUND;
     long long start, end;
 	long long loop_start;
-
-    if( ms_period != CONTROLLER_PERIOD )
-    {
-        javiator_port_send_ctrl_period( ms_period );
-    }
-
-    //inertial_port_send_request( );
-    //wait_for_next_period( );
 
     while( running )
     {

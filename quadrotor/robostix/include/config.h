@@ -51,6 +51,14 @@
 */
 #define PERIODS_TO_WAIT     10      /* should not be less than 10 periods */
 
+/* Period for setting a notify flag (watchdog timer counts internally in 10ms)
+*/
+#define NOTIFY_PERIOD       100     /* [ms] should be a multiple of 10 */
+
+/* Value for decrementing the motor signals when a loss of connectivity occurs
+*/
+#define MOTOR_DEC           5       /* should be adapted to the PWM mode used */
+
 /* Selection of UART channel used for communication with the Gumstix
 */
 #define UART_SERIAL         0       /* must be either 0 for UART0 or 1 for UART1 */

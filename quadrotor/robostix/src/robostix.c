@@ -31,13 +31,13 @@
 #include "config.h"
 #include "ports.h"
 #include "adc.h"
-#include "timer.h"
+#include "wdog.h"
 #include "serial.h"
+#include "spi.h"
 #include "dm3gx1.h"
 #include "minia.h"
 #include "pwm.h"
 #include "leds.h"
-#include "spi.h"
 
 
 /*****************************************************************************/
@@ -49,8 +49,7 @@
 /* Global variables */
 static volatile uint8_t     flag_shut_down;
 static volatile uint8_t     flag_check_delay;
-static volatile uint8_t     periods_passed;
-static volatile int8_t      id_check_delay;
+static volatile uint8_t     flag_new_signals;
 
 /* Global structures */
 static javiator_data_t      javiator_data;
@@ -59,7 +58,6 @@ static motor_signals_t      motor_signals;
 /* Forward declarations */
 void controller_init        ( void );
 void process_data_packet    ( void );
-void process_ctrl_period    ( uint8_t );
 void process_motor_signals  ( const uint8_t *, uint8_t );
 void process_shut_down      ( void );
 void process_en_sensors     ( uint8_t );
@@ -80,7 +78,7 @@ void controller_init( void )
     /* initialize variables */
     flag_shut_down   = 0;
     flag_check_delay = 0;
-    periods_passed   = 0;
+    flag_new_signals = 0;
 
     /* clear data structures */
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -89,9 +87,9 @@ void controller_init( void )
     /* initialize hardware */
     ports_init( );
     adc_init( );
-	spi_init( );
-    timer_init( );
+    wdog_init( );
     serial_init( );
+	spi_init( );
     dm3gx1_init( );
     minia_init( );
     pwm_init( );
@@ -102,8 +100,9 @@ void controller_init( void )
     /*adc_add_channel( ADC_CH_MPX4115A );*/
     adc_add_channel( ADC_CH_BATTERY );
 
-    /* register timer events */
-    id_check_delay = timer_add_event( (uint8_t *) &flag_check_delay, CONTROLLER_PERIOD );
+    /* register watchdog event and start timer */
+    wdog_register_flag( (uint8_t *) &flag_check_delay, NOTIFY_PERIOD );
+    wdog_start( );
 
     /* set Robostix signal LEDs */
     LED_OFF( RED );
@@ -121,10 +120,9 @@ void process_data_packet( void )
     static uint16_t valid_packets = 0;
     uint8_t  packet[ COMM_BUF_SIZE ], size;
     uint16_t checksum;
-	LED_TOGGLE( BLUE );
 
     /* receive packet from communication interface */
-    if( serial_recv_packet( packet ) && spi_recv_packet(packet) )
+    if( serial_recv_packet( packet ) && spi_recv_packet( packet ) )
     {
         javiator_data.error |= JE_RECEIVE_PACKET;
         return;
@@ -158,10 +156,6 @@ void process_data_packet( void )
     /* call packet-dependent function */
     switch( packet[0] )
     {
-        case COMM_CTRL_PERIOD:
-            process_ctrl_period( packet[2] );
-            break;
-
         case COMM_MOTOR_SIGNALS:
             process_motor_signals( packet + 2, packet[1] );
             break;
@@ -179,25 +173,12 @@ void process_data_packet( void )
     }
 }
 
-/* Processes COMM_CTRL_PERIOD messages
-*/
-void process_ctrl_period( uint8_t period )
-{
-    /* check for valid update of period */
-    if( !timer_set_event( id_check_delay, period ) )
-    {
-        javiator_data.state |= JS_PERIOD_UPDATED;
-    }
-}
-
 /* Processes COMM_MOTOR_SIGNALS messages
 */
 void process_motor_signals( const uint8_t *data, uint8_t size )
 {
-    static uint8_t toggle_blue = 0;
-
-    /* reset counter when receiving new motor signals */
-    periods_passed = 0;
+    /* notify that new motor signals arrived */
+    flag_new_signals = 1;
 
     /* ignore received motor signals if shut-down flag is set */
     if( !flag_shut_down )
@@ -217,10 +198,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
             }
 
             /* visualize that motors have been updated */
-            if( (++toggle_blue & 0x0F) == 0 )
-            {
-                LED_TOGGLE( BLUE );
-            }
+            LED_TOGGLE( BLUE );
         }
         else
         {
@@ -229,7 +207,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
         }
     }
 
-    /* send JAviator data to controller */
+    /* send JAviator data to the Gumstix */
     send_javiator_data( );
 }
 
@@ -277,14 +255,10 @@ void process_en_sensors( uint8_t enable )
 void check_signals_delay( )
 {
     static uint8_t first_timeout = 1;
-    static uint8_t toggle_yellow = 0;
 
-    /* check for exceeded waiting time */
-    if( ++periods_passed > PERIODS_TO_WAIT )
+    /* check if new signals have been received */
+    if( !flag_new_signals )
     {
-        /* ensure counter cannot overflow */
-        periods_passed = PERIODS_TO_WAIT;
-
         /* DO NOT modify signals in shut-down mode! */
         if( !flag_shut_down )
         {
@@ -295,10 +269,10 @@ void check_signals_delay( )
             {
                 /* we're possibly airborne, so reduce
                    signals to force descending */
-                --motor_signals.front;
-                --motor_signals.right;
-                --motor_signals.rear;
-                --motor_signals.left;
+                motor_signals.front -= MOTOR_DEC;
+                motor_signals.right -= MOTOR_DEC;
+                motor_signals.rear  -= MOTOR_DEC;
+                motor_signals.left  -= MOTOR_DEC;
             }
             else
             {
@@ -322,8 +296,9 @@ void check_signals_delay( )
             /* disable sensors to save power */
             process_en_sensors( 0 );
 
-            /* reset communication interface */
+            /* reset communication interfaces */
             serial_reset( );
+            spi_reset( );
 
             /* visualize that a timeout occurred */
             LED_ON( YELLOW );
@@ -335,13 +310,11 @@ void check_signals_delay( )
         first_timeout = 1;
 
         /* visualize that we're connected */
-        if( (++toggle_yellow & 0x0F) == 0 )
-        {
-            LED_TOGGLE( YELLOW );
-        }
+        LED_TOGGLE( YELLOW );
     }
 
     flag_check_delay = 0;
+    flag_new_signals = 0;
 }
 
 /* Sends the JAviator data to the controller
@@ -386,7 +359,7 @@ void send_javiator_data( void )
 
     /* send JAviator data to the Gumstix */
     serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
-	spi_send_packet(COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE);
+	spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
 
     /* clear state and error indicator */
     javiator_data.state = 0;
@@ -417,7 +390,7 @@ int main( void )
         }
 
         /* check if a new packet is available */
-        if( serial_is_new_packet( ) || spi_is_new_packet( ))
+        if( serial_is_new_packet( ) || spi_is_new_packet( ) )
         {
             process_data_packet( );
         }
@@ -447,9 +420,8 @@ int main( void )
                 javiator_data.state |= JS_NEW_SONAR_DATA;
             }
         }
-
-        /* check if new pressure data available */
 #if 0
+        /* check if new pressure data available */
         if( adc_is_new_data( ADC_CH_MPX4115A ) )
         {
             if( adc_get_data( ADC_CH_MPX4115A, &javiator_data.pressure ) )

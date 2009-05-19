@@ -194,7 +194,6 @@ static int spi_receive( comm_channel_t *channel, char *buf, int len )
     struct spi_connection *sc = spi_get_connection( channel );
 	struct spi_data *data;
 	int count;
-
 	data = get_active_pending(sc);
 	if (data) {
 		count = min(len, data->data_ready - data->r_idx);
@@ -240,6 +239,7 @@ static void *spi_thread(void *arg)
 			//print_data(data);
 			put_pending(sc, data);
 		}
+>>>>>>> /tmp/spi_dev_channel.c~other.3ND0ov
 	}
 	return NULL;
 }

@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   minia.c    Interface for the SensComp Mini-A sonar sensor.              */
+/*   wdog.c     Watchdog timer used for setting a notification flag.         */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -22,9 +22,9 @@
 /*****************************************************************************/
 
 #include <avr/interrupt.h>
+#include <string.h>
 
-#include "config.h"
-#include "minia.h"
+#include "wdog.h"
 
 
 /*****************************************************************************/
@@ -33,12 +33,17 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Configuration of Timer T2 to obtain a clock signal with a period of 10ms:
+/* Configuration of Timer T0 to obtain a clock signal with a period of 10ms:
    Dividing clock rate 16MHz by 1024 gives 15625 counts/sec or 156 counts/10ms,
-   respectively.  That is, Counter TCNT2 is incremented 156 times/10ms, so
+   respectively.  That is, Counter TCNT0 is incremented 156 times/10ms, so
    there's an offset of 100 required to get an overflow interrupt at 256.
 */
-#define TCNT2_OFFSET    0x64
+#define TCNT0_OFFSET        0x64
+
+/* Global variables */
+static volatile uint8_t *   wdog_flag;
+static volatile uint8_t     wdog_period;
+static volatile uint8_t     wdog_ticks;
 
 
 /*****************************************************************************/
@@ -47,42 +52,43 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes Timer T2 used for the sonar sensor
+/* Initializes Timer T0 for the watchdog timer
 */
-void minia_init( void )
+void wdog_init( void )
 {
-    /* initialize Timer T2 */
-    TCNT2 = TCNT2_OFFSET; /* load counter offset */
-    TCCR2 = (1 << CS22) | (1 << CS20); /* set prescaler 1024 */
+    /* initialize Timer T0 */
+    TCNT0 = TCNT0_OFFSET; /* load counter offset */
+    TCCR0 = (1 << CS02) | (1 << CS01) | (1 << CS00); /* set prescaler 1024 */
 
-    /* make trigger signal an output */
-    MINIA_DDR |= (1 << MINIA_TRIGGER);
-
-    /* just for the case the sonar was not stopped
-       properly during the previous operation */
-    minia_stop( );
+    /* initialize variables */
+    wdog_flag   = 0;
+    wdog_period = 0;
+    wdog_ticks  = 0;
 }
 
-/* Starts the sonar sensor in continuous mode
+/* Registers the given flag and associated period
 */
-void minia_start( void )
+void wdog_register_flag( uint8_t *flag, uint8_t period )
 {
-    /* rise trigger signal */
-    MINIA_PORT &= ~(1 << MINIA_TRIGGER);
-
-    /* enable T2 interrupt */
-    TIMSK |= (1 << TOIE2);
+    wdog_flag   = flag;
+    wdog_period = period;
+    wdog_ticks  = 0;
 }
 
-/* Stops the sonar sensor if in continuous mode
+/* Starts the watchdog timer
 */
-void minia_stop( void )
+void wdog_start( void )
 {
-    /* disable T2 interrupt */
-    TIMSK &= ~(1 << TOIE2);
+    /* enable T0 interrupt */
+    TIMSK |= (1 << TOIE0);
+}
 
-    /* trail trigger signal */
-    MINIA_PORT |= (1 << MINIA_TRIGGER);
+/* Stops the watchdog timer
+*/
+void wdog_stop( void )
+{
+    /* disable T0 interrupt */
+    TIMSK &= ~(1 << TOIE0);
 }
 
 
@@ -92,15 +98,19 @@ void minia_stop( void )
 /*                                                                           */
 /*****************************************************************************/
 
-/* T2 Overflow callback function
+/* T0 Overflow callback function
 */
-SIGNAL( SIG_OVERFLOW2 )
+SIGNAL( SIG_OVERFLOW0 )
 {
     /* reload counter offset */
-    TCNT2 = TCNT2_OFFSET;
+    TCNT0 = TCNT0_OFFSET;
 
-    /* toggle trigger signal */
-    MINIA_PORT ^= (1 << MINIA_TRIGGER);
+    /* check for valid pointer first */
+    if( wdog_flag && (wdog_ticks += 10) >= wdog_period )
+    {
+        wdog_ticks = 0;
+        *wdog_flag = 1;
+    }
 }
 
 /* End of file */
