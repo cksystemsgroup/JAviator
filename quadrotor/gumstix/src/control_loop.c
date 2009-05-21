@@ -157,7 +157,7 @@ static double cos_yaw   = 0;
 static void signal_handler( int num );
 static void int_handler(int num);
 
-#define NUM_STATS        8
+#define NUM_STATS        9
 #define STAT_IMU         0
 #define STAT_TO_JAV      1
 #define STAT_FROM_JAV    2
@@ -165,12 +165,13 @@ static void int_handler(int num);
 #define STAT_TO_TERM     4
 #define STAT_CONTROL     5
 #define STAT_SLEEP       6
-#define STAT_ALL         7
+#define STAT_READ        7
+#define STAT_ALL         8
 
 
 static int loop_count = 0;
-static long long stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
-static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0,0};
+static long long stats[NUM_STATS] = {0,0,0,0,0,0,0,0,0};
+static long long max_stats[NUM_STATS] = {0,0,0,0,0,0,0,0,0};
 static char *stats_name[NUM_STATS] = {
     "IMU           ",
     "to javiator   ",
@@ -179,6 +180,7 @@ static char *stats_name[NUM_STATS] = {
     "to terminal   ",
     "control       ",
     "sleep time    ",
+    "read time    ",
 	"complete loop "
 };
 static void signal_handler(int num);
@@ -403,6 +405,7 @@ static int get_javiator_data( void )
         return( res );
     }
 
+#if 0
     if( javiator_data.id != (int16_t)(last_id + 1) )
     {
         fprintf( stderr, "WARNING: control loop lost %d JAviator packet(s)\n",
@@ -415,6 +418,7 @@ static int get_javiator_data( void )
                 now - last_run, now - last_run - us_period );
         }
     }
+#endif
 
     last_run = get_utime( );
     last_id  = javiator_data.id;
@@ -996,7 +1000,7 @@ static int wait_for_next_period( void )
 }
 
 
-static void calc_stats(long long time, int id)
+void calc_stats(long long time, int id)
 {
     stats[id] += time;
 

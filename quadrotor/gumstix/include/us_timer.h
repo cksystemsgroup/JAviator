@@ -42,6 +42,17 @@ int sleep_until( unsigned long long utime );
 int sleep_for( long long usecs );
 
 
+extern void calc_stats(long long time, int id);
+#define NUM_STATS        9
+#define STAT_IMU         0
+#define STAT_TO_JAV      1
+#define STAT_FROM_JAV    2
+#define STAT_FROM_TERM   3
+#define STAT_TO_TERM     4
+#define STAT_CONTROL     5
+#define STAT_SLEEP       6
+#define STAT_READ        7
+#define STAT_ALL         8
 #endif /* !US_TIMER_H */
 
 /* End of file */
