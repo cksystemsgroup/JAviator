@@ -38,6 +38,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
+#include "us_timer.h"
 
 #define DEV_NAME "/dev/robostix-spi2.0"
 #define BUF_SIZE 64
@@ -202,7 +203,7 @@ static int spi_receive( comm_channel_t *channel, char *buf, int len )
 		put_active_pending(sc, data);
 	} else {
 		count = -1;
-		printf("spi_receive: no pending data\n");
+//		printf("spi_receive: no pending data\n");
 		errno = EAGAIN;
 	}
 
@@ -213,8 +214,10 @@ static void *spi_thread(void *arg)
 {
 	struct spi_connection *sc = (struct spi_connection *)arg;
 	struct spi_data *data;
-	int res;
+	int res, data_read;
+	uint64_t start, end;
 
+	data_read = 0;
 	while (1) {
 		lock(sc);
 		data = __get_free(sc);
@@ -223,16 +226,25 @@ static void *spi_thread(void *arg)
 			data = __get_free(sc);
 		}
 		unlock(sc);
-		/* reading always blocks until one complete packet is ready
+		/* reading always blocks until at least the packet header is ready.
 		 * rx_buf is filled with exactly one packet
 		 */
-		res = read(sc->fd, data->rx_buf, BUF_SIZE);
+		start = get_utime();
+again:
+		res = read(sc->fd, data->rx_buf + data_read, BUF_SIZE - data_read);
 		if (res <= 0) {
 			perror("read spi device");
 			put_free(sc, data);
 		} else {
-			data->data_ready = res;
+			data_read += res;
+			if (data_read < data->rx_buf[3] + 6)
+				goto again;
+
+			end = get_utime();
+			calc_stats(end-start, STAT_READ);
+			data->data_ready = data_read;
 			data->r_idx = 0;
+			data_read = 0;
 			//print_data(data);
 			put_pending(sc, data);
 		}
