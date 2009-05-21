@@ -233,11 +233,12 @@ static void *spi_thread(void *arg)
 again:
 		res = read(sc->fd, data->rx_buf + data_read, BUF_SIZE - data_read);
 		if (res <= 0) {
+			printf("res %d, data_read %d, BUF_SIZE %d\n", res, data_read, BUF_SIZE);
 			perror("read spi device");
 			put_free(sc, data);
 		} else {
 			data_read += res;
-			if (data_read < data->rx_buf[3] + 6)
+			if (data_read < data->rx_buf[3] + 6 && data_read < BUF_SIZE)
 				goto again;
 
 			end = get_utime();
