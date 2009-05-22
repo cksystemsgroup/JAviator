@@ -28,7 +28,7 @@ package javiator.util;
  */
 public class TraceData extends NumeratedSendable
 {
-	public static final int PACKET_SIZE = 14;
+	public static final int PACKET_SIZE = 16;
 
 	public TraceData()
 	{
@@ -45,6 +45,7 @@ public class TraceData extends NumeratedSendable
 		ddz_filtered = 0;
 		uz           = 0;
 		z_cmd        = 0;
+		id           = 0;
 	}
 
 	public String toString( )
@@ -58,6 +59,7 @@ public class TraceData extends NumeratedSendable
 		result += " filtered ddz: " + ddz_filtered;
 		result += " uz: "           + uz;
 		result += " z command: "    + z_cmd;
+		result += " id: "           + id;
 
 		return( result );
 	}
@@ -88,6 +90,8 @@ public class TraceData extends NumeratedSendable
 		packet.payload[ offset + 13 ] = (byte)( uz );
 		packet.payload[ offset + 14 ] = (byte)( z_cmd >> 8 );
 		packet.payload[ offset + 15 ] = (byte)( z_cmd );
+		packet.payload[ offset + 16 ] = (byte)( id >> 8 );
+		packet.payload[ offset + 17 ] = (byte)( id );
 	}
 
 	public synchronized Packet toPacket( byte type )
@@ -114,6 +118,7 @@ public class TraceData extends NumeratedSendable
         ddz_filtered = (short)( (packet.payload[ offset + 10 ] << 8) | (packet.payload[ offset + 11 ] & 0xFF) );
         uz           = (short)( (packet.payload[ offset + 12 ] << 8) | (packet.payload[ offset + 13 ] & 0xFF) );
         z_cmd        = (short)( (packet.payload[ offset + 14 ] << 8) | (packet.payload[ offset + 15 ] & 0xFF) );
+        id           = (short)( (packet.payload[ offset + 16 ] << 8) | (packet.payload[ offset + 17 ] & 0xFF) );
 	}
 
 	public synchronized Object clone( )
@@ -151,4 +156,5 @@ public class TraceData extends NumeratedSendable
 	public short ddz_filtered;
 	public short uz;
 	public short z_cmd;
+	public short id;
 }

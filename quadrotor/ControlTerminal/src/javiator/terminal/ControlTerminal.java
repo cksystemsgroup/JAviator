@@ -381,7 +381,8 @@ public class ControlTerminal extends Frame
 	            (short) data.ddz          + ',' +
 	            (short) data.ddz_filtered + ',' +
 	            (short) data.uz           + ',' +
-	            (short) data.z_cmd        + ',' + '\n';
+	            (short) data.z_cmd        + ',' + 
+	            (short) data.id        + ',' + '\n';
 
 	        try
 	        {
