@@ -200,7 +200,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
     if( !flag_shut_down )
     {
         /* check for correct data size before extracting */
-        if( motor_signals_from_stream(&motor_signals, data, size) )
+        if( motor_signals_from_stream(&motor_signals, data, size) == 0)
         {
             /* check for invalid signals */
             if( pwm_set_signals( &motor_signals ) )
