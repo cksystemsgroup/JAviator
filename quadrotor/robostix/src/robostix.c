@@ -26,8 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "config.h"
 #include "ports.h"
 #include "adc.h"
@@ -56,6 +56,7 @@ static volatile uint8_t     flag_send_spi;
 /* Global structures */
 static javiator_data_t      javiator_data;
 static motor_signals_t      motor_signals;
+uint8_t current_response = RESP_FULL;
 
 /* Forward declarations */
 void controller_init        ( void );
@@ -199,13 +200,8 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
     if( !flag_shut_down )
     {
         /* check for correct data size before extracting */
-        if( size == MOTOR_SIGNALS_SIZE )
+        if( motor_signals_from_stream(&motor_signals, data, size) )
         {
-            motor_signals.front = (data[0] << 8) | data[1];
-            motor_signals.right = (data[2] << 8) | data[3];
-            motor_signals.rear  = (data[4] << 8) | data[5];
-            motor_signals.left  = (data[6] << 8) | data[7];
-
             /* check for invalid signals */
             if( pwm_set_signals( &motor_signals ) )
             {
@@ -338,39 +334,7 @@ void send_javiator_data( void )
 {
     uint8_t data[ JAVIATOR_DATA_SIZE ];
 
-    /* encode JAviator data */
-    data[0]  = (uint8_t)( javiator_data.roll >> 8 );
-    data[1]  = (uint8_t)( javiator_data.roll );
-    data[2]  = (uint8_t)( javiator_data.pitch >> 8 );
-    data[3]  = (uint8_t)( javiator_data.pitch );
-    data[4]  = (uint8_t)( javiator_data.yaw >> 8 );
-    data[5]  = (uint8_t)( javiator_data.yaw );
-    data[6]  = (uint8_t)( javiator_data.droll >> 8 );
-    data[7]  = (uint8_t)( javiator_data.droll );
-    data[8]  = (uint8_t)( javiator_data.dpitch >> 8 );
-    data[9]  = (uint8_t)( javiator_data.dpitch );
-    data[10] = (uint8_t)( javiator_data.dyaw >> 8 );
-    data[11] = (uint8_t)( javiator_data.dyaw );
-    data[12] = (uint8_t)( javiator_data.ddx >> 8 );
-    data[13] = (uint8_t)( javiator_data.ddx );
-    data[14] = (uint8_t)( javiator_data.ddy >> 8 );
-    data[15] = (uint8_t)( javiator_data.ddy );
-    data[16] = (uint8_t)( javiator_data.ddz >> 8 );
-    data[17] = (uint8_t)( javiator_data.ddz );
-    data[18] = (uint8_t)( javiator_data.ticks >> 8 );
-    data[19] = (uint8_t)( javiator_data.ticks );
-    data[20] = (uint8_t)( javiator_data.sonar >> 8 );
-    data[21] = (uint8_t)( javiator_data.sonar );
-    data[22] = (uint8_t)( javiator_data.pressure >> 8 );
-    data[23] = (uint8_t)( javiator_data.pressure );
-    data[24] = (uint8_t)( javiator_data.battery >> 8 );
-    data[25] = (uint8_t)( javiator_data.battery );
-    data[26] = (uint8_t)( javiator_data.state >> 8 );
-    data[27] = (uint8_t)( javiator_data.state );
-    data[28] = (uint8_t)( javiator_data.error >> 8 );
-    data[29] = (uint8_t)( javiator_data.error );
-    data[30] = (uint8_t)( javiator_data.id >> 8 );
-    data[31] = (uint8_t)( javiator_data.id );
+	javiator_data_to_stream(&javiator_data, data, JAVIATOR_DATA_SIZE);
 
     /* send JAviator data to the Gumstix */
     if( flag_send_serial )
