@@ -53,6 +53,22 @@ static volatile uint8_t     spi_tx;
 /*   Public Functions                                                        */
 /*                                                                           */
 /*****************************************************************************/
+/* Returns 1 if the packet contains valid data, 0 otherwise
+*/
+static uint8_t is_valid_data( const uint8_t *data, uint8_t size )
+{
+    uint16_t checksum = (data[ size-2 ] << 8) | data[ size-1 ];
+
+    size -= 2;
+
+    /* iterate over payload */
+    while( size-- )
+    {
+        checksum -= data[ size ];
+    }
+
+    return( checksum == 0 );
+}
 
 /* Initializes the SPI interface for communication
 */
@@ -60,6 +76,8 @@ void spi_init( void )
 {
     /* make MISO an output, MOSI, SCK, and SS inputs */
     DDRB |= (1 << DDB3);
+
+	spi_int_flag = 0;
 
     /* enable SPI interface and interrupt */
     SPCR = (1 << SPE) | (1 << SPIE);
@@ -70,6 +88,7 @@ void spi_init( void )
     tx_index = 0;
     rx_index = 0;
     new_data = 0;
+
 }
 
 /* Returns 1 if a new packet is available, 0 otherwise
@@ -78,9 +97,6 @@ uint8_t spi_is_new_packet( void )
 {
 	if (spi_int_flag) {
 		spi_int_flag = 0;
-
-		new_data = 0;
-		rx_buf[ rx_index ] = spi_rx;
 
 		/* check for TX items to transmit */
 		if( tx_items )
@@ -95,54 +111,63 @@ uint8_t spi_is_new_packet( void )
 		}
 		else /* transmit null-byte */
 		{
-			spi_tx = 0;
+			spi_tx = 0x1a;
 		}
 
 		/* check RX data stream for packet marks and payload size */
 		if( rx_index == 0 )
 		{
 			/* check for first packet mark */
-			if( rx_buf[0] == COMM_PACKET_MARK )
+			if( spi_rx == COMM_PACKET_MARK )
 			{
 				rx_items = COMM_OVERHEAD;
 			}
-		}
-		else
-			if( rx_index == 1 )
+		} else if( rx_index == 1 )
+		{
+			/* check for second packet mark */
+			if( spi_rx != COMM_PACKET_MARK )
 			{
-				/* check for second packet mark */
-				if( rx_buf[1] != COMM_PACKET_MARK )
+				rx_items = 0;
+				rx_index = 0;
+				LED_TOGGLE(RED);
+			}
+		} else {
+			new_data = 0;
+			rx_buf[ rx_index ] = spi_rx;
+			if( rx_index == 3 )
+			{
+				rx_buf[0] = 0xff;
+				rx_buf[1] = 0xff;
+				/* second header byte contains payload size */
+				rx_items += rx_buf[3];
+
+				/* check for valid packet size */
+				if( rx_items > COMM_BUF_SIZE )
 				{
 					rx_items = 0;
 					rx_index = 0;
 				}
 			}
-			else
-				if( rx_index == 3 )
-				{
-					/* second header byte contains payload size */
-					rx_items += rx_buf[3];
-
-					/* check for valid packet size */
-					if( rx_items > COMM_BUF_SIZE )
-					{
-						rx_items = 0;
-						rx_index = 0;
-					}
-				}
-
+		}
 		/* check for end of RX data stream */
 		if( rx_items && ++rx_index == rx_items )
 		{
+			/* check for valid packet content */
+			if( is_valid_data( rx_buf + 2, rx_items - 2 ) )
+			{
+				new_data = 1;
+			}
 			rx_items = 0;
 		}
 
 		/* check for end of transmission */
-		if( !tx_items && !rx_items )
+		if( !rx_items )
+		{
+			rx_index = 0;
+		}
+		if (!tx_items) 
 		{
 			tx_index = 0;
-			rx_index = 0;
-			new_data = 1;
 		}
 	}
     return( new_data );
