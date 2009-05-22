@@ -40,10 +40,11 @@ typedef struct
     int16_t ddz_filtered;   /* low-pass-filtered ddz */
     int16_t uz;             /* output from z-controller */
     int16_t z_cmd;          /* z-command from terminal */
+    int16_t id;             /* packet id */
 
 } trace_data_t;
 
-#define TRACE_DATA_SIZE     16  /* byte size of trace_data_t */
+#define TRACE_DATA_SIZE     18  /* byte size of trace_data_t */
 
 
 int trace_data_to_stream( const trace_data_t *data, char *buf, int len );

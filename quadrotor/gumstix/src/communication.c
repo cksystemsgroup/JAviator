@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include "../shared/protocol.h"
+#include "shared/protocol.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"
@@ -218,7 +218,7 @@ redo:
             else
             {
                 retval = EAGAIN;
-				fprintf(stderr, "WARNING: checksum error from javiator\n");
+				printf("checksum error javiator\n");
                 packet->state = 0;
             } 
             break;

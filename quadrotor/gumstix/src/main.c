@@ -28,8 +28,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "comm_channel.h"
 #include "spi_channel.h"
 #include "serial_channel.h"

@@ -28,8 +28,8 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"
@@ -374,7 +374,7 @@ int terminal_port_get_base_motor_speed( void )
 
 int terminal_port_send_sensor_data( const sensor_data_t *data )
 {
-    char buf[ SENSOR_DATA_SIZE ];
+    uint8_t buf[ SENSOR_DATA_SIZE ];
     comm_packet_t packet;
 
     sensor_data_to_stream( data, buf, SENSOR_DATA_SIZE );
@@ -389,7 +389,7 @@ int terminal_port_send_sensor_data( const sensor_data_t *data )
 
 int terminal_port_send_motor_signals( const motor_signals_t *signals )
 {
-    char buf[ MOTOR_SIGNALS_SIZE ];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
@@ -437,7 +437,7 @@ int terminal_port_send_report(
         const int state, const int mode )
 {
     static int counter = 1;
-    char buf[ SENSOR_DATA_SIZE
+    uint8_t buf[ SENSOR_DATA_SIZE
             + MOTOR_SIGNALS_SIZE
             + COMMAND_DATA_SIZE
             + 2 ]; /* state and mode */

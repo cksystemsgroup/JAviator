@@ -48,6 +48,8 @@ int trace_data_to_stream( const trace_data_t *data, char *buf, int len )
         buf[13] = (char)( data->uz );
         buf[14] = (char)( data->z_cmd >> 8 );
         buf[15] = (char)( data->z_cmd );
+        buf[16] = (char)( data->id >> 8 );
+        buf[17] = (char)( data->id );
         return( 0 );
     }
 
@@ -68,6 +70,7 @@ int trace_data_from_stream( trace_data_t *data, const char *buf, int len )
         data->ddz_filtered = (int16_t)( (buf[10] << 8) | (buf[11] & 0xFF) );
         data->uz           = (int16_t)( (buf[12] << 8) | (buf[13] & 0xFF) );
         data->z_cmd        = (int16_t)( (buf[14] << 8) | (buf[15] & 0xFF) );
+        data->id           = (int16_t)( (buf[16] << 8) | (buf[17] & 0xFF) );
         return( 0 );
     }
 

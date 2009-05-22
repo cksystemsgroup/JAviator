@@ -30,8 +30,8 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"
@@ -89,7 +89,7 @@ int javiator_port_send_ctrl_period( int period )
 
 int javiator_port_send_enable_sensors( int enable )
 {
-    char buf[1] = { (char) enable };
+    uint8_t buf[1] = { (char) enable };
     comm_packet_t packet;
 
     packet.type     = COMM_EN_SENSORS;
@@ -102,7 +102,7 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    char buf[ MOTOR_SIGNALS_SIZE ];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
@@ -122,7 +122,6 @@ static void *javiator_thread(void *arg)
 	int res;
 	while (running) {
 		comm_channel->poll(comm_channel, 0);
-		
 		res = comm_recv_packet( comm_channel, &comm_packet );
 	}
 
@@ -135,11 +134,11 @@ static void start_javiator_thread(void)
 	pthread_attr_t attr;
 
 	pthread_attr_init(&attr);
-	
+
 	sched_getparam(0, &param);
 	if (param.sched_priority > 0) {
 		param.sched_priority++;
-		pthread_attr_setschedparam(&attr, &param);		
+		pthread_attr_setschedparam(&attr, &param);
 		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 		pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
 	}

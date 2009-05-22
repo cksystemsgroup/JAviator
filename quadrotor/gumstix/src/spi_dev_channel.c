@@ -44,7 +44,7 @@
 #define BUF_SIZE 64
 #define N_BUF    16
 
-#include "../shared/protocol.h"
+#include "shared/protocol.h"
 #include "spi_channel.h"
 
 struct spi_data;
@@ -69,6 +69,7 @@ struct spi_connection
 	pthread_cond_t cond;
 };
 
+static void print_data(struct spi_data *data) __attribute__((used));
 static void print_data(struct spi_data *data)
 {
 	int i;
@@ -227,7 +228,6 @@ static void *spi_thread(void *arg)
 		}
 		unlock(sc);
 		/* reading always blocks until at least the packet header is ready.
-		 * rx_buf is filled with exactly one packet
 		 */
 		start = get_utime();
 again:

@@ -29,8 +29,8 @@
 #include <math.h>
 #include <signal.h>
 
-#include "../shared/protocol.h"
-#include "../shared/transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "control_loop.h"
 #include "controller.h"
 #include "comm_channel.h"
@@ -180,7 +180,7 @@ static char *stats_name[NUM_STATS] = {
     "to terminal   ",
     "control       ",
     "sleep time    ",
-    "read time    ",
+    "read time     ",
 	"complete loop "
 };
 static void signal_handler(int num);
@@ -393,7 +393,6 @@ static int get_javiator_data( void )
 {
     static long long last_run = 0;
     static int16_t   last_id  = 0;
-    long long        now;
     int              res;
     int16_t          sonar_signal;
 
@@ -405,20 +404,20 @@ static int get_javiator_data( void )
         return( res );
     }
 
-#if 0
     if( javiator_data.id != (int16_t)(last_id + 1) )
     {
-        fprintf( stderr, "WARNING: control loop lost %d JAviator packet(s)\n",
-            javiator_data.id - last_id -1 );
+        fprintf( stderr, "WARNING: lost %d JAviator packet(s); id %d local id %d\n",
+            javiator_data.id - last_id -1, javiator_data.id, last_id );
+		/*
+		   long long        now;
         now = get_utime( );
-
         if( now - last_run > us_period )
         {
             fprintf( stderr, "WARNING: last period is %lld, jitter is %lld\n",
                 now - last_run, now - last_run - us_period );
         }
+		*/
     }
-#endif
 
     last_run = get_utime( );
     last_id  = javiator_data.id;
@@ -937,6 +936,7 @@ static int compute_motor_signals( void )
     trace_data.ddz_filtered = (int16_t)( ddz_filtered*1000.0 );
     trace_data.uz           = (int16_t)( uz_new );
     trace_data.z_cmd        = (int16_t)( command_data.z );
+	trace_data.id           = javiator_data.id ;
 
     uz_old                  = uz_new;
 
