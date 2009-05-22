@@ -154,7 +154,7 @@ void process_data_packet( void )
         checksum -= packet[ size ];
     }
 
-    /* check for non-zero checksum */
+    /* check for non-zero checksum*/
     if( checksum )
     {
         javiator_data.error |= JE_INVALID_DATA;
@@ -382,7 +382,9 @@ void send_javiator_data( void )
     if( flag_send_spi )
     {
         flag_send_spi = 0;
-	    spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
+	    if (spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE )) {
+			LED_TOGGLE(RED); /* could not send packet; previous packet still enqueued */
+		}
     }
 
     /* clear state and error indicator */
@@ -390,7 +392,7 @@ void send_javiator_data( void )
     javiator_data.error = 0;
 
     /* increment transmission ID */
-    ++javiator_data.id;
+	++javiator_data.id;
 
     /* start next ADC cycle */
     adc_convert( );
