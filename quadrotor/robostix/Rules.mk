@@ -10,7 +10,7 @@ endif
 all: $(TARGET)
 
 $(TARGET) : % : %.hex
-				 
+ 
 .PHONY: all $(TARGET)
 
 CROSS_COMPILE = avr-
@@ -21,9 +21,8 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 AVR_MCU_FLAGS = -mmcu=$(AVR_MCU)
 
 vpath %.c ./src
-vpath %.s ../shared
 
-CFLAGS   += -O3 -Wall 
+CFLAGS   += -O3 -Wall -I../
 CPPFLAGS += $(AVR_MCU_FLAGS) -I . -I ./include -I ./src
 LDFLAGS  += $(AVR_MCU_FLAGS) -Wl,-Map,$(basename $@).map
 

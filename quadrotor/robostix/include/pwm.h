@@ -26,8 +26,7 @@
 
 #include <stdint.h>
 
-#include "../shared/transfer.h"
-
+#include "shared/motor_signals.h"
 
 /*****************************************************************************/
 /*                                                                           */
