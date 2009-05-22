@@ -155,6 +155,27 @@ static inline void put_active_pending(struct spi_connection *sc, struct spi_data
 	}
 }
 
+static inline void put_pending_delete(struct spi_connection *sc, struct spi_data *data)
+{
+	struct spi_data *next;
+	struct spi_data *to_free;
+	lock(sc);
+	__put_pending(sc, data);
+	/* look for an old packet of the same type */
+	next = data;
+	while (next->next != NULL) {
+		if(next->next->rx_buf[2] == data->rx_buf[2]) {
+			to_free = next->next;
+			next->next = to_free->next;
+			__put_free(sc, to_free);
+			break;
+		}
+		next = next->next;
+	}
+
+	unlock(sc);
+}
+
 static inline struct spi_connection *spi_get_connection(const comm_channel_t *channel)
 {
     struct spi_connection *sc = (struct spi_connection *)channel->data;
@@ -247,7 +268,7 @@ again:
 			data->r_idx = 0;
 			data_read = 0;
 			//print_data(data);
-			put_pending(sc, data);
+			put_pending_delete(sc, data);
 		}
 	}
 	return NULL;
