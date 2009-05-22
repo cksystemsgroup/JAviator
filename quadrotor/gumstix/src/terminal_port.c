@@ -404,7 +404,7 @@ int terminal_port_send_motor_signals( const motor_signals_t *signals )
 
 int terminal_port_send_motor_offsets( const command_data_t *offsets )
 {
-    char buf[ COMMAND_DATA_SIZE ];
+    uint8_t buf[ COMMAND_DATA_SIZE ];
     comm_packet_t packet;
 
     command_data_to_stream( offsets, buf, COMMAND_DATA_SIZE );

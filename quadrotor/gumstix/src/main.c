@@ -98,7 +98,7 @@ static int setup_spi_javiator_port( char *device, int baudrate )
     return( 0 );
 }
 
-static int setup_inertial_port( char *device, int baudrate )
+static int setup_inertial_port( char *device, int baudrate, int automatic )
 {
     if( serial_channel_create( &inertial_channel ) )
     {
@@ -112,7 +112,7 @@ static int setup_inertial_port( char *device, int baudrate )
         return( -1 );
     }
 
-    if( inertial_port_init( &inertial_channel ) )
+    if( inertial_port_init( &inertial_channel, automatic ) )
     {
         fprintf( stderr, "ERROR: inertial port not correctly initialized\n" );
         return( -1 );
@@ -208,13 +208,17 @@ int main( int argc, char **argv )
     int control_z  = Z_AXIS_CONTROLLER;
     int exec_loop  = EXEC_CONTROL_LOOP;
 	int setup_imu = 0;
+	int automatic_imu = 0;
 	int opt;
 	channel_type_t type = CH_SERIAL;
 
 
-	while((opt = getopt(argc, argv, "cim:s:t:zu")) != -1) {
+	while((opt = getopt(argc, argv, "acim:s:t:zu")) != -1) {
 		switch(opt)
 		{
+			case 'a':
+				automatic_imu = 1;
+				break;
 			case 'c':
 				exec_loop = 0;
 				break;
@@ -264,7 +268,7 @@ int main( int argc, char **argv )
 
 	if (type != CH_SERIAL && setup_imu) {
 		printf( "setting up Inertial port ... " );
-		if(setup_inertial_port(SERIAL_DEVICE, SERIAL_BAUDRATE)) {
+		if(setup_inertial_port(SERIAL_DEVICE, SERIAL_BAUDRATE, automatic_imu)) {
 			printf( "failed\n" );
 			fprintf( stderr, "ERROR: could not setup the Inertial port\n" );
 			exit( 1 );

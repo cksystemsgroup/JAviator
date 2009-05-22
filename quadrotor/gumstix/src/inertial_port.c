@@ -40,6 +40,9 @@
 #define CMD_CONTINUOUSLY    0x10    /* command for continuous mode */
 #define CMD_DESIRED_DATA    0x31    /* command for desired data */
 
+static int                  inertial_local = 0;
+static int                  _started;
+static int                  _automatic;
 static inertial_data_t      inertial_data;
 static comm_channel_t *     comm_channel;
 static char                 comm_buf[ DM3_GX1_DATA_SIZE ];
@@ -79,7 +82,7 @@ static inline int is_valid_data( const uint8_t *data, int size )
     return( checksum == 0 );
 }
 
-int imu_recv_packet( void )
+static int imu_recv_packet( void )
 {
     static comm_state_t state = st_TYPE;
     static int items = 0;
@@ -128,24 +131,33 @@ redo:
     return( retval );
 }
 
-int inertial_port_init( comm_channel_t *channel )
+int inertial_port_init( comm_channel_t *channel, int automatic)
 {
     memset( &inertial_data, 0, sizeof( inertial_data ) );
 
     comm_channel = channel;
     new_data     = 0;
 
+	_automatic = automatic;
+	_started = 0;
+	inertial_local = 1;
+
     return( 0 );
+}
+
+int inertial_is_local()
+{
+	return inertial_local;
 }
 
 int inertial_port_tick( void )
 {
     int res = 0;
 
-    if( !new_data ) 
-    { 
+    if( !new_data )
+    {
         res = imu_recv_packet( );
-    
+
         if( res == 0 )
         {
             parse_inertial_data( );
@@ -157,7 +169,7 @@ int inertial_port_tick( void )
         }
         else
         if( res == -1 )
-        {            
+        {
             fprintf( stderr, "ERROR: invalid data from IMU channel\n" );
         }
         else
@@ -171,35 +183,56 @@ int inertial_port_tick( void )
 
 int inertial_port_send_request( void )
 {
-    char buf[1] = { (char) CMD_DESIRED_DATA };
+	if (!_automatic) {
+		char buf[1] = { (char) CMD_DESIRED_DATA };
 
-    return comm_channel->transmit( comm_channel, buf, 1 );
+		return comm_channel->transmit( comm_channel, buf, 1 );
+	}
+	return 0;
 }
 
 int inertial_port_send_start( void )
 {
-    char buf[3] = { (char) CMD_CONTINUOUSLY,
-                    (char) CMD_CONFIRMATION,
-                    (char) CMD_DESIRED_DATA };
+	if (_automatic) {
+		int ret;
+		char buf[64] = { (char) CMD_CONTINUOUSLY,
+			(char) CMD_CONFIRMATION,
+			(char) CMD_DESIRED_DATA };
 
-    return comm_channel->transmit( comm_channel, buf, 3 );
+		_started = 1;
+		comm_channel->transmit( comm_channel, buf, 3 );
+
+		while (comm_channel->poll(comm_channel, 0) > 0) {
+			ret = comm_channel->receive(comm_channel, buf, 64);
+			printf("empty recv buffer: %d\n", ret);
+		}
+	}
+
+	return 0;
 }
 
 int inertial_port_send_stop( void )
 {
-    char buf[3] = { (char) CMD_CONTINUOUSLY,
-                    (char) CMD_CONFIRMATION,
-                    (char) CMD_CONFIRMATION };
+	if (_automatic) {
+		char buf[3] = { (char) CMD_CONTINUOUSLY,
+			(char) CMD_CONFIRMATION,
+			(char) CMD_CONFIRMATION };
 
-    return comm_channel->transmit( comm_channel, buf, 3 );
+		_started = 0;
+		return comm_channel->transmit( comm_channel, buf, 3 );
+	}
+
+	return 0;
 }
 
 int inertial_port_get_data( inertial_data_t *data )
 {
     int res;
 
-    do
-    {
+	if (_automatic && !_started)
+		return 0;
+
+    while (!new_data) {
         res = inertial_port_tick( );
 
         if( res == EAGAIN )
@@ -216,8 +249,7 @@ int inertial_port_get_data( inertial_data_t *data )
         {
             return( 1 );
         }
-    }while( !new_data );
-
+    }
     memcpy( data, &inertial_data, sizeof( *data ) );
     new_data = 0;
 

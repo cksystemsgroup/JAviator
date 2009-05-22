@@ -137,7 +137,7 @@ static struct kalman_filter z_kalman_filter;
 /* sensor and input data */
 static command_data_t   command_data;
 static javiator_data_t  javiator_data;
-//static inertial_data_t  inertial_data;
+static inertial_data_t  inertial_data;
 static sensor_data_t    sensor_data;
 static motor_signals_t  motor_signals;
 static command_data_t   motor_offsets;
@@ -209,7 +209,7 @@ int control_loop_setup( int period, int control_z )
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
-    //memset( &inertial_data, 0, sizeof( inertial_data ) );
+    memset( &inertial_data, 0, sizeof( inertial_data ) );
     memset( &sensor_data,   0, sizeof( sensor_data ) );
     memset( &motor_signals, 0, sizeof( motor_signals ) );
     memset( &motor_offsets, 0, sizeof( motor_offsets ) );
@@ -391,7 +391,6 @@ static void adjust_z( )
 
 static int get_javiator_data( void )
 {
-    static long long last_run = 0;
     static int16_t   last_id  = 0;
     int              res;
     int16_t          sonar_signal;
@@ -408,40 +407,36 @@ static int get_javiator_data( void )
     {
         fprintf( stderr, "WARNING: lost %d JAviator packet(s); id %d local id %d\n",
             javiator_data.id - last_id -1, javiator_data.id, last_id );
-		/*
-		   long long        now;
-        now = get_utime( );
-        if( now - last_run > us_period )
-        {
-            fprintf( stderr, "WARNING: last period is %lld, jitter is %lld\n",
-                now - last_run, now - last_run - us_period );
-        }
-		*/
     }
 
-    last_run = get_utime( );
     last_id  = javiator_data.id;
 
-    /* copy and scale Euler angles */
-    sensor_data.roll    = (int16_t)( javiator_data.roll  * FACTOR_EULER_ANGLE );
-    sensor_data.pitch   = (int16_t)( javiator_data.pitch * FACTOR_EULER_ANGLE );
-    sensor_data.yaw     = (int16_t)( javiator_data.yaw   * FACTOR_EULER_ANGLE );
+	if (!inertial_is_local()) {
+		/* copy and scale Euler angles */
+		sensor_data.roll    = (int16_t)( javiator_data.roll  * FACTOR_EULER_ANGLE );
+		sensor_data.pitch   = (int16_t)( javiator_data.pitch * FACTOR_EULER_ANGLE );
+		sensor_data.yaw     = (int16_t)( javiator_data.yaw   * FACTOR_EULER_ANGLE );
 
-    /* save old angular rates */
-    sensor_data.ddroll  = sensor_data.droll;
-    sensor_data.ddpitch = sensor_data.dpitch;
-    sensor_data.ddyaw   = sensor_data.dyaw;
+		/* save old angular rates */
+		sensor_data.ddroll  = sensor_data.droll;
+		sensor_data.ddpitch = sensor_data.dpitch;
+		sensor_data.ddyaw   = sensor_data.dyaw;
 
-    /* copy and scale angular rates */
-    sensor_data.droll   = (int16_t)( javiator_data.droll  * FACTOR_ANGULAR_RATE );
-    sensor_data.dpitch  = (int16_t)( javiator_data.dpitch * FACTOR_ANGULAR_RATE );
-    sensor_data.dyaw    = (int16_t)( javiator_data.dyaw   * FACTOR_ANGULAR_RATE );
+		/* copy and scale angular rates */
+		sensor_data.droll   = (int16_t)( javiator_data.droll  * FACTOR_ANGULAR_RATE );
+		sensor_data.dpitch  = (int16_t)( javiator_data.dpitch * FACTOR_ANGULAR_RATE );
+		sensor_data.dyaw    = (int16_t)( javiator_data.dyaw   * FACTOR_ANGULAR_RATE );
 
-    /* compute angular accelerations */
-    sensor_data.ddroll  = (int16_t)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
-    sensor_data.ddpitch = (int16_t)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
-    sensor_data.ddyaw   = (int16_t)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
+		/* compute angular accelerations */
+		sensor_data.ddroll  = (int16_t)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
+		sensor_data.ddpitch = (int16_t)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
+		sensor_data.ddyaw   = (int16_t)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
 
+		/* copy and scale linear accelerations */
+		sensor_data.ddx     = (int16_t)( javiator_data.ddx * FACTOR_LINEAR_ACCEL );
+		sensor_data.ddy     = (int16_t)( javiator_data.ddy * FACTOR_LINEAR_ACCEL );
+		sensor_data.ddz     = (int16_t)( javiator_data.ddz * FACTOR_LINEAR_ACCEL );
+	}
     /* save old positions */
     sensor_data.dx      = sensor_data.x;
     sensor_data.dy      = sensor_data.y;
@@ -465,10 +460,6 @@ static int get_javiator_data( void )
     sensor_data.dy      = (int16_t)( (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE );
     sensor_data.dz      = (int16_t)( (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE );
 
-    /* copy and scale linear accelerations */
-    sensor_data.ddx     = (int16_t)( javiator_data.ddx * FACTOR_LINEAR_ACCEL );
-    sensor_data.ddy     = (int16_t)( javiator_data.ddy * FACTOR_LINEAR_ACCEL );
-    sensor_data.ddz     = (int16_t)( javiator_data.ddz * FACTOR_LINEAR_ACCEL );
 
     /* copy and scale battery level */
     sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
@@ -476,44 +467,18 @@ static int get_javiator_data( void )
     /* apply filter to battery data */
     filter_battery( );
 
-#ifdef ADJUST_YAW
-    /* IMPORTANT: yaw angle must be adjusted BEFORE
-       computation of sine/cosine values */
-    adjust_yaw( );
-#endif
-
-#ifdef ADJUST_Z
-    adjust_z( );
-#endif
-
-    /* compute sine/cosine values */
-    sin_roll  = sin( sensor_data.roll/1000.0 );
-    cos_roll  = cos( sensor_data.roll/1000.0 );
-    sin_pitch = sin( sensor_data.pitch/1000.0 );
-    cos_pitch = cos( sensor_data.pitch/1000.0 );
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    sin_yaw   = sin( sensor_data.yaw/1000.0 );
-    cos_yaw   = cos( sensor_data.yaw/1000.0 );
-#endif
-
     return( 0 );
 }
 
-#if 0
 static int get_inertial_data( void )
 {
-    //static long long last_run   = 0;
-    //static int16_t   last_ticks = 0;
-    //long long        now;
+    static int16_t   last_ticks = 0;
     int              res;
 
     res = inertial_port_get_data( &inertial_data );
 
     if( res == -1 )
     {
-        //last_run   = get_utime( );
-        //last_ticks = inertial_data.ticks;
         return( 0 );
     }
 
@@ -522,24 +487,14 @@ static int get_inertial_data( void )
         fprintf( stderr, "ERROR: data from IMU not available\n" );
         return( res );
     }
-/*
-    if( inertial_data.ticks != (int16_t)( last_ticks + IMU_DELAY ) )
+
+    if( inertial_data.ticks != (int16_t)(last_ticks + IMU_DELAY) )
     {
-        fprintf( stderr, "WARNING: control loop lost %d IMU packet(s), ticks difference: %5d\n",
-            (inertial_data.ticks - last_ticks) / IMU_DELAY,
-            (inertial_data.ticks - last_ticks) + IMU_DELAY );
-        now = get_utime( );
-
-        if( now - last_run > us_period )
-        {
-            fprintf( stderr, "WARNING: last period is %lld, jitter is %lld\n",
-                now - last_run, now - last_run - us_period );
-        }
+        fprintf( stderr, "WARNING: lost %d IMU packet(s); id %d local id %d\n",
+            inertial_data.ticks - last_ticks -1, inertial_data.ticks, last_ticks );
     }
-
-    last_run   = get_utime( );
     last_ticks = inertial_data.ticks;
-*/
+
     /* copy and scale Euler angles */
     sensor_data.roll    = (int16_t)( inertial_data.roll  * FACTOR_EULER_ANGLE );
     sensor_data.pitch   = (int16_t)( inertial_data.pitch * FACTOR_EULER_ANGLE );
@@ -565,25 +520,8 @@ static int get_inertial_data( void )
     sensor_data.ddy     = (int16_t)( inertial_data.ddy * FACTOR_LINEAR_ACCEL );
     sensor_data.ddz     = (int16_t)( inertial_data.ddz * FACTOR_LINEAR_ACCEL );
 
-#ifdef ADJUST_YAW
-    /* IMPORTANT: yaw angle must be adjusted BEFORE
-       computation of sine/cosine values */
-    adjust_yaw( );
-#endif
-
-    /* compute sine/cosine values */
-    sin_roll  = sin( sensor_data.roll/1000.0 );
-    cos_roll  = cos( sensor_data.roll/1000.0 );
-    sin_pitch = sin( sensor_data.pitch/1000.0 );
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    sin_yaw   = sin( sensor_data.yaw/1000.0 );
-    cos_yaw   = cos( sensor_data.yaw/1000.0 );
-#endif
-
     return( 0 );
 }
-#endif
 
 static void filter_and_assign_commands(
     const command_data_t *in, command_data_t *out )
@@ -626,6 +564,8 @@ static int get_command_data( void )
         if( sensors_enabled )
         {
             javiator_port_send_enable_sensors( 0 );
+			if (inertial_is_local())
+				inertial_port_send_stop();
             sensors_enabled = 0;
         }
     }
@@ -653,6 +593,8 @@ static int get_command_data( void )
                 if( !sensors_enabled )
                 {
                     javiator_port_send_enable_sensors( 1 );
+					if (inertial_is_local())
+						inertial_port_send_start();
                     sensors_enabled = 1;
                 }
                 break;
@@ -976,19 +918,6 @@ static int send_trace_data_to_terminal( void )
     return terminal_port_send_trace_data( &trace_data );
 }
 
-static inline void do_io( long long deadline )
-{
-    long long now = get_utime( );
-
-    while( now < deadline )
-    {
-        terminal_port_tick( );
-   //     inertial_port_tick( );
-        sleep_until( now + 1000 );
-        now = get_utime( );
-    }
-}
-
 static int wait_for_next_period( void )
 {
     if( sleep_until( next_period ) ) {
@@ -1030,14 +959,75 @@ static void int_handler(int num)
 	running = 0;
 }
 
+static int read_sensors()
+{
+	uint64_t start, end;
+	start = get_utime();
+	if (get_javiator_data()) {
+            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
+			return -1;
+
+	}
+	end = get_utime();
+
+	calc_stats(end - start, STAT_FROM_JAV);
+	if(inertial_is_local()) {
+		start = get_utime();
+		if( get_inertial_data( ) )
+		{
+			fprintf( stderr, "ERROR: connection to IMU broken\n" );
+			return -1;
+		}
+		else
+		{
+			inertial_port_send_request( );
+			   fprintf( stdout, "roll: %5d"
+			   "     pitch: %5d"
+			   "     yaw: %5d\r",
+			   sensor_data.roll,
+			   sensor_data.pitch,
+			   sensor_data.yaw );
+			   fflush( stdout );
+		}
+		end = get_utime();
+		calc_stats(end - start, STAT_IMU);
+	}
+
+#ifdef ADJUST_YAW
+	/* IMPORTANT: yaw angle must be adjusted BEFORE
+	   computation of sine/cosine values */
+	adjust_yaw( );
+#endif
+
+#ifdef ADJUST_Z
+	adjust_z( );
+#endif
+
+	/* compute sine/cosine values */
+	sin_roll  = sin( sensor_data.roll/1000.0 );
+	cos_roll  = cos( sensor_data.roll/1000.0 );
+	sin_pitch = sin( sensor_data.pitch/1000.0 );
+	cos_pitch = cos( sensor_data.pitch/1000.0 );
+
+#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+	sin_yaw   = sin( sensor_data.yaw/1000.0 );
+	cos_yaw   = cos( sensor_data.yaw/1000.0 );
+#endif
+
+	return 0;
+}
+
 /* the control loop for our helicopter */
 int control_loop_run( )
 {
-    int first_time = 1;    
+    int first_time = 1;
     next_period    = get_utime( ) + us_period;
     altitude_mode  = ALT_MODE_GROUND;
     long long start, end;
 	long long loop_start;
+
+	if (inertial_is_local())
+		inertial_port_send_request();
 
     while( running )
     {
@@ -1049,55 +1039,13 @@ int control_loop_run( )
         end = get_utime();
         calc_stats(end - start, STAT_TO_JAV);
 
-        start = get_utime();
-        if( get_javiator_data( ) )
+        if( read_sensors( ) )
         {
             altitude_mode = ALT_MODE_SHUTDOWN;
             perform_shut_down( );
-            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
             break;
         }
-        else
-        {
-/*
-            fprintf( stdout, "laser: %5u"
-                        "     sonar: %5u"
-                        "     pressure: %5u"
-                        "     battery: %5u\r",
-                        javiator_data.laser,
-                        javiator_data.sonar,
-                        javiator_data.pressure,
-                        javiator_data.battery );
-            fflush( stdout );
-*/
-        }
-        end = get_utime();
-        calc_stats(end - start, STAT_FROM_JAV);
-#if 0
-        start = get_utime();
-        if( get_inertial_data( ) )
-        {
-            altitude_mode = ALT_MODE_SHUTDOWN;
-            perform_shut_down( );
-            fprintf( stderr, "ERROR: connection to IMU broken\n" );
-            break;
-        }
-        else
-        {
-            inertial_port_send_request( );
-/*
-            fprintf( stdout, "roll: %5d"
-                        "     pitch: %5d"
-                        "     yaw: %5d\r",
-                        sensor_data.roll,
-                        sensor_data.pitch,
-                        sensor_data.yaw );
-            fflush( stdout );
-*/
-        }
-        end = get_utime();
-        calc_stats(end - start, STAT_IMU);
-#endif
+
         start = get_utime();
         if( check_terminal_connection( ) )
         {
@@ -1112,7 +1060,7 @@ int control_loop_run( )
         else
         {
             first_time = 1;
-        }        
+        }
         get_command_data( );
         end = get_utime();
         calc_stats(end - start, STAT_FROM_TERM);

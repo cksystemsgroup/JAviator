@@ -32,7 +32,7 @@
 
 int inertial_port_tick( void );
 
-int inertial_port_init( comm_channel_t *channel );
+int inertial_port_init( comm_channel_t *channel, int automatic );
 
 int inertial_port_send_request( void );
 
@@ -42,6 +42,8 @@ int inertial_port_send_stop( void );
 
 int inertial_port_get_data( inertial_data_t *data );
 
+/* return true if the IMU is connected locally */
+int inertial_is_local();
 
 #endif /* !INERTIAL_PORT_H */
 
