@@ -26,13 +26,7 @@
 #ifndef MOTOR_SIGNALS_H
 #define MOTOR_SIGNALS_H
 
-#include "../shared/transfer.h"
-
-
-int motor_signals_to_stream( const motor_signals_t *signals, char *buf, int buf_len );
-
-int motor_signals_from_stream( motor_signals_t *signals, const char *buf, int buf_len );
-
+#include "shared/motor_signals.h"
 
 #endif /* !MOTOR_SIGNALS_H */
 
