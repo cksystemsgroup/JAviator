@@ -26,13 +26,7 @@
 #ifndef JAVIATOR_DATA_H
 #define JAVIATOR_DATA_H
 
-#include "../shared/transfer.h"
-
-
-int javiator_data_to_stream( const javiator_data_t *data, char *buf, int len );
-
-int javiator_data_from_stream( javiator_data_t *data, const char *buf, int len );
-
+#include "shared/javiator_data.h"
 
 #endif /* !JAVIATOR_DATA_H */
 
