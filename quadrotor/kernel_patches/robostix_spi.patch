@@ -1,0 +1,248 @@
+Index: linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c
+===================================================================
+--- linux-2.6.24.7.orig/arch/arm/mach-pxa/gumstix.c	2009-05-18 13:39:24.000000000 +0200
++++ linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c	2009-05-22 16:10:45.000000000 +0200
+@@ -17,6 +17,9 @@
+ #include <linux/init.h>
+ #include <linux/device.h>
+ #include <linux/platform_device.h>
++#include <linux/autoconf.h>
++#include <linux/spi/spi.h>
++#include <asm/arch/pxa2xx_spi.h>
+ 
+ #include <asm/hardware.h>
+ #include <asm/mach-types.h>
+@@ -189,8 +192,81 @@
+ };
+ #endif
+ 
++#if defined(CONFIG_SPI_JAVIATOR) || defined(CONFIG_SPI_JAVIATOR_MODULE)
++static
++void javiator_cs_control(u32 command)
++{   /* uses NSSPSFRM pin configured as GPIO out */
++    if (command & PXA2XX_CS_ASSERT) {
++        GPCR(75) = GPIO_bit(75);
++	} else {
++        GPSR(75) = GPIO_bit(75);
++	}
++}
++
++static
++struct pxa2xx_spi_chip javiator_chip_info = {
++    .tx_threshold = 8,      /* SSP hardware FIFO threshold */
++    .rx_threshold = 4,     /* SSP hardware FIFO threshold */
++    .dma_burst_size = 8,    /* byte wide transfers used so 8 byte bursts */
++    .timeout = 235,         /* wait to handle trailing */
++    .cs_control = javiator_cs_control,
++};
++#endif
++
++#if defined(CONFIG_SPI_PXA2XX) || defined(CONFIG_SPI_PXA2XX_MODULE)
++static
++struct resource pxa_spi_nssp_resources[] = {
++    [0] = {
++        .start  = __PREG(SSCR0_P(2)), /* Start address of NSSP */
++        .end    = __PREG(SSCR0_P(2)) + 0x2c, /* Range of registers */
++        .flags  = IORESOURCE_MEM,
++    },
++    [1] = {
++        .start  = IRQ_NSSP, /* NSSP IRQ */
++        .end    = IRQ_NSSP,
++        .flags  = IORESOURCE_IRQ,
++    },
++};
++
++static
++struct pxa2xx_spi_master pxa_nssp_master_info = {
++    .ssp_type = PXA27x_SSP, /* Type of SSP */
++    .clock_enable = CKEN_SSP2, /* NSSP Peripheral clock */
++    .num_chipselect = 1, /* Matches the number of chips attached to NSSP */
++    .enable_dma = 1, /* Enables NSSP DMA */
++};
++
++static
++struct platform_device pxa_spi_nssp = {
++    .name = "pxa2xx-spi", /* MUST BE THIS VALUE, so device match driver */
++    .id = 2, /* Bus number, MUST MATCH SSP number 1..n */
++    .resource = pxa_spi_nssp_resources,
++    .num_resources = ARRAY_SIZE(pxa_spi_nssp_resources),
++    .dev = {
++        .platform_data = &pxa_nssp_master_info, /* Passed to driver */
++    },
++};
++
++static
++struct spi_board_info gumstix_spi_board_info[] = {
++#if defined(CONFIG_SPI_JAVIATOR) || defined(CONFIG_SPI_JAVIATOR_MODULE)
++    {
++        .modalias = "javiator-spi",
++        .max_speed_hz = 3686400, /* run SSP as fast as possbile */
++        .bus_num = 2,
++        .chip_select = 0,
++        .controller_data = &javiator_chip_info,
++        .mode = SPI_MODE_3,
++    },
++#endif
++};
++#endif
++
+ static struct platform_device *devices[] __initdata = {
+ 	&gum_audio_device,
++#if defined(CONFIG_SPI_PXA2XX) || defined(CONFIG_SPI_PXA2XX_MODULE)
++    &pxa_spi_nssp,
++#endif
+ };
+ 
+ #ifdef CONFIG_ARCH_GUMSTIX_VERDEX
+@@ -225,6 +301,10 @@
+ #if defined(CONFIG_FB_PXA_ALPS_CDOLLAR) | defined(CONFIG_FB_PXA_SHARP_LQ043_PSP) | defined(CONFIG_FB_PXA_SAMSUNG_LTE430WQ_F0C)
+ 	set_pxa_fb_info(&gumstix_fb_info);
+ #endif
++#if defined(CONFIG_SPI_PXA2XX) || defined(CONFIG_SPI_PXA2XX_MODULE)
++    spi_register_board_info(gumstix_spi_board_info,
++        ARRAY_SIZE(gumstix_spi_board_info));
++#endif
+ 	(void) platform_add_devices(devices, ARRAY_SIZE(devices));
+ }
+ 
+Index: linux-2.6.24.7/drivers/spi/Kconfig
+===================================================================
+--- linux-2.6.24.7.orig/drivers/spi/Kconfig	2008-05-07 01:22:34.000000000 +0200
++++ linux-2.6.24.7/drivers/spi/Kconfig	2009-05-22 16:24:03.000000000 +0200
+@@ -237,5 +237,11 @@
+ 
+ # (slave support would go here)
+ 
++config SPI_JAVIATOR
++    tristate "JAviator SPI slave"
++    depends on SPI_MASTER && EXPERIMENTAL
++    help
++      This enables using JAviator robostix as SPI slave.
++
+ endmenu # "SPI support"
+ 
+Index: linux-2.6.24.7/drivers/spi/Makefile
+===================================================================
+--- linux-2.6.24.7.orig/drivers/spi/Makefile	2008-05-07 01:22:34.000000000 +0200
++++ linux-2.6.24.7/drivers/spi/Makefile	2009-05-22 16:27:57.000000000 +0200
+@@ -36,6 +36,8 @@
+ # 	... add above this line ...
+ 
+ # SPI slave controller drivers (upstream link)
++obj-$(CONFIG_SPI_JAVIATOR)   += javiator_spi.o
++
+ # 	... add above this line ...
+ 
+ # SPI slave drivers (protocol for that link)
+Index: linux-2.6.24.7/drivers/spi/pxa2xx_spi.c
+===================================================================
+--- linux-2.6.24.7.orig/drivers/spi/pxa2xx_spi.c	2009-05-18 18:07:42.000000000 +0200
++++ linux-2.6.24.7/drivers/spi/pxa2xx_spi.c	2009-05-18 18:16:55.000000000 +0200
+@@ -135,7 +135,6 @@
+ 	size_t tx_map_len;
+ 	u8 n_bytes;
+ 	u32 dma_width;
+-	int cs_change;
+ 	int (*write)(struct driver_data *drv_data);
+ 	int (*read)(struct driver_data *drv_data);
+ 	irqreturn_t (*transfer_handler)(struct driver_data *drv_data);
+@@ -397,8 +396,42 @@
+ 					struct spi_transfer,
+ 					transfer_list);
+ 
++	if (last_transfer->delay_usecs)
++		udelay(last_transfer->delay_usecs);
++
+ 	if (!last_transfer->cs_change)
+ 		drv_data->cs_control(PXA2XX_CS_DEASSERT);
++	else {
++		struct spi_message *next_msg;
++
++		/* Holding of cs was hinted, but we need to make sure
++		 * the next message is for the same chip.  Don't waste
++		 * time with the following tests unless this was hinted.
++		 *
++		 * We cannot postpone this until pump_messages, because
++		 * after calling msg->complete (below) the driver that
++		 * sent the current message could be unloaded, which
++		 * could invalidate the cs_control() callback...
++		 */
++
++		/* get a pointer to the next message, if any */
++		spin_lock_irqsave(&drv_data->lock, flags);
++		if (list_empty(&drv_data->queue))
++			next_msg = NULL;
++		else
++			next_msg = list_entry(drv_data->queue.next,
++					struct spi_message, queue);
++		spin_unlock_irqrestore(&drv_data->lock, flags);
++
++		/* see if the next and current messages point
++		 * to the same chip
++		 */
++		if (next_msg && next_msg->spi != msg->spi)
++			next_msg = NULL;
++		if (!next_msg || msg->state == ERROR_STATE)
++			drv_data->cs_control(PXA2XX_CS_DEASSERT);
++	}
++
+ 
+ 	msg->state = NULL;
+ 	if (msg->complete)
+@@ -481,10 +514,9 @@
+ 	msg->actual_length += drv_data->len -
+ 				(drv_data->rx_end - drv_data->rx);
+ 
+-	/* Release chip select if requested, transfer delays are
+-	 * handled in pump_transfers */
+-	if (drv_data->cs_change)
+-		drv_data->cs_control(PXA2XX_CS_DEASSERT);
++	/* Transfer delays and chip select release are
++	 * handled in pump_transfers or giveback
++	 */
+ 
+ 	/* Move to next transfer */
+ 	msg->state = next_transfer(drv_data);
+@@ -593,10 +625,9 @@
+ 	drv_data->cur_msg->actual_length += drv_data->len -
+ 				(drv_data->rx_end - drv_data->rx);
+ 
+-	/* Release chip select if requested, transfer delays are
+-	 * handled in pump_transfers */
+-	if (drv_data->cs_change)
+-		drv_data->cs_control(PXA2XX_CS_DEASSERT);
++	/* Transfer delays and chip select release are
++	 * handled in pump_transfers or giveback
++	 */
+ 
+ 	/* Move to next transfer */
+ 	drv_data->cur_msg->state = next_transfer(drv_data);
+@@ -819,13 +850,17 @@
+ 		return;
+ 	}
+ 
+-	/* Delay if requested at end of transfer*/
++	/* Delay if requested at end of transfer before CS change */
+ 	if (message->state == RUNNING_STATE) {
+ 		previous = list_entry(transfer->transfer_list.prev,
+-					struct spi_transfer,
+-					transfer_list);
++				struct spi_transfer,
++				transfer_list);
+ 		if (previous->delay_usecs)
+ 			udelay(previous->delay_usecs);
++
++		/* Drop chip select only if cs_change is requested */
++		if (previous->cs_change)
++			drv_data->cs_control(PXA2XX_CS_DEASSERT);
+ 	}
+ 
+ 	/* Check transfer length */
+@@ -857,7 +892,6 @@
+ 	drv_data->len = transfer->len & DCMD_LENGTH;
+ 	drv_data->write = drv_data->tx ? chip->write : null_writer;
+ 	drv_data->read = drv_data->rx ? chip->read : null_reader;
+-	drv_data->cs_change = transfer->cs_change;
+ 
+ 	/* Change speed and bit per word on a per transfer */
+ 	cr0 = chip->cr0;

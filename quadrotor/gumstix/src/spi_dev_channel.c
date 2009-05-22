@@ -40,7 +40,7 @@
 #include <errno.h>
 #include "us_timer.h"
 
-#define DEV_NAME "/dev/robostix-spi2.0"
+#define DEV_NAME "/dev/javiator-spi2.0"
 #define BUF_SIZE 64
 #define N_BUF    16
 
