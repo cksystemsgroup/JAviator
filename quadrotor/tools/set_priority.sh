@@ -10,7 +10,7 @@ WLAN_PRIO=40
 
 ./control -c
 
-tmpfile="ps_file.txt"
+tmpfile="/tmp/ps_file.txt"
 
 # use the correct ps command:
 
