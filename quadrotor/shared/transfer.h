@@ -57,61 +57,8 @@
 #define JE_PRESS_GET_DATA   0x0100  /* error while receiving pressure data */
 #define JE_BATT_GET_DATA    0x0200  /* error while receiving battery data */
 
-#if 0
-/* Structure for shared JAviator data */
-typedef struct
-{
-    uint32_t    pos_x;              /* [?] range ? */
-    uint32_t    pos_y;              /* [?] range ? */
-    uint32_t    laser;              /* [1/10mm] range 0...5000000 */
-    uint16_t    sonar;              /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    pressure;           /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    battery;            /* [mV] range 0...5000 (10-bit resolution) */
-    uint16_t    state;              /* JAviator state indicator */
-    uint16_t    error;              /* JAviator error indicator */
-    uint16_t    id;                 /* transmisson ID */
-
-} javiator_data_t;
-
-#define JAVIATOR_DATA_SIZE  24      /* byte size of javiator_data_t */
-#endif
-
-/* Structure for shared JAviator data */
-typedef struct
-{
-    int16_t     roll;               /*                        | roll    |                       */
-    int16_t     pitch;              /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
-    int16_t     yaw;                /*                        | yaw     |                       */
-    int16_t     droll;              /*                        | droll   |                       */
-    int16_t     dpitch;             /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
-    int16_t     dyaw;               /*                        | dyaw    |                       */
-    int16_t     ddx;                /*                        | ddx     |                       */
-    int16_t     ddy;                /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
-    int16_t     ddz;                /*                        | ddz     |                       */
-    int16_t     ticks;              /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
-    int16_t     sonar;              /* [mV] range 0...5000 (10-bit resolution) */
-    int16_t     pressure;           /* [mV] range 0...5000 (10-bit resolution) */
-    int16_t     battery;            /* [mV] range 0...5000 (10-bit resolution) */
-    int16_t     state;              /* JAviator state indicator */
-    int16_t     error;              /* JAviator error indicator */
-    int16_t     id;                 /* transmisson ID */
-
-} javiator_data_t;
-
-#define JAVIATOR_DATA_SIZE  32      /* byte size of javiator_data_t */
-
-/* Structure for shared motor signals */
-typedef struct
-{
-    int16_t     front;              /* [units] If Fast PWM Mode enabled,  */
-    int16_t     right;              /* [units] then range 0...16000,      */
-    int16_t     rear;               /* [units] if Fast PWM Mode disabled, */
-    int16_t     left;               /* [units] then range 0...1000.       */
-
-} motor_signals_t;
-
-#define MOTOR_SIGNALS_SIZE  8       /* byte size of motor_signals_t */
-
+#include "shared/javiator_data.h"
+#include "shared/motor_signals.h"
 
 #endif /* !TRANSFER_H */
 
