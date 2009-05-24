@@ -33,7 +33,7 @@ public class UDPTransceiver extends Transceiver
 	public UDPTransceiver(ControlTerminal parent, String sendHost, int sendPort, int listenPort)
 	{
 		super(parent);
-		this.listenPort = listenPort;
+		this.listenPort = sendPort;
 		socketAddress = new InetSocketAddress(sendHost, sendPort);
 	}
 
@@ -43,11 +43,17 @@ public class UDPTransceiver extends Transceiver
 	public void connect()
 	{
 		try {
-			recvSocket = new DatagramSocket(listenPort);
-			sendSocket = new DatagramSocket();
+		//	recvSocket = new DatagramSocket(listenPort);
+			sendSocket = new DatagramSocket(listenPort);
 			haveTraffic = false;
 			setConnected(true);
 	    setLinked(true);
+	   
+	    
+	    	Packet packet = new Packet(PacketType.COMM_SWITCH_MODE, 0);
+	    	sendPacket(packet);   	
+	    	
+	    	
 		} catch (SocketException e) {
 			e.printStackTrace();
 	    setConnected(false);
@@ -60,11 +66,13 @@ public class UDPTransceiver extends Transceiver
 	 */
 	public void disconnect()
 	{
+		
 		if (recvSocket != null) {
 			recvSocket.close();
 			recvSocket = null;
 		}
-		if (recvSocket != null) {
+		
+		if (sendSocket != null) {
 			sendSocket.close();
 			sendSocket = null;
 		}
@@ -75,10 +83,11 @@ public class UDPTransceiver extends Transceiver
 	/* (non-Javadoc)
 	 * @see javiator.util.Transceiver#receive()
 	 */
-	protected void receive()
+	public void receive()
 	{
-		while (isConnected() && !isHalt()) {        	
-			byte[] buffer = new byte[ReportToGround.PACKET_SIZE + LeanPacket.OVERHEAD];
+		
+		while (isConnected() && !isHalt()) {  	
+			byte[] buffer = new byte[Packet.MAX_SIZE];
 			DatagramPacket recvPacket = new DatagramPacket(buffer, 0, buffer.length);
 			try {
 				if (!haveTraffic) {
@@ -87,26 +96,22 @@ public class UDPTransceiver extends Transceiver
 				if (DEBUG) {
 					System.err.println("Trying to receive");
 				}
-				recvSocket.receive(recvPacket);
+				sendSocket.receive(recvPacket);
 				if (!haveTraffic) {
 					System.err.println("First message received from JControl");
 					haveTraffic = true;
 				}
 				arrived();
-				if (recvPacket.getLength() != buffer.length) {
-					throw new IOException("Wrong length packet received: " + recvPacket.getLength());
-				}
+				
 				if (!LeanPacket.checksOut(buffer)) {
 					throw new IOException("Corrupt packet received");
 				}
-				if (buffer[LeanPacket.TYPE_OFFSET] != PacketType.COMM_GROUND_REPORT) {
-					throw new IOException("Bad packet type " + buffer[LeanPacket.TYPE_OFFSET] + " received");
-				}
+				
 				if (DEBUG) {
 					System.err.println("Processing packet: " + LeanPacket.dumpPacket(buffer, 0, buffer.length));
 				}
-				Packet thePacket = new Packet(PacketType.COMM_GROUND_REPORT, ReportToGround.PACKET_SIZE);
-				System.arraycopy(buffer,LeanPacket.PAYLOAD_OFFSET, thePacket.payload,0, ReportToGround.PACKET_SIZE);
+				Packet thePacket = new Packet(buffer[2], buffer[3]);
+				System.arraycopy(buffer,LeanPacket.PAYLOAD_OFFSET, thePacket.payload, 0, buffer[3]);
 				processPacket(thePacket);
 				if (DEBUG) {
 					System.err.println("Processing complete");

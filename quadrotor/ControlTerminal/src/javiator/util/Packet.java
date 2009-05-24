@@ -42,6 +42,7 @@ package javiator.util;
 
 public class Packet
 {
+	public static final int MAX_SIZE = 64;
   /** 
    * generates a packet that can hold size bytes.
    * allocates the byte array for payload with new byte[size]

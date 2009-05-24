@@ -143,8 +143,10 @@ public abstract class Transceiver extends javiator.util.Transceiver
 
     protected void processPacket( Packet packet )
     {
+    //	 System.out.println("got packet " + packet.type);
         switch( packet.type )
         {
+       
 	        case PacketType.COMM_SENSOR_DATA:
                 sendPacket( parent.getCommandData( ).toPacket( PacketType.COMM_COMMAND_DATA ) );
                 if( parent.isNewIdlingSpeed( ) )
