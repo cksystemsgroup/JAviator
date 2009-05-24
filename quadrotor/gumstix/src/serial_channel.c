@@ -123,7 +123,15 @@ static int serial_start( comm_channel_t *channel )
 
 static int serial_flush( comm_channel_t *channel )
 {
-    return( 0 );
+    serial_connection_t *sc = serial_get_connection( channel );
+    int res;
+
+    if (!sc) return( -1 );
+
+	res = tcflush(sc->fd, TCIOFLUSH);
+	if (res)
+		perror("tcflush");
+    return( res );
 }
 
 static int serial_poll( comm_channel_t *channel, long timeout )

@@ -22,6 +22,7 @@ control_SOURCES = \
     pidd_controller.c \
     serial_channel.c \
     socket_channel.c \
+    udp_socket_channel.c \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \

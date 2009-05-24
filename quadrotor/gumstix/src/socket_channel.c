@@ -45,13 +45,11 @@ typedef struct
     int    port;
     int    accept_fd;
     int    connected;
-    struct sockaddr_in serverinfo;
     struct sockaddr_in clientinfo;
 
 } socket_connection_t;
 
 static socket_connection_t connection;
-
 
 static inline socket_connection_t *socket_get_connection( const comm_channel_t *channel )
 {
@@ -433,7 +431,7 @@ static int client_socket_receive( comm_channel_t *channel, char *buf, int len )
     return( res );
 }
 
-int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port )
+int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port )
 {
     socket_connection_t *sc = socket_get_connection( channel );
 
@@ -451,12 +449,14 @@ int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr
             channel->transmit = client_socket_transmit;
             channel->receive  = client_socket_receive;
             return client_socket_init( sc, addr, port );
+		default:
+			printf("unknown type here\n");
     }
 
     return( -1 );
 }
 
-int socket_channel_create( comm_channel_t *channel )
+int tcp_socket_channel_create( comm_channel_t *channel )
 {
     if( channel->data == NULL )
     {
@@ -475,7 +475,7 @@ int socket_channel_create( comm_channel_t *channel )
 }
 
 
-int socket_channel_destroy( comm_channel_t *channel )
+int tcp_socket_channel_destroy( comm_channel_t *channel )
 {
     socket_connection_t *sc = socket_get_connection( channel );
 

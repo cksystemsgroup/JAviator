@@ -163,17 +163,17 @@ static int setup_javiator_port(channel_type_t type)
 	}
 }
 
-static int setup_terminal_port( int listen_port, int multiplier )
+static int setup_terminal_port( int listen_port, int type, int multiplier )
 {
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
 
-    if( socket_channel_create( &terminal_channel ) )
+    if( socket_channel_create( &terminal_channel, type ) )
     {
         fprintf( stderr, "ERROR: unable to create socket channel\n" );
         return( -1 );
     }
 
-    if( socket_channel_init( &terminal_channel, SOCK_SERVER, NULL, listen_port ) )
+    if( socket_channel_init( &terminal_channel, type, NULL, listen_port ) )
     {
         fprintf( stderr, "ERROR: unable to initialize socket channel\n" );
         return( -1 );
@@ -210,10 +210,11 @@ int main( int argc, char **argv )
 	int setup_imu = 0;
 	int automatic_imu = 0;
 	int opt;
+	int conn_type = SOCK_SERVER;
 	channel_type_t type = CH_SERIAL;
 
 
-	while((opt = getopt(argc, argv, "acim:s:t:zu")) != -1) {
+	while((opt = getopt(argc, argv, "acdim:s:t:zu")) != -1) {
 		switch(opt)
 		{
 			case 'a':
@@ -221,6 +222,9 @@ int main( int argc, char **argv )
 				break;
 			case 'c':
 				exec_loop = 0;
+				break;
+			case 'd':
+				conn_type = SOCK_UDP;
 				break;
 			case 'i':
 				setup_imu = 1;
@@ -277,7 +281,7 @@ int main( int argc, char **argv )
 	}
 
 	printf( "setting up Terminal port ... " );
-    if( setup_terminal_port( TERMINAL_PORT, multiplier ) )
+    if( setup_terminal_port( TERMINAL_PORT, conn_type, multiplier ) )
     {
         printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the Terminal port\n" );

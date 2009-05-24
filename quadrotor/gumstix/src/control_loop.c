@@ -488,11 +488,14 @@ static int get_inertial_data( void )
         return( res );
     }
 
+#if 0 /* FIXME: figure out correct delay values */
     if( inertial_data.ticks != (int16_t)(last_ticks + IMU_DELAY) )
     {
         fprintf( stderr, "WARNING: lost %d IMU packet(s); id %d local id %d\n",
             inertial_data.ticks - last_ticks -1, inertial_data.ticks, last_ticks );
     }
+#endif
+
     last_ticks = inertial_data.ticks;
 
     /* copy and scale Euler angles */
@@ -981,6 +984,7 @@ static int read_sensors()
 		else
 		{
 			inertial_port_send_request( );
+			/*
 			   fprintf( stdout, "roll: %5d"
 			   "     pitch: %5d"
 			   "     yaw: %5d\r",
@@ -988,6 +992,7 @@ static int read_sensors()
 			   sensor_data.pitch,
 			   sensor_data.yaw );
 			   fflush( stdout );
+			   */
 		}
 		end = get_utime();
 		calc_stats(end - start, STAT_IMU);

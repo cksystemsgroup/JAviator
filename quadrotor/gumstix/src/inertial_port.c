@@ -194,20 +194,14 @@ int inertial_port_send_request( void )
 int inertial_port_send_start( void )
 {
 	if (_automatic) {
-		int ret;
 		char buf[64] = { (char) CMD_CONTINUOUSLY,
 			(char) CMD_CONFIRMATION,
 			(char) CMD_DESIRED_DATA };
 
 		_started = 1;
+		comm_channel->flush(comm_channel);
 		comm_channel->transmit( comm_channel, buf, 3 );
-
-		while (comm_channel->poll(comm_channel, 0) > 0) {
-			ret = comm_channel->receive(comm_channel, buf, 64);
-			printf("empty recv buffer: %d\n", ret);
-		}
 	}
-
 	return 0;
 }
 

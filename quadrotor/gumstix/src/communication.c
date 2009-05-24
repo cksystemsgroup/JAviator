@@ -66,11 +66,6 @@ static inline int _receive( comm_channel_t *channel, char *buf, int len )
     return( 0 );
 }
 
-static inline int _flush( comm_channel_t *channel )
-{
-    return channel->flush( channel );
-}
-
 static inline uint16_t calc_checksum( comm_packet_t *packet )
 {
     uint16_t checksum = packet->type + packet->size;
@@ -273,7 +268,6 @@ int comm_send_packet( comm_channel_t *channel, const comm_packet_t *packet )
         return( -1 ); 
     }
 
-    _flush( channel );
     return( 0 );
 }
 

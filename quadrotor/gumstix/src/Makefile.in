@@ -62,9 +62,9 @@ am_control_OBJECTS = butter_filter.$(OBJEXT) communication.$(OBJEXT) \
 	kalman_filter.$(OBJEXT) main.$(OBJEXT) \
 	pid_controller.$(OBJEXT) pidd_controller.$(OBJEXT) \
 	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
-	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
-	terminal_port.$(OBJEXT) trace_data.$(OBJEXT) \
-	us_timer.$(OBJEXT)
+	udp_socket_channel.$(OBJEXT) spi_channel.$(OBJEXT) \
+	spi_dev_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
+	trace_data.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -207,6 +207,7 @@ control_SOURCES = \
     pidd_controller.c \
     serial_channel.c \
     socket_channel.c \
+    udp_socket_channel.c \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \
@@ -305,6 +306,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_dev_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/terminal_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trace_data.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/udp_socket_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/us_timer.Po@am__quote@
 
 .c.o:
