@@ -193,12 +193,20 @@ static void usage( char *binary )
 {
     printf( "usage: %s [OPTIONS]\n"
             "OPTIONS are:\n"
-            "\t -u      ... print this message\n"
-            "\t -t time ... controller period in milliseconds\n"
-            "\t -m mult ... send data every <mult> period to terminal\n"
-            "\t -z      ... disable z-controller\n"
+            "\t -a      ... if IMU is connected directly use it in automatic mode\n"
             "\t -c      ... disable control loop\n"
-            , binary );
+            "\t -h      ... print this message\n"
+            "\t -i      ... use IMU connected directly to serial device %s\n"
+			"\t               only possible if an SPI device is used\n"
+            "\t -j num  ... connect to JAviator through \n"
+			"\t               num == 1: user SPI\n"
+			"\t               num == 2: kernel SPI\n"
+			"\t               num == 3: serial device %s\n"
+            "\t -m mult ... send data every <mult> period to terminal\n"
+            "\t -t time ... controller period in milliseconds\n"
+            "\t -u      ... use UDP socket to communicate with the control terminal\n"
+            "\t -z      ... disable z-controller\n"
+            , binary, SERIAL_DEVICE, SERIAL_DEVICE);
 }
 
 int main( int argc, char **argv )
@@ -214,7 +222,7 @@ int main( int argc, char **argv )
 	channel_type_t type = CH_SERIAL;
 
 
-	while((opt = getopt(argc, argv, "acdim:s:t:zu")) != -1) {
+	while((opt = getopt(argc, argv, "achij:m:t:uz")) != -1) {
 		switch(opt)
 		{
 			case 'a':
@@ -222,9 +230,6 @@ int main( int argc, char **argv )
 				break;
 			case 'c':
 				exec_loop = 0;
-				break;
-			case 'd':
-				conn_type = SOCK_UDP;
 				break;
 			case 'i':
 				setup_imu = 1;
@@ -237,7 +242,7 @@ int main( int argc, char **argv )
 					exit( 1 );
 				}
 				break;
-			case 's':
+			case 'j':
 				type = atoi(optarg);
 				if (type < 1 || type >= CH_MAX_TYPE) {
 					fprintf( stderr, "ERROR: option '-s' requires btw 1 ... %d\n", 
@@ -254,6 +259,9 @@ int main( int argc, char **argv )
 				control_z = 0;
 				break;
 			case 'u':
+				conn_type = SOCK_UDP;
+				break;
+			case 'h':
 			default:
 				usage(argv[0]);
 				exit(1);
