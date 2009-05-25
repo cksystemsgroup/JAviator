@@ -52,7 +52,7 @@ static inline int parse_javiator_data( const comm_packet_t *packet )
     int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
 
 	if (local_id - 1 != javiator_data.id)
-		printf("local id %u received id %u\n", id, javiator_data.id);
+		printf("local id %u received id %u\n", local_id, javiator_data.id);
 
     new_data = 1;
     return( res );
