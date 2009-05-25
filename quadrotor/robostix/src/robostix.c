@@ -208,6 +208,8 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
                 javiator_data.error |= JE_OUT_OF_RANGE;
             }
 
+			javiator_data.id = data[MOTOR_SIGNALS_SIZE - 1] |
+				(data[MOTOR_SIGNALS_SIZE - 2] << 8);
             /* visualize that motors have been updated */
             LED_TOGGLE( BLUE );
         }
@@ -302,7 +304,6 @@ void check_signals_delay( )
         if( first_timeout )
         {
             first_timeout = 0;
-            javiator_data.id = 0;
 
             /* disable sensors to save power */
             process_en_sensors( 0 );
@@ -354,9 +355,6 @@ void send_javiator_data( void )
     /* clear state and error indicator */
     javiator_data.state = 0;
     javiator_data.error = 0;
-
-    /* increment transmission ID */
-	++javiator_data.id;
 
     /* start next ADC cycle */
     adc_convert( );

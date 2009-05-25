@@ -35,10 +35,9 @@ typedef struct
     int16_t     right;              /* [units] then range 0...16000,      */
     int16_t     rear;               /* [units] if Fast PWM Mode disabled, */
     int16_t     left;               /* [units] then range 0...1000.       */
-	uint8_t     response;
 } motor_signals_t;
 
-#define MOTOR_SIGNALS_SIZE  8       /* byte size of motor_signals_t */
+#define MOTOR_SIGNALS_SIZE  10       /* byte size of motor_signals_t + 2 for id */
 
 extern uint8_t current_response;
 

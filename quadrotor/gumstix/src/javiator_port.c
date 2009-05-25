@@ -44,14 +44,17 @@ static comm_channel_t * comm_channel;
 static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
 static volatile int     new_data;
+static int16_t id = 0;
 
 
 static inline int parse_javiator_data( const comm_packet_t *packet )
 {
     int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
 
-    new_data = 1;
+	if (id - 1 != javiator_data.id)
+		printf("local id %d received id %d\n", id, javiator_data.id);
 
+    new_data = 1;
     return( res );
 }
 
@@ -102,10 +105,14 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
+    uint8_t buf[MOTOR_SIGNALS_SIZE];
     comm_packet_t packet;
 
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
+
+	id++;
+	buf[MOTOR_SIGNALS_SIZE - 1] = id & 0xff;
+	buf[MOTOR_SIGNALS_SIZE - 2] = (id >> 8) & 0xff;
 
     packet.type     = COMM_MOTOR_SIGNALS;
     packet.size     = MOTOR_SIGNALS_SIZE;
