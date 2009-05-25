@@ -1,7 +1,7 @@
 Index: linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c
 ===================================================================
 --- linux-2.6.24.7.orig/arch/arm/mach-pxa/gumstix.c	2009-05-18 13:39:24.000000000 +0200
-+++ linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c	2009-05-22 16:10:45.000000000 +0200
++++ linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c	2009-05-25 10:13:56.000000000 +0200
 @@ -17,6 +17,9 @@
  #include <linux/init.h>
  #include <linux/device.h>
@@ -30,9 +30,9 @@ Index: linux-2.6.24.7/arch/arm/mach-pxa/gumstix.c
 +static
 +struct pxa2xx_spi_chip javiator_chip_info = {
 +    .tx_threshold = 8,      /* SSP hardware FIFO threshold */
-+    .rx_threshold = 4,     /* SSP hardware FIFO threshold */
++    .rx_threshold = 8,     /* SSP hardware FIFO threshold */
 +    .dma_burst_size = 8,    /* byte wide transfers used so 8 byte bursts */
-+    .timeout = 235,         /* wait to handle trailing */
++    .timeout = 2350*2,         /* wait to handle trailing */
 +    .cs_control = javiator_cs_control,
 +};
 +#endif
@@ -246,3 +246,752 @@ Index: linux-2.6.24.7/drivers/spi/pxa2xx_spi.c
  
  	/* Change speed and bit per word on a per transfer */
  	cr0 = chip->cr0;
+Index: linux-2.6.24.7/drivers/spi/javiator_spi.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.6.24.7/drivers/spi/javiator_spi.c	2009-05-25 13:28:52.000000000 +0200
+@@ -0,0 +1,744 @@
++/*
++ * Copyright (C) 2009 Harald Roeck
++ *              based on a driver of Andrei Rylin
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#include <linux/init.h>
++#include <linux/poll.h>
++#include <linux/module.h>
++#include <linux/device.h>
++#include <linux/errno.h>
++#include <linux/interrupt.h>
++#include <linux/string.h>
++#include <linux/ctype.h>
++#include <linux/fs.h>
++#include <linux/proc_fs.h>
++#include <linux/dma-mapping.h>
++#include <linux/spi/spi.h>
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++#include <asm/uaccess.h>
++#include <asm/ioctls.h>
++
++#define DEV_NAME "javiator-spi"
++#define DEV_NAME_LONG "JAviator as SPI slave"
++#define DRV_VERSION_STR "version 01.01"
++
++MODULE_AUTHOR("Harald Roeck <hroeck@gmail.com>");
++MODULE_DESCRIPTION(DEV_NAME_LONG);
++MODULE_LICENSE("GPL");
++
++#define N_BUFS          32
++#define MAX_PACKET_SIZE 64
++
++#define MAX_MESSAGE_LENGTH 15
++#define NUM_TRANSFERS       1
++#define BUF_LENGTH  (MAX_MESSAGE_LENGTH + NUM_TRANSFERS) /* should be a multiple of 8 */
++
++#define SPI_SPEED_HZ (3686400/divider) /* basic clock divided by the divider parameter */
++#define BYTE_DELAY   transfer_delay
++
++/* the following are module parameters, with good defaults */
++static int transfer_delay = 0;
++static int divider = 50; /* smaller values -> transfers faster, but the robostix can't catch up then */
++static int cs_change = 0;
++static int debug = 0;
++
++module_param(transfer_delay, int, S_IRUGO | S_IWUSR);
++module_param(divider, int, S_IRUGO | S_IWUSR);
++module_param(cs_change, int, S_IRUGO | S_IWUSR);
++module_param(debug, int, S_IRUGO | S_IWUSR);
++
++struct javiator_data {
++    uint8_t tx_buf[BUF_LENGTH];
++    uint8_t rx_buf[BUF_LENGTH];
++    struct javiator_dev* dev;
++    struct spi_message message;
++    struct spi_transfer t[NUM_TRANSFERS];
++}__attribute__((aligned(128)));
++
++typedef enum
++{
++    st_MARK1 = 1,
++    st_MARK2,
++    st_TYPE,
++    st_SIZE,
++    st_PAYLOAD,
++    st_SUM1,
++    st_SUM2,
++    st_COMPLETE,
++} packet_state_t;
++
++struct javiator_dev {
++    struct list_head link;
++    int minor;
++    int flags;
++    struct class_device *class_dev;
++    struct spi_device* spi;
++
++    wait_queue_head_t waitq; /* wait queue of user processes wanting to read */
++    wait_queue_head_t w_waitq; /* wait queue of user processes wanting to write */
++
++    spinlock_t lock; /* lock for stuff below */
++    struct javiator_data* data; /* memory for N_BUFS javiator_data structs */
++    struct list_head pending_data; /* data read from robostix but not forwarded to user */
++	struct list_head free_data; /* not used data */
++	int open;
++	int submitted;
++
++	packet_state_t packet_state;
++	int packet_length;
++	int packet_read;
++	uint8_t packet_buf[MAX_PACKET_SIZE];
++};
++
++static struct class* javiator_dev_class;
++static int javiator_major;
++static LIST_HEAD(javiator_dev_list);
++static DEFINE_SPINLOCK(javiator_dev_list_lock);
++
++static struct spi_message* spi_msg;
++
++/* some debug helpers */
++static void print_buf(struct javiator_data *data)
++{
++	int i,j;
++	printk("rx: ");
++	for(i=0;i<NUM_TRANSFERS;++i)
++		for(j=0;j<data->t[i].len;++j)
++			if(data->t[i].rx_buf)
++				printk("%2x ", ((char *)data->t[i].rx_buf)[j]);
++
++	printk("\n");
++}
++static void print_tx_buf(struct javiator_data *data)
++{
++	int i,j;
++	printk("tx: ");
++	for(i=0;i<NUM_TRANSFERS;++i)
++		for(j=0;j<data->t[i].len;++j)
++			if(data->t[i].tx_buf)
++				printk("%2x ", ((char *)data->t[i].tx_buf)[j]);
++
++	printk("\n");
++}
++
++static inline int packet_complete(struct javiator_dev *dev)
++{
++	return dev->packet_state == st_COMPLETE;
++}
++
++static inline void reset_parser(struct javiator_dev *dev)
++{
++	dev->packet_state = st_MARK1;
++	dev->packet_read = 0;
++	dev->packet_length = 0;
++}
++
++
++static inline void __add_free_data(struct javiator_data *data, struct javiator_dev *dev)
++{
++	list_add_tail(&data->message.queue, &dev->free_data);
++	wake_up_interruptible(&dev->w_waitq);
++}
++
++static inline void add_free_data(struct javiator_data *data, struct javiator_dev *dev)
++{
++    unsigned long flags;
++	spin_lock_irqsave(&dev->lock, flags);
++	__add_free_data(data, dev);
++	spin_unlock_irqrestore(&dev->lock, flags);
++}
++
++static inline struct javiator_data *__get_free_data(struct javiator_dev *dev)
++{
++	struct list_head *elm;
++	if (list_empty(&dev->free_data)) {
++		if (list_empty(&dev->pending_data))
++			return NULL;
++
++		elm = dev->pending_data.next;
++	} else {
++		elm = dev->free_data.next;
++	}
++    list_del_init(elm);
++	return list_entry(elm, struct javiator_data, message.queue);
++}
++
++static inline struct javiator_data *get_free_data(struct javiator_dev *dev)
++{
++	struct javiator_data *ret;
++    unsigned long flags;
++	spin_lock_irqsave(&dev->lock, flags);
++	ret = __get_free_data(dev);
++	spin_unlock_irqrestore(&dev->lock, flags);
++	return ret;
++}
++
++static inline struct javiator_data *__get_pending_data(struct javiator_dev *dev)
++{
++	struct list_head *elm;
++	if (list_empty(&dev->pending_data))
++		return NULL;
++
++	elm = dev->pending_data.next;
++	list_del_init(elm);
++	return list_entry(elm, struct javiator_data, message.queue);
++}
++
++static inline int data_is_pending(struct javiator_dev *dev)
++{
++	return !list_empty(&dev->pending_data);
++}
++
++static inline struct javiator_data *get_pending_data(struct javiator_dev *dev)
++{
++	struct javiator_data *data;
++    unsigned long flags;
++    spin_lock_irqsave(&dev->lock, flags);
++	data = __get_pending_data(dev);
++	spin_unlock_irqrestore(&dev->lock, flags);
++	return data;
++}
++
++static inline int submit_data(struct javiator_data *data, struct javiator_dev *dev)
++{
++	int i;
++	for(i=0;i<NUM_TRANSFERS;++i) {
++		data->t[i].speed_hz = SPI_SPEED_HZ;
++		data->t[i].delay_usecs = BYTE_DELAY;
++		data->t[i].cs_change = cs_change;
++	}
++	if (spi_async(dev->spi, &data->message)) {
++		printk("message submission failed\n");
++		add_free_data(data, dev);
++		return -1;
++	}
++
++	dev->submitted++;
++	return 0;
++}
++
++/* callback: called when a message was processed */
++static void javiator_data_ready(void *context)
++{
++    unsigned long flags;
++    struct javiator_data* data = context;
++    struct javiator_dev* dev = data->dev;
++
++	if(debug) {
++		print_buf(data);
++		print_tx_buf(data);
++	}
++    spin_lock_irqsave(&dev->lock, flags);
++	dev->submitted--;
++    list_add_tail(&data->message.queue, &dev->pending_data);
++    wake_up_interruptible(&dev->waitq);
++    spin_unlock_irqrestore(&dev->lock, flags);
++}
++
++static inline
++struct javiator_dev* __get_this_dev_by_minor(int minor)
++{
++    struct javiator_dev* dev;
++    list_for_each_entry(dev, &javiator_dev_list, link)
++        if (dev->minor == minor)
++            return dev;
++    return NULL;
++}
++
++static inline
++struct javiator_dev* get_this_dev_by_minor(int minor)
++{
++    struct javiator_dev* dev;
++    spin_lock(&javiator_dev_list_lock);
++    dev = __get_this_dev_by_minor(minor);
++    spin_unlock(&javiator_dev_list_lock);
++    return dev;
++}
++
++static
++void javiator_data_init(struct javiator_data* data, struct javiator_dev* dev)
++{
++    int i;
++    struct spi_transfer *t = data->t;
++    spi_message_init(&data->message);
++    data->message.complete = javiator_data_ready;
++    data->message.context = data;
++    data->dev = dev;
++
++	for (i=0;i<NUM_TRANSFERS;++i) {
++		t->len = BUF_LENGTH/NUM_TRANSFERS;
++		t->tx_buf = &data->tx_buf[i*t->len];
++		t->rx_buf = &data->rx_buf[i*t->len];
++		spi_message_add_tail(t, &data->message);
++		t++;
++	}
++
++    list_add_tail(&data->message.queue, &dev->free_data);
++}
++
++static
++struct javiator_dev* new_javiator_dev(struct spi_device* spi)
++{
++    int i;
++    struct javiator_dev* dev;
++    dev = kzalloc(sizeof *dev, GFP_KERNEL);
++    if (!dev)
++        return ERR_PTR(-ENOMEM);
++
++    dev->spi = spi;
++
++    spin_lock_init(&dev->lock);
++    INIT_LIST_HEAD(&dev->pending_data);
++    INIT_LIST_HEAD(&dev->free_data);
++    dev->data = kzalloc(N_BUFS * sizeof(struct javiator_data), GFP_KERNEL);
++    if (!dev->data) {
++        kfree(dev);
++        return ERR_PTR(-ENOMEM);
++    }
++
++    for (i=0; i<N_BUFS; i++)
++        javiator_data_init(&dev->data[i], dev);
++
++    init_waitqueue_head(&dev->waitq);
++    init_waitqueue_head(&dev->w_waitq);
++
++	dev->submitted = 0;
++	reset_parser(dev);
++
++    spin_lock(&javiator_dev_list_lock);
++    for(dev->minor = 0; dev->minor < 256; dev->minor++)
++        if(!__get_this_dev_by_minor(dev->minor))
++            break;
++
++    if (dev->minor < 256)
++        list_add_tail(&dev->link, &javiator_dev_list);
++    else {
++        kfree(dev);
++        dev = NULL;
++    }
++    spin_unlock(&javiator_dev_list_lock);
++    return dev;
++}
++
++static inline
++void return_javiator_dev(struct javiator_dev* dev)
++{
++    spin_lock(&javiator_dev_list_lock);
++    list_del(&dev->link);
++    spin_unlock(&javiator_dev_list_lock);
++}
++
++static inline
++struct javiator_dev* get_this_dev_by_spi(
++    struct spi_device *spi)
++{
++    struct javiator_dev* dev;
++    spin_lock(&javiator_dev_list_lock);
++    list_for_each_entry(dev, &javiator_dev_list, link) {
++        if (dev->spi == spi) {
++            spin_unlock(&javiator_dev_list_lock);
++            return dev;
++        }
++    }
++    spin_unlock(&javiator_dev_list_lock);
++    return NULL;
++}
++
++static ssize_t show_dev_name(struct class_device *class_dev, char *buf)
++{
++    struct javiator_dev* dev = get_this_dev_by_minor(MINOR(class_dev->devt));
++    if (!dev)
++        return -ENODEV;
++    return sprintf(buf, DEV_NAME "%d.%d\n",
++        dev->spi->master->bus_num, dev->spi->chip_select);
++}
++static CLASS_DEVICE_ATTR(name, S_IRUGO, show_dev_name, NULL);
++
++static int parse_packet(uint8_t *buf, int len, struct javiator_dev *dev)
++{
++	uint8_t *p;
++	int copy;
++	p = buf;
++	if (packet_complete(dev)) {
++		printk("WARNING: parsing packet while previous packet was not read, override old packet\n");
++		reset_parser(dev);
++	}
++	while (p<buf+len) {
++		//printk("%d\n", dev->packet_state);
++		switch (dev->packet_state) {
++			case st_MARK1:
++				if(*p++ == 0xff) {
++					dev->packet_state++;
++				}
++				break;
++			case st_MARK2:
++				if(*p++ == 0xff) {
++					dev->packet_state++;
++				} else {
++					dev->packet_state = st_MARK1;
++				}
++				break;
++			case st_TYPE:
++				if (dev->packet_length != 0)
++					printk("WARNING: buffer overrun\n");
++				dev->packet_buf[0] = 0xff;
++				dev->packet_buf[1] = 0xff;
++				dev->packet_buf[2] = *p++;
++				dev->packet_state++;
++				break;
++			case st_SIZE:
++				if (*p > MAX_PACKET_SIZE) {
++					printk("received packet size %d larger than buffer %d\n", *p, MAX_PACKET_SIZE);
++					dev->packet_state = st_MARK1;
++					p++;
++				} else {
++					dev->packet_length = 3;
++					dev->packet_buf[dev->packet_length++] = *p++;
++					dev->packet_state++;
++				}
++				break;
++			case st_PAYLOAD:
++				copy = dev->packet_buf[3] - (dev->packet_length - 4); // -4 for header
++
++				if ( p + copy >= buf + len)
++					copy = &buf[len] - p;
++				memcpy(dev->packet_buf + dev->packet_length, p, copy);
++				dev->packet_length += copy;
++				p += copy;
++				if (dev->packet_length - 4 == dev->packet_buf[3]) // -4 for header
++					dev->packet_state = st_SUM1;
++				break;
++			case st_SUM1:
++				dev->packet_buf[dev->packet_length++] = *p++;
++				dev->packet_state++;
++				break;
++			case st_SUM2:
++				dev->packet_buf[dev->packet_length++] = *p++;
++				dev->packet_state = st_COMPLETE;
++				return 0;
++				break;
++			default:
++				printk("unknown packet parse state\n");
++		}
++	}
++	if (dev->packet_state > st_SIZE) {
++		return dev->packet_buf[3] + 6 - dev->packet_length;
++	}
++	return 1;
++}
++
++static ssize_t javiator_read(struct file *file, char __user *buf,
++     size_t count, loff_t *offset)
++{
++    int ret;
++    struct javiator_dev *dev = (struct javiator_dev *)file->private_data;
++    struct javiator_data* data;
++	int data_avail;
++
++	if (count > MAX_PACKET_SIZE)
++		return -EINVAL; /* not enough bytes to receive the packet */
++
++	data_avail = dev->packet_length - dev->packet_read;
++again:
++    if (!data_is_pending(dev) && file->f_flags & O_NONBLOCK && !data_avail)
++        return -EAGAIN;
++
++    ret = wait_event_interruptible(dev->waitq,
++                                    data_is_pending(dev)
++									|| (packet_complete(dev) && data_avail));
++    if (ret)
++        return ret;
++
++	if(!packet_complete(dev)) {
++		data = get_pending_data(dev);
++		if (data == NULL && !data_avail)
++			goto again;
++	} else {
++		data = NULL;
++	}
++
++	/* first byte in rx_buf is not used by robostix */
++	if (data) {
++		struct spi_transfer *t = data->t;
++		int i;
++		for(i=0; i<NUM_TRANSFERS; ++i) {
++			ret = parse_packet(t->rx_buf + 1, t->len - 1, dev);
++			if(ret == 0) /* we have a complete packet in the buffer */
++				break;
++			t++;
++		}
++		data_avail = dev->packet_length - dev->packet_read;
++		if (ret && count > data_avail) {
++			/* not a complete packet yet; and user could read more data.
++			 *  resubmit message to get the rest of the pending packet */
++			if (debug)
++				printk("missing %d bytes, resubmit message\n", ret);
++			if (list_empty(&dev->pending_data) && !dev->submitted) {
++				memset(data->tx_buf, 0, BUF_LENGTH);
++				submit_data(data, dev);
++			} else {
++				add_free_data(data, dev);
++			}
++			goto again; /* parse next message */
++		}
++		add_free_data(data, dev);
++	}
++	if (!packet_complete(dev))
++		goto again;
++
++	if (count > data_avail)
++		count = data_avail;
++
++	if (debug) {
++		printk("copy %d bytes from offset %d\n", count, dev->packet_read);
++	}
++
++	if(copy_to_user(buf, dev->packet_buf + dev->packet_read, count))
++		ret = -EFAULT;
++	else
++		ret = count;
++
++	dev->packet_read += count;
++	if(packet_complete(dev) && dev->packet_length - dev->packet_read == 0) {
++		reset_parser(dev);
++	}
++    *offset = 0;
++    BUG_ON(ret > count);
++    return ret;
++}
++static ssize_t javiator_write(struct file *file, const char __user *buf,
++     size_t count, loff_t *offset)
++{
++    struct javiator_dev *dev = (struct javiator_dev *)file->private_data;
++    struct javiator_data* data;
++	int sent = 0;
++	int i = 0;
++	int ret;
++	struct spi_transfer *t;
++	int to_copy;
++
++again:
++    if (list_empty(&dev->free_data) && file->f_flags & O_NONBLOCK)
++        return -EAGAIN;
++
++    ret = wait_event_interruptible(dev->w_waitq,
++                                    !list_empty(&dev->free_data));
++    if (ret)
++        return ret;
++
++	if(list_empty(&dev->free_data) && list_empty(&dev->pending_data)) {
++		printk("submitted buffers %d\n", dev->submitted);
++		return -EAGAIN;
++	}
++
++	data = get_free_data(dev);
++	if (data == NULL)
++		goto again;
++
++	sent = 0;
++	t = data->t;
++	for(i=0; i<NUM_TRANSFERS; ++i) {
++		to_copy = t->len - 1;
++		if (to_copy > count - sent)
++			to_copy = count - sent;
++		if (copy_from_user(t->tx_buf, &buf[sent], to_copy)) {
++			add_free_data(data, dev);
++			return -EFAULT;
++		}
++		sent += to_copy;
++		t++;
++	}
++
++	submit_data(data, dev);
++
++	if (sent < count)
++		goto again;
++
++	*offset = 0;
++	return count;
++}
++
++static unsigned int javiator_poll(struct file *file, poll_table *wait)
++{
++    struct javiator_dev *dev = (struct javiator_dev *)file->private_data;
++
++    poll_wait(file, &dev->waitq, wait);
++
++    if (!list_empty(&dev->pending_data))
++        return POLLIN | POLLRDNORM;
++
++    return 0;
++}
++
++
++static int javiator_open(struct inode *inode, struct file *file)
++{
++    struct javiator_dev* dev;
++
++    dev = get_this_dev_by_minor(iminor(inode));
++    if (!dev)
++        return -ENODEV;
++
++	spin_lock(&dev->lock);
++	if (dev->open) {
++		spin_unlock(&dev->lock);
++		return -EBUSY;
++	}
++	dev->open = 1;
++	spin_unlock(&dev->lock);
++    file->private_data = dev;
++    return 0;
++}
++
++static int javiator_release(struct inode *inode, struct file *file)
++{
++    struct javiator_dev *dev = (struct javiator_dev *)file->private_data;
++
++	spin_lock(&dev->lock);
++	dev->open = 0;
++	spin_unlock(&dev->lock);
++
++    file->private_data = NULL;
++    return 0;
++}
++
++static int javiator_probe(struct spi_device *spi)
++{
++    struct javiator_dev* dev;
++    int i;
++
++    spi->max_speed_hz = SPI_SPEED_HZ;
++    i = spi_setup(spi);
++    if (i) {
++        dev_err(&spi->dev, "spi_setup() failed with status %d\n", i);
++        return i;
++    }
++
++    dev = new_javiator_dev(spi);
++    if (IS_ERR(dev))
++        return PTR_ERR(dev);
++
++    dev->class_dev = class_device_create(javiator_dev_class, NULL,
++        MKDEV(javiator_major, dev->minor), &spi->dev,
++        DEV_NAME "%d.%d", spi->master->bus_num, spi->chip_select);
++    if (!dev->class_dev)
++        goto error;
++
++    if (class_device_create_file(dev->class_dev, &class_device_attr_name))
++		goto error;
++
++    if (i < 0)
++        goto error_class_destroy;
++
++    return 0;
++
++error_class_destroy:
++    class_device_destroy(javiator_dev_class, MKDEV(javiator_major, dev->minor));
++error:
++    return_javiator_dev(dev);
++    kfree(dev);
++	printk("%s %d\n", __FUNCTION__, __LINE__);
++    return -ENODEV;
++}
++
++static
++void javiator_shutdown(struct spi_device* spi)
++{
++    dev_dbg(&spi->dev, "shutdown\n");
++}
++
++int javiator_remove(struct spi_device* spi)
++{
++    unsigned long flags;
++    struct javiator_dev* dev = get_this_dev_by_spi(spi);
++    if (!dev)
++        return -ENODEV;
++
++    spin_lock_irqsave(&dev->lock, flags);
++    return_javiator_dev(dev);
++    spin_unlock_irqrestore(&dev->lock, flags);
++
++    class_device_destroy(javiator_dev_class, MKDEV(javiator_major, dev->minor));
++    kfree(dev);
++    return 0;
++}
++
++static struct file_operations javiator_fops = {
++    .owner      = THIS_MODULE,
++    .llseek     = no_llseek,
++    .read       = javiator_read,
++    .write      = javiator_write,
++    .open       = javiator_open,
++    .release    = javiator_release,
++    .poll       = javiator_poll,
++};
++
++static struct spi_driver javiator_driver = {
++    .driver = {
++        .name = DEV_NAME,
++        .bus = &spi_bus_type,
++        .owner = THIS_MODULE,
++    },
++    .probe = javiator_probe,
++    .remove = __devexit_p(javiator_remove),
++    .shutdown = javiator_shutdown,
++};
++
++static int __init javiator_init(void)
++{
++    int res;
++    res = sizeof(struct spi_message) +
++        NUM_TRANSFERS * sizeof(struct spi_transfer);
++    spi_msg = kmalloc(res, GFP_KERNEL);
++    if (!spi_msg)
++        return -ENOMEM;
++
++    res = register_chrdev(0, DEV_NAME, &javiator_fops);
++    if (IS_ERR_VALUE(res))
++        goto out;
++    javiator_major = res;
++    javiator_dev_class = class_create(THIS_MODULE, DEV_NAME "-dev");
++    if (IS_ERR(javiator_dev_class))
++        goto out_unreg_chrdev;
++
++	res = spi_register_driver(&javiator_driver);
++    if (res)
++        goto out_unreg_class;
++    return 0;
++
++out_unreg_class:
++    class_destroy(javiator_dev_class);
++out_unreg_chrdev:
++    unregister_chrdev(javiator_major, DEV_NAME);
++out:
++    kfree(spi_msg);
++    printk(KERN_ERR DEV_NAME ": driver init failed\n");
++    return res;
++}
++module_init(javiator_init);
++
++static void __exit javiator_exit(void)
++{
++    spi_unregister_driver(&javiator_driver);
++    class_destroy(javiator_dev_class);
++    unregister_chrdev(javiator_major, DEV_NAME);
++    kfree(spi_msg);
++}
++module_exit(javiator_exit);
++
