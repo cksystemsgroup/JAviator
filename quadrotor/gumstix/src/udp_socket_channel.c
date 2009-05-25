@@ -41,8 +41,7 @@
 #define MAX_BUF 64
 struct udp_connection
 {
-	int recv_fd;
-	int send_fd;
+	int fd;
 	int connected;
 	uint8_t buf[MAX_BUF];
 	int len;
@@ -138,7 +137,7 @@ static int udp_socket_transmit(comm_channel_t * channel, const uint8_t *buf, int
 	}
 
 	if (uc->connected) {
-		res = udp_write(uc->recv_fd, buf, len);
+		res = udp_write(uc->fd, buf, len);
 
 		if (res == -1) {
 			close_connection(uc);
@@ -152,31 +151,18 @@ static int udp_connection_connect(struct udp_connection *uc, uint8_t *buf, int l
 {
 	int res;
 	size_t addrlen;
-	int i;
 	struct sockaddr_in clientinfo;
-	
+
 	addrlen = sizeof(clientinfo);
 	/* receive first message from any source */
-	res = recvfrom(uc->recv_fd, buf, len, 0, (struct sockaddr *)&clientinfo, &addrlen);
+	res = recvfrom(uc->fd, buf, len, 0, (struct sockaddr *)&clientinfo, &addrlen);
 
-	for(i=0; i<len; ++i)
-		printf("%2x ", buf[i]);
-	printf("\n");
 	if (res > 0) {
 		/* now connect to peer */
-		printf("connect upd socket to %s %d \n", inet_ntoa(clientinfo.sin_addr), ntohs(clientinfo.sin_port) );
-		if (connect(uc->recv_fd, (struct sockaddr *)&clientinfo, addrlen)) {
+		if (connect(uc->fd, (struct sockaddr *)&clientinfo, addrlen)) {
 			perror("udp recv connect");
 			return -1;
 		}
-		/*
-		clientinfo.sin_port = htons(7000);
-		if (connect(uc->send_fd, (struct sockaddr *)&clientinfo, addrlen)) {
-			perror("udp send connect");
-			return -1;
-	
-		}
-		*/
 		printf("connected to %s %d \n", inet_ntoa(clientinfo.sin_addr), ntohs(clientinfo.sin_port) );
 		uc->connected = 1;
 	}
@@ -198,7 +184,7 @@ static int udp_socket_receive(comm_channel_t * channel, uint8_t *buf, int len)
 	} else {
 		int count;
 		if (uc->idx == uc->len) {
-			res = udp_read(uc->recv_fd, uc->buf, MAX_BUF);
+			res = udp_read(uc->fd, uc->buf, MAX_BUF);
 			if (res == -1) {
 				perror("udp_read");
 				close_connection(uc);
@@ -244,8 +230,8 @@ static int udp_socket_poll(comm_channel_t * channel, long timeout)
 		tv.tv_usec = 0;
 		tv.tv_sec = 0;
 	}
-	FD_SET(uc->recv_fd, &readfs);
-	maxfd = uc->recv_fd + 1;
+	FD_SET(uc->fd, &readfs);
+	maxfd = uc->fd + 1;
 
 	return select(maxfd, &readfs, NULL, NULL, timeout ? &tv : NULL);
 }
@@ -254,8 +240,8 @@ static int udp_socket_init(struct udp_connection * uc, int port)
 {
 	struct sockaddr_in serverinfo;
 
-	uc->recv_fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (uc->recv_fd < 0) {
+	uc->fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (uc->fd < 0) {
 		perror("udp recv socket");
 		return -1;
 	}
@@ -263,16 +249,9 @@ static int udp_socket_init(struct udp_connection * uc, int port)
 	serverinfo.sin_family = AF_INET;
 	serverinfo.sin_addr.s_addr = INADDR_ANY;
 	serverinfo.sin_port = htons((short)port);
-	if (bind(uc->recv_fd, (struct sockaddr *)&serverinfo, sizeof(serverinfo)) < 0) {
+	if (bind(uc->fd, (struct sockaddr *)&serverinfo, sizeof(serverinfo)) < 0) {
 		fprintf(stderr, "ERROR in %s %d: server bind\n", __FILE__, __LINE__);
-		close(uc->recv_fd);
-		return -1;
-	}
-
-	uc->send_fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (uc->send_fd < 0) {
-		perror("udp send socket");
-		close(uc->recv_fd);
+		close(uc->fd);
 		return -1;
 	}
 
@@ -316,8 +295,7 @@ int udp_socket_channel_destroy(comm_channel_t * channel)
 		return -1;
 	}
 
-	close(uc->recv_fd);
-	close(uc->send_fd);
+	close(uc->fd);
 	channel->data = NULL;
 	return 0;
 }
