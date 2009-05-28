@@ -72,7 +72,6 @@ public class PortDialog extends Dialog
     private        ControlTerminal parent    = null;
     private        TextField       hostField = null;
     private        TextField       portField = null;
-    private        TextField       UDP_Field = null;
 
     private PortDialog( ControlTerminal parent, String title )
     {
@@ -81,7 +80,6 @@ public class PortDialog extends Dialog
         this.parent = parent;
         hostField   = new TextField( "@@@@@@@@@@@@@@@" );
         portField   = new TextField( "88888" );
-        UDP_Field   = new TextField( "88888" );
 
         setBackground( Color.WHITE );
         makePanel( );
@@ -89,7 +87,6 @@ public class PortDialog extends Dialog
 
         hostField.setText( parent.relayHost );
         portField.setText( ControlTerminal.NIL + parent.relayPort );
-        UDP_Field.setText( ControlTerminal.NIL + parent.udpListenPort );
 
         addWindowListener( new WindowAdapter( )
         {
@@ -124,22 +121,6 @@ public class PortDialog extends Dialog
         Panel northPanel = new Panel( new BorderLayout( ) );
         northPanel.add( hostPanel, BorderLayout.WEST );
         northPanel.add( portPanel, BorderLayout.EAST );
-
-        Panel udpTextPanel = new Panel( new BorderLayout( ) );
-        udpTextPanel.add( new Label( "UDP Listen Port:" ), BorderLayout.CENTER );
-        udpTextPanel.add( new Label( ), BorderLayout.SOUTH );
-        udpTextPanel.add( new Label( ), BorderLayout.WEST );
-        udpTextPanel.add( new Label( ), BorderLayout.EAST );
-
-        Panel udpPortPanel = new Panel( new BorderLayout( ) );
-        udpPortPanel.add( UDP_Field, BorderLayout.CENTER );
-        udpPortPanel.add( new Label( ), BorderLayout.SOUTH );
-        udpPortPanel.add( new Label( ), BorderLayout.WEST );
-        udpPortPanel.add( new Label( ), BorderLayout.EAST );
-
-        Panel centerPanel = new Panel( new BorderLayout( ) );
-        centerPanel.add( udpTextPanel, BorderLayout.WEST );
-        centerPanel.add( udpPortPanel, BorderLayout.EAST );
 
         Button okButton = new Button( "Ok" );
         okButton.addActionListener( new ActionListener( )
@@ -207,7 +188,6 @@ public class PortDialog extends Dialog
 
         setLayout( new BorderLayout( ) );
         add( northPanel, BorderLayout.NORTH );
-        add( centerPanel, BorderLayout.CENTER );
         add( southPanel, BorderLayout.SOUTH );
     }
 
@@ -224,16 +204,6 @@ public class PortDialog extends Dialog
             catch( Exception e )
             {
                 parent.relayPort = 0;
-                System.err.println( "PortDialog.closeDialog: " + e.getMessage( ) );
-            }
-
-            try
-            {
-                parent.udpListenPort = Integer.parseInt( UDP_Field.getText( ) );
-            }
-            catch( Exception e )
-            {
-                parent.udpListenPort = 0;
                 System.err.println( "PortDialog.closeDialog: " + e.getMessage( ) );
             }
         }

@@ -10,7 +10,6 @@ import java.net.SocketException;
 import javiator.util.LeanPacket;
 import javiator.util.Packet;
 import javiator.util.PacketType;
-import javiator.util.ReportToGround;
 
 /**
  * An alternate JControlTransceiver that uses UDP instead of TCP
@@ -30,7 +29,7 @@ public class UDPTransceiver extends Transceiver
 	 * @param sendHost the host to which to send datagrams
 	 * @param sendPort the port to which to send datagrams
 	 */
-	public UDPTransceiver(ControlTerminal parent, String sendHost, int sendPort, int listenPort)
+	public UDPTransceiver(ControlTerminal parent, String sendHost, int sendPort)
 	{
 		super(parent);
 		this.listenPort = sendPort;
