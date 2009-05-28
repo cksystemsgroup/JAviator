@@ -391,7 +391,7 @@ static void adjust_z( )
 
 static int get_javiator_data( void )
 {
-    static int16_t   last_id  = 0;
+    static uint16_t   last_id  = 0;
     int              res;
     int16_t          sonar_signal;
 
@@ -403,7 +403,7 @@ static int get_javiator_data( void )
         return( res );
     }
 
-    if( javiator_data.id != (int16_t)(last_id + 1) )
+    if( javiator_data.id != (uint16_t)(last_id + 1) )
     {
         fprintf( stderr, "WARNING: lost %d JAviator packet(s); id %d local id %d\n",
             javiator_data.id - last_id -1, javiator_data.id, last_id );

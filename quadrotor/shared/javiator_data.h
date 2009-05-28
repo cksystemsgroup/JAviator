@@ -61,7 +61,7 @@ typedef struct
     int16_t     battery;            /* [mV] range 0...5000 (10-bit resolution) */
     int16_t     state;              /* JAviator state indicator */
     int16_t     error;              /* JAviator error indicator */
-    int16_t     id;                 /* transmisson ID */
+    uint16_t     id;                 /* transmisson ID */
 
 } javiator_data_long_t;
 
