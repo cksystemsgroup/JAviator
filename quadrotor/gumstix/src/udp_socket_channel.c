@@ -122,7 +122,7 @@ static inline int udp_read(int fd, uint8_t *buf, int len)
 	return res;
 }
 
-static int udp_socket_transmit(comm_channel_t * channel, const uint8_t *buf, int len)
+static int udp_socket_transmit(comm_channel_t * channel, const char *buf, int len)
 {
 	struct udp_connection *uc = udp_get_connection(channel);
 	int res;
@@ -137,7 +137,7 @@ static int udp_socket_transmit(comm_channel_t * channel, const uint8_t *buf, int
 	}
 
 	if (uc->connected) {
-		res = udp_write(uc->fd, buf, len);
+		res = udp_write(uc->fd, (uint8_t *) buf, len);
 
 		if (res == -1) {
 			close_connection(uc);
@@ -170,7 +170,7 @@ static int udp_connection_connect(struct udp_connection *uc, uint8_t *buf, int l
 }
 
 #define min(a,b) (a)<(b)?(a):(b)
-static int udp_socket_receive(comm_channel_t * channel, uint8_t *buf, int len)
+static int udp_socket_receive(comm_channel_t * channel, char *buf, int len)
 {
 	struct udp_connection *uc = udp_get_connection(channel);
 	int res;
@@ -180,7 +180,7 @@ static int udp_socket_receive(comm_channel_t * channel, uint8_t *buf, int len)
 	}
 
 	if (!uc->connected) {
-		res = udp_connection_connect(uc, buf, len);
+		res = udp_connection_connect(uc, (uint8_t *) buf, len);
 	} else {
 		int count;
 		if (uc->idx == uc->len) {

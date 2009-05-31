@@ -90,14 +90,14 @@ public class UDPTransceiver extends Transceiver
 			DatagramPacket recvPacket = new DatagramPacket(buffer, 0, buffer.length);
 			try {
 				if (!haveTraffic) {
-					System.err.println("Waiting for messages from JControl");
+					System.err.println("Waiting for messages from control application");
 				}
 				if (DEBUG) {
 					System.err.println("Trying to receive");
 				}
 				sendSocket.receive(recvPacket);
 				if (!haveTraffic) {
-					System.err.println("First message received from JControl");
+					System.err.println("First message received from control application");
 					haveTraffic = true;
 				}
 				arrived();
