@@ -947,7 +947,7 @@ static void print_stats()
     if (loop_count) {
         printf("Loop Statistics:\n");
         for (i=0;i<NUM_STATS; ++i) {
-            printf("\t%s %8lld us\tmax %8lldus\n", stats_name[i], stats[i]/loop_count, max_stats[i]);
+            printf("\t%s %8lld us\tmax %8lld us\n", stats_name[i], stats[i]/loop_count, max_stats[i]);
         }
     }
 }
