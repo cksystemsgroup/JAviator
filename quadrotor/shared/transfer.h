@@ -57,8 +57,9 @@
 #define JE_PRESS_GET_DATA   0x0100  /* error while receiving pressure data */
 #define JE_BATT_GET_DATA    0x0200  /* error while receiving battery data */
 
-#include "shared/javiator_data.h"
-#include "shared/motor_signals.h"
+#include "shared/javiator_data.h"   /* definition of JAviator data structure */
+#include "shared/motor_signals.h"   /* definition of motor signals structure */
+
 
 #endif /* !TRANSFER_H */
 

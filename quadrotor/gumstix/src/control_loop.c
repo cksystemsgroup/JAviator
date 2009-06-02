@@ -51,8 +51,8 @@
 
 #define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 #define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-//#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-//#define APPLY_LARGE_SIZE_MEDIAN_FILTER
+#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
+#define APPLY_LARGE_SIZE_MEDIAN_FILTER
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
@@ -68,11 +68,11 @@
 #define FILTER_FACTOR_DDZ       0.1
 
 #ifdef APPLY_LARGE_SIZE_MEDIAN_FILTER
-  #define MEDIAN_BUFFER_SIZE      15
-  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-#else
   #define MEDIAN_BUFFER_SIZE      9
   #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
+#else
+  #define MEDIAN_BUFFER_SIZE      5
+  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0}
 #endif
 
 /* plant parameters */
@@ -122,7 +122,7 @@ static double       uz_old;
 
 /* motor speed up threshold */
 static int motor_revving_add = 4;
-static int base_motor_speed  = 450;
+static int base_motor_speed  = 500;
 static int revving_step      = 0;
 
 /* controller objects */
@@ -705,8 +705,10 @@ static inline double do_control( struct controller *ctrl,
          (also used to filter sensor_data.battery ) */
 static inline double filter_z( void )
 {
-    static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
-    int i, j;
+    static double filtered_z = 0;
+
+    //static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
+    //int i, j;
 
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
     sensor_data.z = (int16_t)( SONAR_POS_ROLL  * sin_pitch * -1.0
@@ -714,6 +716,11 @@ static inline double filter_z( void )
                              + sensor_data.z   * cos_pitch * cos_roll );
 #endif
 
+    filtered_z = filtered_z + FILTER_FACTOR_DDZ * (sensor_data.z - filtered_z);
+
+    return( filtered_z / 1000.0 );
+
+/*
     for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
     {
         if( sensor_data.z < median_buffer[i] )
@@ -749,6 +756,7 @@ static inline double filter_z( void )
     }
 
     return( (double) median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ] / 1000.0 );
+*/
 }
 
 static inline double filter_ddz( void )
