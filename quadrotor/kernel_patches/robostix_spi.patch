@@ -249,8 +249,8 @@ Index: linux-2.6.24.7/drivers/spi/pxa2xx_spi.c
 Index: linux-2.6.24.7/drivers/spi/javiator_spi.c
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ linux-2.6.24.7/drivers/spi/javiator_spi.c	2009-05-25 13:28:52.000000000 +0200
-@@ -0,0 +1,744 @@
++++ linux-2.6.24.7/drivers/spi/javiator_spi.c	2009-05-25 17:47:15.000000000 +0200
+@@ -0,0 +1,747 @@
 +/*
 + * Copyright (C) 2009 Harald Roeck
 + *              based on a driver of Andrei Rylin
@@ -740,9 +740,9 @@ Index: linux-2.6.24.7/drivers/spi/javiator_spi.c
 +		if (ret && count > data_avail) {
 +			/* not a complete packet yet; and user could read more data.
 +			 *  resubmit message to get the rest of the pending packet */
-+			if (debug)
-+				printk("missing %d bytes, resubmit message\n", ret);
 +			if (list_empty(&dev->pending_data) && !dev->submitted) {
++				if (debug)
++					printk("missing %d bytes, resubmit message\n", ret);
 +				memset(data->tx_buf, 0, BUF_LENGTH);
 +				submit_data(data, dev);
 +			} else {
@@ -780,12 +780,13 @@ Index: linux-2.6.24.7/drivers/spi/javiator_spi.c
 +{
 +    struct javiator_dev *dev = (struct javiator_dev *)file->private_data;
 +    struct javiator_data* data;
-+	int sent = 0;
++	int sent;
 +	int i = 0;
 +	int ret;
 +	struct spi_transfer *t;
 +	int to_copy;
 +
++	sent = 0;
 +again:
 +    if (list_empty(&dev->free_data) && file->f_flags & O_NONBLOCK)
 +        return -EAGAIN;
@@ -804,12 +805,14 @@ Index: linux-2.6.24.7/drivers/spi/javiator_spi.c
 +	if (data == NULL)
 +		goto again;
 +
-+	sent = 0;
 +	t = data->t;
 +	for(i=0; i<NUM_TRANSFERS; ++i) {
 +		to_copy = t->len - 1;
 +		if (to_copy > count - sent)
 +			to_copy = count - sent;
++
++		if (debug)
++			printk("spi copy %d bytes from user\n", to_copy);
 +		if (copy_from_user(t->tx_buf, &buf[sent], to_copy)) {
 +			add_free_data(data, dev);
 +			return -EFAULT;
