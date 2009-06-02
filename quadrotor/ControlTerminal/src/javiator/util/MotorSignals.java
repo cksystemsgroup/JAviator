@@ -6,7 +6,7 @@ package javiator.util;
  */
 public class MotorSignals extends NumeratedSendable
 {
-	public static final int PACKET_SIZE = 8;
+	public static final int PACKET_SIZE = 10;
 		
     public MotorSignals( )
     {

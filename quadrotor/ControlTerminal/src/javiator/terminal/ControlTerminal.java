@@ -72,7 +72,7 @@ public class ControlTerminal extends Frame
 
     public static final boolean SMALL_DISPLAY = true;
     public static final boolean SHOW_3DWINDOW = false;
-    public static final boolean SHOW_DIAGRAMS = false;
+    public static final boolean SHOW_DIAGRAMS = true;
 
     public static final String  LOG_FILE_NAME = "traces/z_dz_ddz_uz.csv";
 /*
