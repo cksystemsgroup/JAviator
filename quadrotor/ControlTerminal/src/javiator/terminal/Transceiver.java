@@ -46,13 +46,13 @@ public abstract class Transceiver extends javiator.util.Transceiver
     public static final int  UDP_CONNECT      = 1;
 	public static final int  TCP_CONNECT      = 2;
 
-    public static Transceiver createInstance( ControlTerminal parent, int connectType, int listenPort )
+    public static Transceiver createInstance( ControlTerminal parent, int connectType )
     {
         if( Instance == null )
         {
             if( connectType == UDP_CONNECT )
             {
-            	Instance = new UDPTransceiver( parent, parent.relayHost, parent.relayPort, listenPort );
+            	Instance = new UDPTransceiver( parent, parent.relayHost, parent.relayPort );
             }
             else
             if( connectType == TCP_CONNECT )

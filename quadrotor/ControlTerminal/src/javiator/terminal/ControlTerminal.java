@@ -564,11 +564,10 @@ public class ControlTerminal extends Frame
     protected FileWriter          logFile          = null;
     protected String              relayHost        = "192.168.2.3";
     protected int                 relayPort        = 7000;
-    protected int                 udpListenPort    = 0;
     protected int                 motionDelay      = 10;
     protected int                 idlingSpeed      = 450;
     protected boolean             stickControl     = false;
-    protected boolean             udpConnect       = false;
+    protected boolean             udpConnect       = true;
     protected boolean             connected        = false;
 
     protected void finalize( )
@@ -1036,7 +1035,7 @@ public class ControlTerminal extends Frame
             }
         } );
 
-        toggleConnMode = new HiddenButton( UDP_ + CONNECTION );
+        toggleConnMode = new HiddenButton( TCP_ + CONNECTION );
         toggleConnMode.addMouseListener( new MouseAdapter( )
         {
             public void mouseClicked( MouseEvent me )
@@ -1195,7 +1194,7 @@ public class ControlTerminal extends Frame
         {
             resetMeterNeedles( );
             remote = Transceiver.createInstance( this,
-                udpConnect ? Transceiver.UDP_CONNECT : Transceiver.TCP_CONNECT, udpListenPort );
+                udpConnect ? Transceiver.UDP_CONNECT : Transceiver.TCP_CONNECT );
             remote.connect( );
 
             if( remote.isConnected( ) )
