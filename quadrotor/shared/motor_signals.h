@@ -28,6 +28,7 @@
 
 #define	RESP_FULL  1
 #define RESP_SHORT 2
+
 /* Structure for shared motor signals */
 typedef struct
 {
@@ -35,6 +36,8 @@ typedef struct
     int16_t     right;              /* [units] then range 0...16000,      */
     int16_t     rear;               /* [units] if Fast PWM Mode disabled, */
     int16_t     left;               /* [units] then range 0...1000.       */
+    uint16_t    id;                 /* transmisson ID */
+
 } motor_signals_t;
 
 #define MOTOR_SIGNALS_SIZE  10       /* byte size of motor_signals_t + 2 for id */
@@ -54,6 +57,8 @@ int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int l
         buf[5] = (uint8_t)( signals->rear );
         buf[6] = (uint8_t)( signals->left >> 8 );
         buf[7] = (uint8_t)( signals->left );
+        buf[8] = (uint8_t)( signals->id >> 8 );
+        buf[9] = (uint8_t)( signals->id );
         return( 0 );
     }
 
@@ -65,10 +70,11 @@ int motor_signals_from_stream( motor_signals_t *signals, const uint8_t *buf, int
 {
     if( len == MOTOR_SIGNALS_SIZE )
     {
-        signals->front = (int16_t)( (buf[0] << 8) | (buf[1] & 0xFF) );
-        signals->right = (int16_t)( (buf[2] << 8) | (buf[3] & 0xFF) );
-        signals->rear  = (int16_t)( (buf[4] << 8) | (buf[5] & 0xFF) );
-        signals->left  = (int16_t)( (buf[6] << 8) | (buf[7] & 0xFF) );
+        signals->front = (int16_t) ( (buf[0] << 8) | (buf[1] & 0xFF) );
+        signals->right = (int16_t) ( (buf[2] << 8) | (buf[3] & 0xFF) );
+        signals->rear  = (int16_t) ( (buf[4] << 8) | (buf[5] & 0xFF) );
+        signals->left  = (int16_t) ( (buf[6] << 8) | (buf[7] & 0xFF) );
+        signals->id    = (uint16_t)( (buf[8] << 8) | (buf[9] & 0xFF) );
         return( 0 );
     }
 

@@ -50,9 +50,9 @@
 #include "us_timer.h"
 
 #define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-//#define APPLY_LARGE_SIZE_MEDIAN_FILTER
+#define APPLY_LARGE_SIZE_MEDIAN_FILTER
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
@@ -66,13 +66,14 @@
 /* filter parameters */
 #define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
+#define FILTER_FACTOR_Z         0.9
 
 #ifdef APPLY_LARGE_SIZE_MEDIAN_FILTER
-  #define MEDIAN_BUFFER_SIZE      15
-  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-#else
   #define MEDIAN_BUFFER_SIZE      9
   #define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
+#else
+  #define MEDIAN_BUFFER_SIZE      5
+  #define MEDIAN_BUFFER_INIT      {0,0,0,0,0}
 #endif
 
 /* plant parameters */
@@ -122,7 +123,7 @@ static double       uz_old;
 
 /* motor speed up threshold */
 static int motor_revving_add = 4;
-static int base_motor_speed  = 450;
+static int base_motor_speed  = 500;
 static int revving_step      = 0;
 
 /* controller objects */
@@ -181,7 +182,7 @@ static char *stats_name[NUM_STATS] = {
     "control       ",
     "sleep time    ",
     "read time     ",
-	"complete loop "
+    "complete loop "
 };
 static void signal_handler(int num);
 static void print_stats(void);
@@ -391,9 +392,10 @@ static void adjust_z( )
 
 static int get_javiator_data( void )
 {
-    static uint16_t   last_id  = 0;
-    int              res;
-    int16_t          sonar_signal;
+    static uint16_t last_id = 0;
+    static int16_t  old_z   = 13;
+    static int      count   = 2;
+    int             res;
 
     res = javiator_port_get_data( &javiator_data );
 
@@ -445,21 +447,24 @@ static int get_javiator_data( void )
     /* copy and scale positions */
     sensor_data.x       = 0;
     sensor_data.y       = 0;
-    sonar_signal        = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+    sensor_data.z       = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
 
-    /* Since the sonar signal takes on values close to the maximum as soon as
-       the sensor does not receive an echo anymore, this check is intended to
-       avoid outliers resulting from occasional echo loss. */
-    if( sonar_signal < ALTITUDE_THRESHOLD )
+    if( abs( old_z - sensor_data.z ) > 20 && count < 2 )
     {
-        sensor_data.z   = sonar_signal;
+        sensor_data.z = old_z;
+        ++count;
     }
+    else
+    {
+        count = 0;
+    }
+
+    old_z = sensor_data.z;
 
     /* compute linear rates */
     sensor_data.dx      = (int16_t)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );
     sensor_data.dy      = (int16_t)( (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE );
     sensor_data.dz      = (int16_t)( (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE );
-
 
     /* copy and scale battery level */
     sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
@@ -705,8 +710,7 @@ static inline double do_control( struct controller *ctrl,
          (also used to filter sensor_data.battery ) */
 static inline double filter_z( void )
 {
-    static int16_t median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
-    int i, j;
+    static double filtered_z = 0;
 
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
     sensor_data.z = (int16_t)( SONAR_POS_ROLL  * sin_pitch * -1.0
@@ -714,41 +718,9 @@ static inline double filter_z( void )
                              + sensor_data.z   * cos_pitch * cos_roll );
 #endif
 
-    for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
-    {
-        if( sensor_data.z < median_buffer[i] )
-        {
-            break;
-        }
-    }
+    filtered_z = filtered_z + FILTER_FACTOR_Z * (sensor_data.z - filtered_z);
 
-    if( i < MEDIAN_BUFFER_SIZE )
-    {
-        j = MEDIAN_BUFFER_SIZE - 1;
-
-        while( j > i )
-        {
-            median_buffer[j] = median_buffer[j-1];
-            --j;
-        }
-
-        median_buffer[j] = sensor_data.z;
-    }
-    else
-    {
-        i = MEDIAN_BUFFER_SIZE - 1;
-        j = 0;
-
-        while( j < i )
-        {
-            median_buffer[j] = median_buffer[j+1];
-            ++j;
-        }
-
-        median_buffer[j] = sensor_data.z;
-    }
-
-    return( (double) median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ] / 1000.0 );
+    return( filtered_z / 1000.0 );
 }
 
 static inline double filter_ddz( void )

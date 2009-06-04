@@ -108,11 +108,8 @@ int javiator_port_send_motor_signals( const motor_signals_t *signals )
     uint8_t buf[MOTOR_SIGNALS_SIZE];
     comm_packet_t packet;
 
+    *(uint16_t *) &signals->id = ++local_id;
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
-
-	local_id++;
-	buf[MOTOR_SIGNALS_SIZE - 1] = local_id & 0xff;
-	buf[MOTOR_SIGNALS_SIZE - 2] = (local_id >> 8) & 0xff;
 
     packet.type     = COMM_MOTOR_SIGNALS;
     packet.size     = MOTOR_SIGNALS_SIZE;
@@ -124,7 +121,7 @@ int javiator_port_send_motor_signals( const motor_signals_t *signals )
 
 int javiator_port_init( comm_channel_t *channel )
 {
-    motor_signals_t signals = { 0, 0, 0, 0 };
+    motor_signals_t signals = { 0, 0, 0, 0, 0 };
 
     memset( &javiator_data, 0, sizeof( javiator_data ) );
     memset( &comm_packet,   0, sizeof( comm_packet ) );
@@ -162,7 +159,7 @@ int javiator_port_tick( void )
 
 int javiator_port_get_data( javiator_data_t *data )
 {
-    motor_signals_t signals = { 0, 0, 0, 0 };
+    motor_signals_t signals = { 0, 0, 0, 0, 0 };
     int res, attempts = 0;
 
     do

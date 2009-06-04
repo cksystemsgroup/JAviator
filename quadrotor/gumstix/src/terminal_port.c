@@ -389,16 +389,14 @@ int terminal_port_send_sensor_data( const sensor_data_t *data )
 
 int terminal_port_send_motor_signals( const motor_signals_t *signals )
 {
-// TODO: remove hack "- 2" from MOTOR_SIGNALS_SIZE
-
-    uint8_t buf[ MOTOR_SIGNALS_SIZE - 2 ];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
 
     packet.type     = COMM_MOTOR_SIGNALS;
-    packet.size     = MOTOR_SIGNALS_SIZE - 2;
-    packet.buf_size = MOTOR_SIGNALS_SIZE - 2;
+    packet.size     = MOTOR_SIGNALS_SIZE;
+    packet.buf_size = MOTOR_SIGNALS_SIZE;
     packet.payload  = buf;
 
     return comm_send_packet( comm_channel, &packet );
@@ -438,11 +436,9 @@ int terminal_port_send_report(
         const command_data_t  *offsets,
         const int state, const int mode )
 {
-// TODO: remove hack "- 2" from MOTOR_SIGNALS_SIZE
-
     static int counter = 1;
     uint8_t buf[ SENSOR_DATA_SIZE
-            + MOTOR_SIGNALS_SIZE - 2
+            + MOTOR_SIGNALS_SIZE
             + COMMAND_DATA_SIZE
             + 2 ]; /* state and mode */
     comm_packet_t packet;
@@ -454,7 +450,7 @@ int terminal_port_send_report(
         i += SENSOR_DATA_SIZE;
 
         motor_signals_to_stream( signals, &buf[i], MOTOR_SIGNALS_SIZE );
-        i += MOTOR_SIGNALS_SIZE - 2;
+        i += MOTOR_SIGNALS_SIZE;
 
         command_data_to_stream( offsets, &buf[i], COMMAND_DATA_SIZE );
         i += COMMAND_DATA_SIZE;

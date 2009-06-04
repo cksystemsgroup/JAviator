@@ -200,7 +200,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
     if( !flag_shut_down )
     {
         /* check for correct data size before extracting */
-        if( motor_signals_from_stream(&motor_signals, data, size) == 0)
+        if( motor_signals_from_stream( &motor_signals, data, size ) == 0 )
         {
             /* check for invalid signals */
             if( pwm_set_signals( &motor_signals ) )
@@ -208,8 +208,9 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
                 javiator_data.error |= JE_OUT_OF_RANGE;
             }
 
-			javiator_data.id = data[MOTOR_SIGNALS_SIZE - 1] |
-				(data[MOTOR_SIGNALS_SIZE - 2] << 8);
+            /* get current ID to be returned to the Gumstix */
+			javiator_data.id = motor_signals.id;
+
             /* visualize that motors have been updated */
             LED_TOGGLE( BLUE );
         }
@@ -347,8 +348,10 @@ void send_javiator_data( void )
     if( flag_send_spi )
     {
         flag_send_spi = 0;
-	    if (spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE )) {
-			LED_TOGGLE(RED); /* could not send packet; previous packet still enqueued */
+
+	    if( spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE ) )
+        {
+			LED_TOGGLE( RED ); /* could not send packet; previous packet still enqueued */
 		}
     }
 

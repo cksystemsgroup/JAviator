@@ -5,7 +5,7 @@
 # this is GNU style:
 #    px ax 
 
-PS_CMD="ps ax"
+PS_CMD="ps"
 WLAN_PRIO=40
 
 ./control -c
