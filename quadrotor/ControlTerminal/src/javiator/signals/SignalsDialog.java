@@ -22,7 +22,7 @@ public class SignalsDialog extends JDialog {
     
     public boolean isClosed() { return closed; }
     
-    public void open() { setVisible(true); closed = false; }
+    public void open() { setVisible(true); z.reset(); closed = false; }
     
 	//diagrams
 	private DiagramPanel zDiag;

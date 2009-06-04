@@ -49,9 +49,9 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-//#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
+#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 #define APPLY_LARGE_SIZE_MEDIAN_FILTER
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
@@ -536,7 +536,7 @@ static void filter_and_assign_commands(
 {
     static command_data_t old_commands = { 0, 0, 0, 0 };
     int16_t yaw_error = in->yaw - old_commands.yaw;
-
+#if 0
     if( yaw_error < -MRAD_PI )
     {
         yaw_error += 2 * MRAD_PI;
@@ -546,6 +546,7 @@ static void filter_and_assign_commands(
     {
         yaw_error -= 2 * MRAD_PI;
     }
+#endif
 
     out->roll  = old_commands.roll  + (int16_t)( FILTER_FACTOR_CMD * (in->roll  - old_commands.roll) );
     out->pitch = old_commands.pitch + (int16_t)( FILTER_FACTOR_CMD * (in->pitch - old_commands.pitch) );
@@ -713,6 +714,7 @@ static inline double filter_z( void )
     static double filtered_z = 0;
 
     double z = (double)sensor_data.z * FACTOR_SONAR ;
+    
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
     z = ( SONAR_POS_ROLL  * sin_pitch * -1.0
                              + SONAR_POS_PITCH * cos_pitch * sin_roll
@@ -721,6 +723,8 @@ static inline double filter_z( void )
 
     filtered_z = filtered_z + FILTER_FACTOR_Z * (z - filtered_z);
 
+/* for logging, tracing etc */
+    sensor_data.z = (int) z;
     return( filtered_z / 1000.0 );
 }
 
@@ -804,18 +808,21 @@ static int compute_motor_signals( void )
             sensor_data.dyaw/1000.0, sensor_data.ddyaw/1000.0 )*1000.0;
 
         if( compute_z )
-        {
-            uz_new = base_motor_speed + do_control( &ctrl_z, z_estimated,
-                command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
-        }
+	{
+
+		uz_new = base_motor_speed 
+#ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
+			/ (cos_roll * cos_pitch)
+#endif
+		;
+		uz_new += do_control( &ctrl_z, z_estimated,
+				command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
+	}
         else
         {
             uz_new = command_data.z;
         }
 
-#ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-        uz_new /= cos_roll * cos_pitch;
-#endif
     }
 
     signals[0] = (int)( uz_new + uyaw + upitch );

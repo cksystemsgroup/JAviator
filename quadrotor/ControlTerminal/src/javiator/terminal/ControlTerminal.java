@@ -581,7 +581,7 @@ public class ControlTerminal extends Frame
     protected String              relayHost        = "192.168.2.3";
     protected int                 relayPort        = 7000;
     protected int                 motionDelay      = 10;
-    protected int                 idlingSpeed      = 500;
+    protected int                 idlingSpeed      = 530;
     protected boolean             stickControl     = false;
     protected boolean             udpConnect       = true;
     protected boolean             connected        = false;

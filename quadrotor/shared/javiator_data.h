@@ -56,7 +56,7 @@ typedef struct
     int16_t     ddy;                /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
     int16_t     ddz;                /*                        | ddz     |                       */
     int16_t     ticks;              /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
-    int16_t     sonar;              /* [mV] range 0...5000 (10-bit resolution) */
+    uint16_t     sonar;              /* [mV] range 0...5000 (10-bit resolution) */
     int16_t     pressure;           /* [mV] range 0...5000 (10-bit resolution) */
     int16_t     battery;            /* [mV] range 0...5000 (10-bit resolution) */
     int16_t     state;              /* JAviator state indicator */

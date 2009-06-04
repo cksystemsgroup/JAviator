@@ -29,6 +29,17 @@ public final class SignalModel extends MyPropertyChangeSupport {
     private int minIndex;
     private int secondMaxIndex;
 
+    public void reset()
+    {
+    	minValue=0.0;
+        maxValue=100.0;
+        secondMaxValue=0.0;
+        
+        maxIndex=0;
+        secondMaxIndex=0;
+        minIndex=0;
+    }
+    
     public SignalModel(String pName, String pUnit, double pScaleFactor) {
     	
     	array=new ArrayList<Double>();
@@ -37,7 +48,7 @@ public final class SignalModel extends MyPropertyChangeSupport {
         unit=pUnit;
         
         minValue=0.0;
-        maxValue=1000.0;
+        maxValue=100.0;
         secondMaxValue=0.0;
         
         maxIndex=0;
