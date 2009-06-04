@@ -28,267 +28,293 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-
 /**
  * @author Daniel Iercan, daniel.iercan@cs.uni-salzburg.at
  */
 public final class DiagramPanel extends JPanel implements
-        PropertyChangeListener {
+		PropertyChangeListener {
 
-    /**
+	/**
      * 
      */
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    private final SignalModel signal;
+	private final SignalModel signal[];
 
-    private final Diagram diagram;
+	private final Diagram diagram;
 
-    private final JLabel lblTitle;
-    
-    private final JButton btnSave;
+	private final JLabel lblTitle;
 
-    private final Color foreColor;
+	private final JButton btnSave;
 
-    private final boolean showIndicators;
+	private final Color foreColor[];
 
-    private boolean enabled;
+	private final boolean showIndicators;
 
-    private final DiagramDialog diagramDialog;
+	private boolean enabled;
 
-    private final boolean fancy;
+	private final DiagramDialog diagramDialog;
 
-    private boolean isImage;
-    
-    private int drawSamples = 1000; //-1 means none
+	private final boolean fancy;
 
-    public DiagramPanel(SignalModel pSignale, Color pColor) {
-        this(pSignale, pColor, false, false, null);
-    }
+	private boolean isImage;
 
-    public DiagramPanel(SignalModel pSignale, Color pColor,
-            boolean pShowIndicators, boolean pFancy,
-            DiagramDialog pDiagramDialog) {
-        signal = pSignale;
-        signal.addPropertyChangeListener(SignalModel.PROPERTY_VALUE_ADDED,
-                        this);
-        
-        isImage=false;
+	private int drawSamples = 1000; // -1 means none
 
-        enabled = true;
+	public DiagramPanel(SignalModel pSignale, Color pColor) {
+		this(pSignale, pColor, false, false, null);
+	}
 
-        fancy = pFancy;
+	public DiagramPanel(SignalModel pSignale, Color pColor,
+			boolean pShowIndicators, boolean pFancy,
+			DiagramDialog pDiagramDialog) {
+		signal = new SignalModel[2];
+		foreColor = new Color[2];
+		signal[0] = pSignale;
+		signal[0].addPropertyChangeListener(SignalModel.PROPERTY_VALUE_ADDED,
+				this);
 
-        diagramDialog = pDiagramDialog;
+		isImage = false;
 
-        foreColor = pColor;
+		enabled = true;
 
-        showIndicators = pShowIndicators;
+		fancy = pFancy;
 
-        setLayout(new BorderLayout(5, 5));
+		diagramDialog = pDiagramDialog;
 
-        setBorder(BorderFactory.createRaisedBevelBorder());
+		foreColor[0] = pColor;
 
-        diagram = new Diagram();
+		showIndicators = pShowIndicators;
 
-        lblTitle = new JLabel(signal.getName() + signal.getUnit(),
-                JLabel.CENTER);
-        lblTitle.setFont(new Font(lblTitle.getFont().getName(), Font.BOLD,
-                lblTitle.getFont().getSize()));
-        
-        btnSave=new JButton("Save");
-        btnSave.addActionListener(new ActionListener() {
-        
-            public void actionPerformed(ActionEvent arg0) {
-                saveToFile(signal.getName()+"-fancy-"+".jpg");
-            }
-        
-        });
-        final JPanel titlePane = new JPanel();
-        titlePane.setBorder(BorderFactory.createRaisedBevelBorder());
-        titlePane.add(lblTitle);
-        if(fancy){
-            titlePane.add(btnSave);
-        }
+		setLayout(new BorderLayout(5, 5));
 
-        add(titlePane, BorderLayout.NORTH);
-        add(diagram, BorderLayout.CENTER);
-    }
+		setBorder(BorderFactory.createRaisedBevelBorder());
 
-    public void setAuxLines(double pLines[][]) {
-        diagram.repaint();
-    }
+		diagram = new Diagram();
 
-    public boolean isEnabled() {
-        return enabled;
-    }
+		lblTitle = new JLabel(signal[0].getName() + signal[0].getUnit(),
+				JLabel.CENTER);
+		lblTitle.setFont(new Font(lblTitle.getFont().getName(), Font.BOLD,
+				lblTitle.getFont().getSize()));
 
-    public void setEnabled(boolean pEnabled) {
-        enabled = pEnabled;
-    }
+		btnSave = new JButton("Save");
+		btnSave.addActionListener(new ActionListener() {
 
-    public boolean isShowIndicatorsEnabled() {
-        return showIndicators;
-    }
+			public void actionPerformed(ActionEvent arg0) {
+				saveToFile(signal[0].getName() + "-fancy-" + ".jpg");
+			}
 
-    private void doubleClick() {
-        if (diagramDialog != null)
-            diagramDialog.setVisible(true);
-    }
+		});
+		final JPanel titlePane = new JPanel();
+		titlePane.setBorder(BorderFactory.createRaisedBevelBorder());
+		titlePane.add(lblTitle);
+		if (fancy) {
+			titlePane.add(btnSave);
+		}
 
-    private class Diagram extends JPanel {
+		add(titlePane, BorderLayout.NORTH);
+		add(diagram, BorderLayout.CENTER);
+	}
 
-        public Diagram() {
+	public void addSignals(SignalModel pSignale, Color pColor) {
+		signal[1] = pSignale;
+		signal[1].addPropertyChangeListener(SignalModel.PROPERTY_VALUE_ADDED,
+				this);
+		foreColor[1] = pColor;
+	}
 
-            addMouseListener(new MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent arg0) {
-                    if (arg0.getClickCount() == 2 && enabled)
-                        doubleClick();
-                }
-            });
-        }
+	public void setAuxLines(double pLines[][]) {
+		diagram.repaint();
+	}
 
-        /**
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean pEnabled) {
+		enabled = pEnabled;
+	}
+
+	public boolean isShowIndicatorsEnabled() {
+		return showIndicators;
+	}
+
+	private void doubleClick() {
+		if (diagramDialog != null)
+			diagramDialog.setVisible(true);
+	}
+
+	private class Diagram extends JPanel {
+
+		public Diagram() {
+
+			addMouseListener(new MouseAdapter() {
+				public void mouseClicked(java.awt.event.MouseEvent arg0) {
+					if (arg0.getClickCount() == 2 && enabled)
+						doubleClick();
+				}
+			});
+		}
+
+		/**
          * 
          */
-        private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = 1L;
 
-        public void paint(Graphics g) {
-            // super.paint(g);
-            if (signal == null)
-                return;
-            Graphics2D g2d = (Graphics2D) g;
-        
-            final double h = isImage?g2d.getDeviceConfiguration().getBounds().getHeight():getHeight();
-            final int w = isImage?(int)g2d.getDeviceConfiguration().getBounds().getWidth():getWidth();
-            double increment = 1;
-            int start = 0;
+		public void paint(Graphics g) {
+			// super.paint(g);
+			if (signal == null)
+				return;
+			Graphics2D g2d = (Graphics2D) g;
 
-            final Rectangle2D.Double bounds = new Rectangle2D.Double(0, 0, w, h);
+			final double h = isImage ? g2d.getDeviceConfiguration().getBounds()
+					.getHeight() : getHeight();
+			final int w = isImage ? (int) g2d.getDeviceConfiguration()
+					.getBounds().getWidth() : getWidth();
+			double increment = 1;
+			int start = 0;
 
-            g2d.setPaint(Color.WHITE);// getBackground());
-            g2d.fill(bounds);
+			final Rectangle2D.Double bounds = new Rectangle2D.Double(0, 0, w, h);
 
-            int pointsCount = signal.getSize();
-            int offset = 0;
-            int signalSize = signal.getSize();
-            if(drawSamples > 0){
-            	pointsCount = drawSamples;
-            	if(signalSize > pointsCount)
-            		offset = signalSize - pointsCount;
-            }
-            
-            final double max = signal.getMaxValue();
-            final double min = signal.getMinValue();
-            double unit = (max - min) / h;
-            if(unit==0)
-            	unit=1;
-            double y;
-            double x;
-            double length;
+			g2d.setPaint(Color.WHITE);// getBackground());
+			g2d.fill(bounds);
 
-            if (pointsCount == 0)
-                return;
+			int pointsCount = signal[0].getSize();
+			int offset = 0;
+			int signalSize = signal[0].getSize();
+			if (drawSamples > 0) {
+				pointsCount = drawSamples;
+				if (signalSize > pointsCount)
+					offset = signalSize - pointsCount;
+			}
 
-            if (pointsCount <= w) {
-                increment = w / pointsCount;
-                length = pointsCount;
-            } else {
-                start = 0;
-                increment = pointsCount / (double)(w + 1);
-                length = pointsCount / (double)increment;
-            }
+			double max = signal[0].getMaxValue();
+			double min = signal[0].getMinValue();
 
-            final GeneralPath path = new GeneralPath();
+			if (signal[1] != null) {
+				if (max < signal[1].getMaxValue())
+					max = signal[1].getMaxValue();
 
-            for (int i = start; i < length; i++) {
-            	
-                if (pointsCount > w) {
-                	if(signalSize < i * increment+offset)
-                		break;
-                    x = i-start;
-                    y = h - (signal.get((int)(i * increment+offset)) - min) / unit;
-                } else {
-                	if(signalSize < i +offset)
-                		break;
-                	
-                    x = (i - start) * increment;
-                    y = h - (signal.get(i+offset) - min) / unit;
-                }
-                //System.out.print("("+x+";"+y+")");
-                if (y < 1.0) {
-                    y = 1.0;
-                }
-                if (i == start)
-                    path.moveTo((float) x, (float) y);
-                else {
-                    path.lineTo((float) x, (float) y);
-                }
-            }
+				if (min > signal[1].getMinValue())
+					min = signal[1].getMinValue();
+			}
+			
+			double unit = (max - min) / h;
+			if (unit == 0)
+				unit = 1;
+			double y;
+			double x;
+			double length;
 
-            // draw the grahpic
-            g2d.setColor(foreColor);
-            g2d.draw(path);
+			if (pointsCount == 0)
+				return;
 
-        }
+			if (pointsCount <= w) {
+				increment = w / pointsCount;
+				length = pointsCount;
+			} else {
+				start = 0;
+				increment = pointsCount / (double) (w + 1);
+				length = pointsCount / (double) increment;
+			}
 
-    }
+			for (int j = 0; j < 2; ++j) {
+				final GeneralPath path = new GeneralPath();
+				if (signal[j] == null)
+					continue;
+				for (int i = start; i < length; i++) {
 
-    public void saveToFile(String pFileName){
-        BufferedImage buff=new BufferedImage(800,600,BufferedImage.TYPE_3BYTE_BGR);
-        isImage=true;
-        diagram.paint(buff.getGraphics());
-        isImage=false;
-        try {
-            Iterator writers = ImageIO.getImageWritersByFormatName("jpg");
-            ImageWriter writer = (ImageWriter)writers.next();
+					if (pointsCount > w) {
+						if (signalSize < i * increment + offset)
+							break;
+						x = i - start;
+						y = h
+								- (signal[j]
+										.get((int) (i * increment + offset)) - min)
+								/ unit;
+					} else {
+						if (signalSize < i + offset)
+							break;
 
-            File f = new File(pFileName);
-            ImageOutputStream ios = ImageIO.createImageOutputStream(f);
-            writer.setOutput(ios);
+						x = (i - start) * increment;
+						y = h - (signal[j].get(i + offset) - min) / unit;
+					}
+					// System.out.print("("+x+";"+y+")");
+					if (y < 1.0) {
+						y = 1.0;
+					}
+					if (i == start)
+						path.moveTo((float) x, (float) y);
+					else {
+						path.lineTo((float) x, (float) y);
+					}
+				}
+				// draw the grahpic
+				g2d.setColor(foreColor[j]);
+				g2d.draw(path);
 
-            writer.write(buff);
+			}
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.beans.PropertyChangeListener#propertyChange(java.beans.PropertyChangeEvent)
-     */
-    public void propertyChange(PropertyChangeEvent arg0) {
-        if (arg0.getPropertyName().compareTo(SignalModel.PROPERTY_VALUE_ADDED) == 0
-                && enabled) {
-            diagram.repaint();
-        }
+		}
 
-    }
-    
-    public ImageIcon getIcon(String iconFile){
-        InputStream pngStream = getClass().getResourceAsStream(iconFile );
-        if ( pngStream == null ) {
-            System.out.println("Image "+iconFile+", not found.");
-            return null;
-        }
-        
-        ImageIcon icon = null;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
-        try {
-            
-            int c; 
-            while( (c = pngStream.read() ) >= 0 ) 
-                baos.write(c); 
+	}
 
-            icon = new ImageIcon(getToolkit().createImage( baos.toByteArray() ));
-            
-        } 
-        catch(IOException e) {
-            
-            e.printStackTrace(); 
-        } 
-        return icon;
-    }
+	public void saveToFile(String pFileName) {
+		BufferedImage buff = new BufferedImage(800, 600,
+				BufferedImage.TYPE_3BYTE_BGR);
+		isImage = true;
+		diagram.paint(buff.getGraphics());
+		isImage = false;
+		try {
+			Iterator writers = ImageIO.getImageWritersByFormatName("jpg");
+			ImageWriter writer = (ImageWriter) writers.next();
+
+			File f = new File(pFileName);
+			ImageOutputStream ios = ImageIO.createImageOutputStream(f);
+			writer.setOutput(ios);
+
+			writer.write(buff);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @seejava.beans.PropertyChangeListener#propertyChange(java.beans.
+	 * PropertyChangeEvent)
+	 */
+	public void propertyChange(PropertyChangeEvent arg0) {
+		if (arg0.getPropertyName().compareTo(SignalModel.PROPERTY_VALUE_ADDED) == 0
+				&& enabled) {
+			diagram.repaint();
+		}
+
+	}
+
+	public ImageIcon getIcon(String iconFile) {
+		InputStream pngStream = getClass().getResourceAsStream(iconFile);
+		if (pngStream == null) {
+			System.out.println("Image " + iconFile + ", not found.");
+			return null;
+		}
+
+		ImageIcon icon = null;
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+
+			int c;
+			while ((c = pngStream.read()) >= 0)
+				baos.write(c);
+
+			icon = new ImageIcon(getToolkit().createImage(baos.toByteArray()));
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}
+		return icon;
+	}
 }
