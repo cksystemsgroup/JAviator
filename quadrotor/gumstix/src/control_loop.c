@@ -851,6 +851,10 @@ static int compute_motor_signals( void )
     trace_data.dz_estimated = (int16_t)( dz_estimated*1000.0 );
     trace_data.ddz          = (int16_t)( sensor_data.ddz );
     trace_data.ddz_filtered = (int16_t)( ddz_filtered*1000.0 );
+    trace_data.p_term       = (int16_t)( controller_get_p_term( &ctrl_z ) );
+    trace_data.i_term       = (int16_t)( controller_get_p_term( &ctrl_z ) );
+    trace_data.d_term       = (int16_t)( controller_get_p_term( &ctrl_z ) );
+    trace_data.dd_term      = (int16_t)( controller_get_p_term( &ctrl_z ) );
     trace_data.uz           = (int16_t)( uz_new );
     trace_data.z_cmd        = (int16_t)( command_data.z );
 	trace_data.id           = javiator_data.id ;

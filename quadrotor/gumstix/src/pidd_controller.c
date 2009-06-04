@@ -31,7 +31,7 @@
 #include <math.h>
 #include "controller.h"
 
-#define INTEGRAL_LIMIT  1.0 //!< Limit used for integral anti-windup (rad*s)
+#define INTEGRAL_LIMIT  0.5 //!< Limit used for integral anti-windup (rad*s)
 
 /** \brief State of a controller for 1 degree of freedom. */
 struct controller_state {
@@ -44,17 +44,24 @@ struct controller_state {
     double iMax;        //!< Maximum integral value (rad*s)
     double iMin;        //!< Minimum integral value (rad*s)
     double last_desired; //!< Stores command to use for finite differencing (rad)
+    double pTerm;
+    double iTerm;
+    double dTerm;
+    double ddTerm;
 };
 
 static void saturate_integral(struct controller_state *state)
 {
     // Saturate the integral (anti-windup)
-    if (state->integral > state->iMax) {
-    state->integral = state->iMax;
-    } else if (state->integral < state->iMin) {
-    state->integral = state->iMin;
+    if( state->integral > state->iMax )
+    {
+        state->integral = state->iMax;
     }
-
+    else
+    if( state->integral < state->iMin )
+    {
+        state->integral = state->iMin;
+    }
 }
 
 /** \brief PIDD math
@@ -63,24 +70,22 @@ static void saturate_integral(struct controller_state *state)
 static double pidd_compute(struct controller_state *state,
     double error, double derror, double acceleration)
 {
-    // Individual contributions of each metric of control error
-    double pTerm, iTerm, dTerm, ddTerm;
     // Compute integral of error
     state->integral += error * state->dtime;
-    saturate_integral(state);
+    saturate_integral( state );
 
     // Compute the contribution of each metric of the angle error
-    pTerm = state->Kp * error; //!< error contribution to control effort
-    iTerm = state->Ki * state->integral; //!< error integral contribution to control effort
-    dTerm = state->Kd * derror; //!< velocity error contribution to control effort
-    ddTerm = state->Kdd * acceleration; //!< acceleration error contribution to control effort
+    state->pTerm  = state->Kp  * error; //!< error contribution to control effort
+    state->iTerm  = state->Ki  * state->integral; //!< error integral contribution to control effort
+    state->dTerm  = state->Kd  * derror; //!< velocity error contribution to control effort
+    state->ddTerm = state->Kdd * acceleration; //!< acceleration error contribution to control effort
 
-    return pTerm + iTerm + dTerm - ddTerm;
+    return( state->pTerm + state->iTerm + state->dTerm - state->ddTerm );
 }
 
 static inline double get_error(double current, double desired)
 {
-    return desired - current;
+    return( desired - current );
 }
 
 /** \brief calculate best error for yaw
@@ -233,6 +238,26 @@ int pidd_controller_destroy(struct controller *controller)
     free( state );
 
     return( 0 );
+}
+
+double controller_get_p_term( struct controller *controller )
+{
+    return( controller->state->pTerm );
+}
+
+double controller_get_i_term( struct controller *controller )
+{
+    return( controller->state->iTerm );
+}
+
+double controller_get_d_term( struct controller *controller )
+{
+    return( controller->state->dTerm );
+}
+
+double controller_get_dd_term( struct controller *controller )
+{
+    return( controller->state->ddTerm );
 }
 
 /* End of file */

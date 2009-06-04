@@ -57,6 +57,10 @@ struct controller {
 
 int controller_init(struct controller *controller, char *name, controller_type type, int period);
 int controller_destroy(struct controller *controller);
+double controller_get_p_term( struct controller *controller );
+double controller_get_i_term( struct controller *controller );
+double controller_get_d_term( struct controller *controller );
+double controller_get_dd_term( struct controller *controller );
 
 #endif /* CONTROLLER_H */
 

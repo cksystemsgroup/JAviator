@@ -28,7 +28,7 @@ package javiator.util;
  */
 public class TraceData extends NumeratedSendable
 {
-	public static final int PACKET_SIZE = 16;
+	public static final int PACKET_SIZE = 26;
 
 	public TraceData()
 	{
@@ -43,6 +43,10 @@ public class TraceData extends NumeratedSendable
 		dz_estimated = 0;
 		ddz          = 0;
 		ddz_filtered = 0;
+        p_term       = 0;
+        i_term       = 0;
+        d_term       = 0;
+        dd_term      = 0;
 		uz           = 0;
 		z_cmd        = 0;
 		id           = 0;
@@ -57,6 +61,10 @@ public class TraceData extends NumeratedSendable
 		result += " estimated dz: " + dz_estimated;
 		result += " ddz: "          + ddz;
 		result += " filtered ddz: " + ddz_filtered;
+		result += " p-term: "       + p_term;
+		result += " i-term: "       + i_term;
+		result += " d-term: "       + d_term;
+		result += " dd-term: "      + dd_term;
 		result += " uz: "           + uz;
 		result += " z command: "    + z_cmd;
 		result += " id: "           + id;
@@ -86,12 +94,20 @@ public class TraceData extends NumeratedSendable
 		packet.payload[ offset + 9 ]  = (byte)( ddz );
 		packet.payload[ offset + 10 ] = (byte)( ddz_filtered >> 8 );
 		packet.payload[ offset + 11 ] = (byte)( ddz_filtered );
-		packet.payload[ offset + 12 ] = (byte)( uz >> 8 );
-		packet.payload[ offset + 13 ] = (byte)( uz );
-		packet.payload[ offset + 14 ] = (byte)( z_cmd >> 8 );
-		packet.payload[ offset + 15 ] = (byte)( z_cmd );
-		packet.payload[ offset + 16 ] = (byte)( id >> 8 );
-		packet.payload[ offset + 17 ] = (byte)( id );
+		packet.payload[ offset + 12 ] = (byte)( p_term >> 8 );
+		packet.payload[ offset + 13 ] = (byte)( p_term );
+		packet.payload[ offset + 14 ] = (byte)( i_term >> 8 );
+		packet.payload[ offset + 15 ] = (byte)( i_term );
+		packet.payload[ offset + 16 ] = (byte)( d_term >> 8 );
+		packet.payload[ offset + 17 ] = (byte)( d_term );
+		packet.payload[ offset + 18 ] = (byte)( dd_term >> 8 );
+		packet.payload[ offset + 19 ] = (byte)( dd_term );
+		packet.payload[ offset + 20 ] = (byte)( uz >> 8 );
+		packet.payload[ offset + 21 ] = (byte)( uz );
+		packet.payload[ offset + 22 ] = (byte)( z_cmd >> 8 );
+		packet.payload[ offset + 23 ] = (byte)( z_cmd );
+		packet.payload[ offset + 24 ] = (byte)( id >> 8 );
+		packet.payload[ offset + 25 ] = (byte)( id );
 	}
 
 	public synchronized Packet toPacket( byte type )
@@ -116,10 +132,14 @@ public class TraceData extends NumeratedSendable
         dz_estimated = (short)( (packet.payload[ offset + 6 ]  << 8) | (packet.payload[ offset + 7 ]  & 0xFF) );
         ddz          = (short)( (packet.payload[ offset + 8 ]  << 8) | (packet.payload[ offset + 9 ]  & 0xFF) );
         ddz_filtered = (short)( (packet.payload[ offset + 10 ] << 8) | (packet.payload[ offset + 11 ] & 0xFF) );
-        uz           = (short)( (packet.payload[ offset + 12 ] << 8) | (packet.payload[ offset + 13 ] & 0xFF) );
-        z_cmd        = (short)( (packet.payload[ offset + 14 ] << 8) | (packet.payload[ offset + 15 ] & 0xFF) );
-        id           = (short)( (packet.payload[ offset + 16 ] << 8) | (packet.payload[ offset + 17 ] & 0xFF) );
-	}
+        p_term       = (short)( (packet.payload[ offset + 12 ] << 8) | (packet.payload[ offset + 13 ] & 0xFF) );
+        i_term       = (short)( (packet.payload[ offset + 14 ] << 8) | (packet.payload[ offset + 15 ] & 0xFF) );
+        d_term       = (short)( (packet.payload[ offset + 16 ] << 8) | (packet.payload[ offset + 17 ] & 0xFF) );
+        dd_term      = (short)( (packet.payload[ offset + 18 ] << 8) | (packet.payload[ offset + 19 ] & 0xFF) );
+        uz           = (short)( (packet.payload[ offset + 20 ] << 8) | (packet.payload[ offset + 21 ] & 0xFF) );
+        z_cmd        = (short)( (packet.payload[ offset + 22 ] << 8) | (packet.payload[ offset + 23 ] & 0xFF) );
+        id           = (short)( (packet.payload[ offset + 24 ] << 8) | (packet.payload[ offset + 25 ] & 0xFF) );
+    }
 
 	public synchronized Object clone( )
 	{
@@ -144,6 +164,10 @@ public class TraceData extends NumeratedSendable
 		copy.dz_estimated = dz_estimated;
 		copy.ddz          = ddz;
 		copy.ddz_filtered = ddz_filtered;
+		copy.p_term       = p_term;
+		copy.i_term       = i_term;
+		copy.d_term       = d_term;
+		copy.dd_term      = dd_term;
 		copy.uz           = uz;
 		copy.z_cmd        = z_cmd;
 	}
@@ -154,6 +178,10 @@ public class TraceData extends NumeratedSendable
 	public short dz_estimated;
 	public short ddz;
 	public short ddz_filtered;
+	public short p_term;
+	public short i_term;
+	public short d_term;
+	public short dd_term;
 	public short uz;
 	public short z_cmd;
 	public short id;

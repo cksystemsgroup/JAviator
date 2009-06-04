@@ -74,7 +74,7 @@ public class ControlTerminal extends Frame
     public static final boolean SHOW_3DWINDOW = false;
     public static final boolean SHOW_DIAGRAMS = true;
 
-    public static final String  LOG_FILE_NAME = "traces/z_dz_ddz_uz.csv";
+    public static final String  LOG_FILE_NAME = "traces/z_.csv";
 /*
     public static final String  DATA_STRING   = "roll,pitch,yaw," +
     											"droll,dpitch,dyaw," +
@@ -91,6 +91,10 @@ public class ControlTerminal extends Frame
                                                 "dz est," +
                                                 "ddz," +
                                                 "ddz fil," +
+                                                "p-term," +
+                                                "i-term," +
+                                                "d-term," +
+                                                "dd-term," +
                                                 "uz," +
                                                 "z cmd";
 
@@ -380,9 +384,13 @@ public class ControlTerminal extends Frame
 	            (short) data.dz_estimated + ',' +
 	            (short) data.ddz          + ',' +
 	            (short) data.ddz_filtered + ',' +
+	            (short) data.p_term       + ',' +
+	            (short) data.i_term       + ',' +
+	            (short) data.d_term       + ',' +
+	            (short) data.dd_term      + ',' +
 	            (short) data.uz           + ',' +
 	            (short) data.z_cmd        + ',' + 
-	            (short) data.id        + ',' + '\n';
+	            (short) data.id           + '\n';
 
 	        try
 	        {
