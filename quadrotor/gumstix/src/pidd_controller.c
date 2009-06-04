@@ -31,7 +31,7 @@
 #include <math.h>
 #include "controller.h"
 
-#define INTEGRAL_LIMIT  0.5 //!< Limit used for integral anti-windup (rad*s)
+#define INTEGRAL_LIMIT  1.0 //!< Limit used for integral anti-windup (rad*s)
 
 /** \brief State of a controller for 1 degree of freedom. */
 struct controller_state {

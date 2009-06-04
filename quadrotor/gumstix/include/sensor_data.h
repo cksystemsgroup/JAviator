@@ -34,43 +34,43 @@ typedef struct
 {
     /* Euler angles
     */
-    int16_t roll;       /* [mrad] */
-    int16_t pitch;      /* [mrad] */
-    int16_t yaw;        /* [mrad] */
+    int roll;       /* [mrad] */
+    int pitch;      /* [mrad] */
+    int yaw;        /* [mrad] */
 
     /* angular rates
     */
-    int16_t droll;      /* [mrad/s] */
-    int16_t dpitch;     /* [mrad/s] */
-    int16_t dyaw;       /* [mrad/s] */
+    int droll;      /* [mrad/s] */
+    int dpitch;     /* [mrad/s] */
+    int dyaw;       /* [mrad/s] */
 
     /* angular accelerations
     */
-    int16_t ddroll;     /* [mrad/s^2] */
-    int16_t ddpitch;    /* [mrad/s^2] */
-    int16_t ddyaw;      /* [mrad/s^2] */
+    int ddroll;     /* [mrad/s^2] */
+    int ddpitch;    /* [mrad/s^2] */
+    int ddyaw;      /* [mrad/s^2] */
 
     /* positions
     */
-    int16_t x;          /* [mm] */
-    int16_t y;          /* [mm] */
-    int16_t z;          /* [mm] */
+    int x;          /* [mm] */
+    int y;          /* [mm] */
+    int z;          /* [mm] */
 
     /* linear rates
     */
-    int16_t dx;         /* [mm/s] */
-    int16_t dy;         /* [mm/s] */
-    int16_t dz;         /* [mm/s] */
+    int dx;         /* [mm/s] */
+    int dy;         /* [mm/s] */
+    int dz;         /* [mm/s] */
 
     /* linear accelerations
     */
-    int16_t ddx;        /* [mm/s^2] */
-    int16_t ddy;        /* [mm/s^2] */
-    int16_t ddz;        /* [mm/s^2] */
+    int ddx;        /* [mm/s^2] */
+    int ddy;        /* [mm/s^2] */
+    int ddz;        /* [mm/s^2] */
 
     /* battery level
     */
-    int16_t battery;    /* [mV] */
+    int battery;    /* [mV] */
 
 } sensor_data_t;
 
@@ -130,25 +130,25 @@ int sensor_data_from_stream( sensor_data_t *data, const uint8_t *buf, int len )
 {
     if( len == SENSOR_DATA_SIZE )
     {
-        data->roll    = (int16_t)( (buf[0]  << 8) | (buf[1]  & 0xFF) );
-        data->pitch   = (int16_t)( (buf[2]  << 8) | (buf[3]  & 0xFF) );
-        data->yaw     = (int16_t)( (buf[4]  << 8) | (buf[5]  & 0xFF) );
-        data->droll   = (int16_t)( (buf[6]  << 8) | (buf[7]  & 0xFF) );
-        data->dpitch  = (int16_t)( (buf[8]  << 8) | (buf[9]  & 0xFF) );
-        data->dyaw    = (int16_t)( (buf[10] << 8) | (buf[11] & 0xFF) );
-        data->ddroll  = (int16_t)( (buf[12] << 8) | (buf[13] & 0xFF) );
-        data->ddpitch = (int16_t)( (buf[14] << 8) | (buf[15] & 0xFF) );
-        data->ddyaw   = (int16_t)( (buf[16] << 8) | (buf[17] & 0xFF) );
-        data->x       = (int16_t)( (buf[18] << 8) | (buf[19] & 0xFF) );
-        data->y       = (int16_t)( (buf[20] << 8) | (buf[21] & 0xFF) );
-        data->z       = (int16_t)( (buf[22] << 8) | (buf[23] & 0xFF) );
-        data->dx      = (int16_t)( (buf[24] << 8) | (buf[25] & 0xFF) );
-        data->dy      = (int16_t)( (buf[26] << 8) | (buf[27] & 0xFF) );
-        data->dz      = (int16_t)( (buf[28] << 8) | (buf[29] & 0xFF) );
-        data->ddx     = (int16_t)( (buf[30] << 8) | (buf[31] & 0xFF) );
-        data->ddy     = (int16_t)( (buf[32] << 8) | (buf[33] & 0xFF) );
-        data->ddz     = (int16_t)( (buf[34] << 8) | (buf[35] & 0xFF) );
-        data->battery = (int16_t)( (buf[36] << 8) | (buf[37] & 0xFF) );
+        data->roll    = (int)( (buf[0]  << 8) | (buf[1]  & 0xFF) );
+        data->pitch   = (int)( (buf[2]  << 8) | (buf[3]  & 0xFF) );
+        data->yaw     = (int)( (buf[4]  << 8) | (buf[5]  & 0xFF) );
+        data->droll   = (int)( (buf[6]  << 8) | (buf[7]  & 0xFF) );
+        data->dpitch  = (int)( (buf[8]  << 8) | (buf[9]  & 0xFF) );
+        data->dyaw    = (int)( (buf[10] << 8) | (buf[11] & 0xFF) );
+        data->ddroll  = (int)( (buf[12] << 8) | (buf[13] & 0xFF) );
+        data->ddpitch = (int)( (buf[14] << 8) | (buf[15] & 0xFF) );
+        data->ddyaw   = (int)( (buf[16] << 8) | (buf[17] & 0xFF) );
+        data->x       = (int)( (buf[18] << 8) | (buf[19] & 0xFF) );
+        data->y       = (int)( (buf[20] << 8) | (buf[21] & 0xFF) );
+        data->z       = (int)( (buf[22] << 8) | (buf[23] & 0xFF) );
+        data->dx      = (int)( (buf[24] << 8) | (buf[25] & 0xFF) );
+        data->dy      = (int)( (buf[26] << 8) | (buf[27] & 0xFF) );
+        data->dz      = (int)( (buf[28] << 8) | (buf[29] & 0xFF) );
+        data->ddx     = (int)( (buf[30] << 8) | (buf[31] & 0xFF) );
+        data->ddy     = (int)( (buf[32] << 8) | (buf[33] & 0xFF) );
+        data->ddz     = (int)( (buf[34] << 8) | (buf[35] & 0xFF) );
+        data->battery = (int)( (buf[36] << 8) | (buf[37] & 0xFF) );
         return( 0 );
     }
 

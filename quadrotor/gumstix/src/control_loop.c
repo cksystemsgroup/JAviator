@@ -49,7 +49,7 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 #define APPLY_LARGE_SIZE_MEDIAN_FILTER
@@ -98,7 +98,7 @@
 #define FACTOR_LINEAR_RATE      1.0                 /* [?]      --> [?] */
 #define FACTOR_LINEAR_ACCEL     9810.0/4681.0       /* [units]  --> [mm/s^2] (4681=32768000/7000) */
 #define FACTOR_LASER            0.1                 /* [1/10mm] --> [mm] */
-#define FACTOR_SONAR            7000.0/1024.0       /* [0-5V]   --> [0-7000mm] */
+#define FACTOR_SONAR            2800.0/1024.0       /* [0-5V]   --> [0-7000mm] */
 #define FACTOR_PRESSURE         1.0                 /* [0-5V]   --> [0-???] */
 #define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18V] */
 #define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
@@ -123,7 +123,7 @@ static double       uz_old;
 
 /* motor speed up threshold */
 static int motor_revving_add = 4;
-static int base_motor_speed  = 500;
+static int base_motor_speed  = 550;
 static int revving_step      = 0;
 
 /* controller objects */
@@ -405,7 +405,7 @@ static int get_javiator_data( void )
         return( res );
     }
 
-    if( javiator_data.id != (uint16_t)(last_id + 1) )
+    if( javiator_data.id != (uint)(last_id + 1) )
     {
         fprintf( stderr, "WARNING: lost %d JAviator packet(s); id %d local id %d\n",
             javiator_data.id - last_id -1, javiator_data.id, last_id );
@@ -415,9 +415,9 @@ static int get_javiator_data( void )
 
 	if (!inertial_is_local()) {
 		/* copy and scale Euler angles */
-		sensor_data.roll    = (int16_t)( javiator_data.roll  * FACTOR_EULER_ANGLE );
-		sensor_data.pitch   = (int16_t)( javiator_data.pitch * FACTOR_EULER_ANGLE );
-		sensor_data.yaw     = (int16_t)( javiator_data.yaw   * FACTOR_EULER_ANGLE );
+		sensor_data.roll    = (int)( javiator_data.roll  * FACTOR_EULER_ANGLE );
+		sensor_data.pitch   = (int)( javiator_data.pitch * FACTOR_EULER_ANGLE );
+		sensor_data.yaw     = (int)( javiator_data.yaw   * FACTOR_EULER_ANGLE );
 
 		/* save old angular rates */
 		sensor_data.ddroll  = sensor_data.droll;
@@ -425,19 +425,19 @@ static int get_javiator_data( void )
 		sensor_data.ddyaw   = sensor_data.dyaw;
 
 		/* copy and scale angular rates */
-		sensor_data.droll   = (int16_t)( javiator_data.droll  * FACTOR_ANGULAR_RATE );
-		sensor_data.dpitch  = (int16_t)( javiator_data.dpitch * FACTOR_ANGULAR_RATE );
-		sensor_data.dyaw    = (int16_t)( javiator_data.dyaw   * FACTOR_ANGULAR_RATE );
+		sensor_data.droll   = (int)( javiator_data.droll  * FACTOR_ANGULAR_RATE );
+		sensor_data.dpitch  = (int)( javiator_data.dpitch * FACTOR_ANGULAR_RATE );
+		sensor_data.dyaw    = (int)( javiator_data.dyaw   * FACTOR_ANGULAR_RATE );
 
 		/* compute angular accelerations */
-		sensor_data.ddroll  = (int16_t)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
-		sensor_data.ddpitch = (int16_t)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
-		sensor_data.ddyaw   = (int16_t)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
+		sensor_data.ddroll  = (int)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
+		sensor_data.ddpitch = (int)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
+		sensor_data.ddyaw   = (int)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
 
 		/* copy and scale linear accelerations */
-		sensor_data.ddx     = (int16_t)( javiator_data.ddx * FACTOR_LINEAR_ACCEL );
-		sensor_data.ddy     = (int16_t)( javiator_data.ddy * FACTOR_LINEAR_ACCEL );
-		sensor_data.ddz     = (int16_t)( javiator_data.ddz * FACTOR_LINEAR_ACCEL );
+		sensor_data.ddx     = (int)( javiator_data.ddx * FACTOR_LINEAR_ACCEL );
+		sensor_data.ddy     = (int)( javiator_data.ddy * FACTOR_LINEAR_ACCEL );
+		sensor_data.ddz     = (int)( javiator_data.ddz * FACTOR_LINEAR_ACCEL );
 	}
     /* save old positions */
     sensor_data.dx      = sensor_data.x;
@@ -447,7 +447,7 @@ static int get_javiator_data( void )
     /* copy and scale positions */
     sensor_data.x       = 0;
     sensor_data.y       = 0;
-    sensor_data.z       = (int16_t)( javiator_data.sonar * FACTOR_SONAR );
+    sensor_data.z       = (int)( javiator_data.sonar );
 
     if( abs( old_z - sensor_data.z ) > 20 && count < 2 )
     {
@@ -462,12 +462,12 @@ static int get_javiator_data( void )
     old_z = sensor_data.z;
 
     /* compute linear rates */
-    sensor_data.dx      = (int16_t)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );
-    sensor_data.dy      = (int16_t)( (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE );
-    sensor_data.dz      = (int16_t)( (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE );
+    sensor_data.dx      = (int)( (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE );
+    sensor_data.dy      = (int)( (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE );
+    sensor_data.dz      = (int)( (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE );
 
     /* copy and scale battery level */
-    sensor_data.battery = (int16_t)( javiator_data.battery * FACTOR_BATTERY );
+    sensor_data.battery = (int)( javiator_data.battery * FACTOR_BATTERY );
 
     /* apply filter to battery data */
     filter_battery( );
@@ -712,13 +712,14 @@ static inline double filter_z( void )
 {
     static double filtered_z = 0;
 
+    double z = (double)sensor_data.z * FACTOR_SONAR ;
 #ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-    sensor_data.z = (int16_t)( SONAR_POS_ROLL  * sin_pitch * -1.0
+    z = ( SONAR_POS_ROLL  * sin_pitch * -1.0
                              + SONAR_POS_PITCH * cos_pitch * sin_roll
-                             + sensor_data.z   * cos_pitch * cos_roll );
+                             + z   * cos_pitch * cos_roll );
 #endif
 
-    filtered_z = filtered_z + FILTER_FACTOR_Z * (sensor_data.z - filtered_z);
+    filtered_z = filtered_z + FILTER_FACTOR_Z * (z - filtered_z);
 
     return( filtered_z / 1000.0 );
 }
