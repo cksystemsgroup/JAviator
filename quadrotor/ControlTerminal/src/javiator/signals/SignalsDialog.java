@@ -18,6 +18,12 @@ import javax.swing.JTabbedPane;
 public class SignalsDialog extends JDialog {
     public static final long serialVersionUID = 1;
 
+    private boolean closed = false;
+    
+    public boolean isClosed() { return closed; }
+    
+    public void open() { setVisible(true); closed = false; }
+    
 	//diagrams
 	private DiagramPanel zDiag;
 	private DiagramPanel rollDiag;
@@ -80,6 +86,7 @@ public class SignalsDialog extends JDialog {
 		ref_pitch = new SignalModel("Ref Pitch", "[degrees]", 1);
 		ref_yaw = new SignalModel("Ref Yaw", "[degrees]", 1);
 		ref_z = new SignalModel("Ref Z", "[m]", 1);
+		closed = false;
 		
 		//diagrams panel
 		JTabbedPane diagTabPanel = new JTabbedPane();
@@ -111,6 +118,7 @@ public class SignalsDialog extends JDialog {
 			public void windowClosing(WindowEvent arg0) {
 				// TODO Auto-generated method stub
 				setVisible(false);
+				closed = true;
 			}
 
 			public void windowDeactivated(WindowEvent arg0) {
@@ -145,13 +153,18 @@ public class SignalsDialog extends JDialog {
 		//new DiagramDialog()
 		//create signal diagram panels
 		zDiag = new DiagramPanel(z, Color.BLUE);//, true, true, new DiagramDialog(this, z, true, Color.BLUE));
+		zDiag.addSignals(ref_z, Color.RED);
 		rollDiag = new DiagramPanel(roll, Color.BLUE);
+		rollDiag.addSignals(ref_roll, Color.RED);
 		pitchDiag = new DiagramPanel(pitch, Color.BLUE);
+		pitchDiag.addSignals(ref_pitch, Color.RED);
 		yawDiag = new DiagramPanel(yaw, Color.BLUE);
-		diagOutPanel.add(zDiag);
+		yawDiag.addSignals(ref_yaw, Color.RED);
+		
 		diagOutPanel.add(rollDiag);
 		diagOutPanel.add(pitchDiag);
 		diagOutPanel.add(yawDiag);
+		diagOutPanel.add(zDiag);
 		return diagOutPanel;
 	}
 	

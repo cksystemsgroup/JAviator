@@ -70,9 +70,9 @@ public class ControlTerminal extends Frame
 {
     public static final long serialVersionUID = 1;
 
-    public static final boolean SMALL_DISPLAY = true;
-    public static final boolean SHOW_3DWINDOW = false;
-    public static final boolean SHOW_DIAGRAMS = false;
+    private static final boolean SMALL_DISPLAY = true;
+    private static final boolean SHOW_3DWINDOW = false;
+    private boolean show_diagrams = false;
 
     public static final String  LOG_FILE_NAME = "traces/z_dz_ddz_uz.csv";
 /*
@@ -278,8 +278,16 @@ public class ControlTerminal extends Frame
             visualization.sendSensorData( data, desiredData );
         }
         
-        if( SHOW_DIAGRAMS )
+        if( show_diagrams )
         {
+        	if (signalsDialog == null) { 
+        		signalsDialog = new SignalsDialog();
+        	} else if (signalsDialog.isClosed()) {
+        		show_diagrams = false;
+        	}
+        	
+        	
+        	
             MotorSignals motor = digitalMeter.getMotorSignals( );
 
             signalsDialog.z         .add( data.z );
@@ -679,7 +687,11 @@ public class ControlTerminal extends Frame
                     doShowAboutInfo( );
                 }
                 break;
+            case KeyEvent.VK_F3:
+                doToggleDiagram( );
+                break;
 
+                
             case KeyEvent.VK_F4:
                 doToggleLogData( );
                 break;
@@ -870,13 +882,8 @@ public class ControlTerminal extends Frame
         {
             visualization = new JAviator3DControlPanel( );
             visualization.createModel( );
-        }
-        
-        if( SHOW_DIAGRAMS )
-        {
-        	signalsDialog = new SignalsDialog( );
-        }
-
+        }        
+       
         try
         {
             iconImage = AnalogMeter.getImage( "pilot_icon.jpg" );
@@ -1266,6 +1273,18 @@ public class ControlTerminal extends Frame
         InfoDialog.createInstance( this, ABOUT_TERMINAL, InfoDialog.TYPE_ABOUT_TERMINAL );
     }
 
+    private void doToggleDiagram( )
+    {    	
+    	if (!show_diagrams) {
+    		if (signalsDialog == null)
+    			signalsDialog = new SignalsDialog();
+    		
+    		signalsDialog.open();
+    	}
+    	
+    	show_diagrams = !show_diagrams;
+    }
+    
     private void doToggleLogData( )
     {
         if( ( logData = !logData ) )
