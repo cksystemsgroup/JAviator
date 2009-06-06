@@ -100,7 +100,7 @@
 #define FACTOR_SONAR            2800.0/1024.0       /* [0-5V]   --> [0-7000mm] */
 #define FACTOR_PRESSURE         1.0                 /* [0-5V]   --> [0-???] */
 #define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18V] */
-#define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
+#define FACTOR_PARAMETER        16.0*0.001               /* [rad]    --> [mrad] */
 
 #define MOTOR_MAX               16000               /* [PWM] */
 #define MOTOR_MIN               0                   /* [PWM] */
@@ -116,7 +116,7 @@ static long long    next_period;
 static double       uz_old;
 
 /* motor speed up threshold */
-static int motor_revving_add = 4;
+static int motor_revving_add = 50;//4;
 static int base_motor_speed  = 550;
 static int revving_step      = 0;
 
@@ -672,7 +672,7 @@ static int perform_ground_actions( void )
     }
     else
     {
-        base_motor_speed = terminal_port_get_base_motor_speed( );
+        base_motor_speed = terminal_port_get_base_motor_speed( ) << 4;
         reset_controllers( );
         reset_motor_signals( );
         controller_state = 0;
@@ -824,12 +824,12 @@ static int compute_motor_signals( void )
     signals[1] = (int)( uz_new - uyaw - uroll );
     signals[2] = (int)( uz_new + uyaw - upitch );
     signals[3] = (int)( uz_new - uyaw + uroll );
-
+/*
     signals[0] *= 16;
     signals[1] *= 16;
     signals[2] *= 16;
     signals[3] *= 16;
-
+*/
     for( i = 0; i < 4; ++i )
     {
         if( signals[i] < MOTOR_MIN )
