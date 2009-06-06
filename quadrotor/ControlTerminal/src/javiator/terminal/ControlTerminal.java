@@ -69,6 +69,8 @@ import com.centralnexus.input.Joystick;
 public class ControlTerminal extends Frame
 {
     public static final long serialVersionUID = 1;
+    
+    protected int idlingSpeed = 8300;
 
     private static final boolean SMALL_DISPLAY = true;
     private static final boolean SHOW_3DWINDOW = false;
@@ -581,7 +583,7 @@ public class ControlTerminal extends Frame
     protected String              relayHost        = "192.168.2.3";
     protected int                 relayPort        = 7000;
     protected int                 motionDelay      = 10;
-    protected int                 idlingSpeed      = 530;
+    //protected int                 idlingSpeed      = 530;
     protected boolean             stickControl     = false;
     protected boolean             udpConnect       = true;
     protected boolean             connected        = false;
