@@ -157,21 +157,10 @@ int8_t pwm_set_signals( const motor_signals_t *signals )
 {
     int16_t pwm[4] =
     {
-#if( FAST_PWM_MODE == 0 )
-
         signals->front,
         signals->right,
         signals->rear,
-        signals->left,
-
-#elif( FAST_PWM_MODE == 1 )
-
-        signals->front << 4,
-        signals->right << 4,
-        signals->rear  << 4,
-        signals->left  << 4,
-
-#endif /* FAST_PWM_MODE */
+        signals->left
     };
 
     int8_t i, res = 0;

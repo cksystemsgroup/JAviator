@@ -56,7 +56,6 @@
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
-//#define FAST_PWM              DO NOT use right now!
 
 /* controller modes */
 #define ALT_MODE_GROUND         0x00
@@ -103,13 +102,8 @@
 #define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18V] */
 #define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
 
-#ifdef FAST_PWM
-  #define MOTOR_MAX             16000
-  #define MOTOR_MIN             0
-#else
-  #define MOTOR_MAX             1000
-  #define MOTOR_MIN             0
-#endif
+#define MOTOR_MAX               16000               /* [PWM] */
+#define MOTOR_MIN               0                   /* [PWM] */
 
 /* control loop parameters */
 static volatile int running;
@@ -535,8 +529,9 @@ static void filter_and_assign_commands(
     const command_data_t *in, command_data_t *out )
 {
     static command_data_t old_commands = { 0, 0, 0, 0 };
-    int16_t yaw_error = in->yaw - old_commands.yaw;
 #if 0
+    int16_t yaw_error = in->yaw - old_commands.yaw;
+
     if( yaw_error < -MRAD_PI )
     {
         yaw_error += 2 * MRAD_PI;
@@ -550,7 +545,7 @@ static void filter_and_assign_commands(
 
     out->roll  = old_commands.roll  + (int16_t)( FILTER_FACTOR_CMD * (in->roll  - old_commands.roll) );
     out->pitch = old_commands.pitch + (int16_t)( FILTER_FACTOR_CMD * (in->pitch - old_commands.pitch) );
-    out->yaw   = old_commands.yaw   + (int16_t)( FILTER_FACTOR_CMD * yaw_error );
+    out->yaw   = in->yaw;//old_commands.yaw   + (int16_t)( FILTER_FACTOR_CMD * yaw_error );
     out->z     = old_commands.z     + (int16_t)( FILTER_FACTOR_CMD * (in->z     - old_commands.z) );
 
     memcpy( &old_commands, out, sizeof( old_commands ) );
@@ -829,6 +824,11 @@ static int compute_motor_signals( void )
     signals[1] = (int)( uz_new - uyaw - uroll );
     signals[2] = (int)( uz_new + uyaw - upitch );
     signals[3] = (int)( uz_new - uyaw + uroll );
+
+    signals[0] *= 16;
+    signals[1] *= 16;
+    signals[2] *= 16;
+    signals[3] *= 16;
 
     for( i = 0; i < 4; ++i )
     {

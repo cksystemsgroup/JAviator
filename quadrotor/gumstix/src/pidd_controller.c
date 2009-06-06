@@ -93,8 +93,23 @@ static inline double get_error(double current, double desired)
  */
 static inline double get_yaw_error(double current, double desired)
 {
-    double error = get_error( current, desired );
+    static double filtered_error = 0;
+    //double error = get_error( current, desired );
 
+    filtered_error = filtered_error + 0.5 * (get_error( current, desired ) - filtered_error);
+
+    if( filtered_error < -M_PI )
+    {
+        filtered_error += 2 * M_PI;
+    }
+    else
+    if( filtered_error > M_PI )
+    {
+        filtered_error -= 2 * M_PI;
+    }
+
+    return( filtered_error );
+#if 0
     if( error < -M_PI )
     {
         error += 2 * M_PI;
@@ -106,6 +121,7 @@ static inline double get_yaw_error(double current, double desired)
     }
 
     return( error );
+#endif
 }
 
 static inline double get_velocity_error(double desired,
