@@ -53,7 +53,7 @@
 #define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 #define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 #define APPLY_LARGE_SIZE_MEDIAN_FILTER
-//#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
 
@@ -146,6 +146,14 @@ static double cos_pitch = 0;
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 static double sin_yaw   = 0;
 static double cos_yaw   = 0;
+#endif
+
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+static double idle_speed     = 0;
+static double idle_limit     = 8300;
+static double ctrl_speed     = 5000;
+static double speed_rev_up   = 50;
+static double speed_rev_down = 25;
 #endif
 
 /* function pointer */
@@ -759,37 +767,70 @@ static int compute_motor_signals( void )
     z_estimated  = z_kalman_filter.z;
 
 #ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-    /* If the z-value measured by the sonar sensor is less
-       than 1cm, then the heli is still settled and has not
-       lifted off so far or it is hovering the remaining
-       13cm (minimum sonar range) over the ground. */
-    if( z_estimated < 0.01 )
+
+    if( compute_z )
     {
-        /* If the z-command issued by the user is greater
-           than 0, then the heli will be revved up until
-           the z-value measured by the sonar sensor exceeds
-           1cm, otherwise it is assumed the user wants to
-           land and the heli is revved down until it
-           settles on the ground. */
         if( command_data.z > 0 )
         {
-            uz_new = uz_old + motor_revving_add;
+            if( idle_speed < idle_limit )
+            {
+                idle_speed += speed_rev_up;
+            }
+            else
+            {
+                uz_new = do_control( &ctrl_z, z_estimated,
+				    command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
+            }
         }
         else
-        if( uz_old > 0 )
-        {
-            uz_new = uz_old - motor_revving_add;
+        {   
+            if( idle_speed >= idle_limit && z_estimated > 0 )
+            {
+                uz_new = do_control( &ctrl_z, z_estimated,
+				    command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
+            }
+            else
+            if( idle_speed > 0 )
+            {
+                idle_speed -= speed_rev_down;
+            }
+            else
+            {
+                idle_speed = 0;
+            }
         }
-
-        base_motor_speed = uz_new;
     }
-#else
+    else
+    {
+        idle_speed = command_data.z * 16;
+    }
+
+    if( idle_speed > ctrl_speed )
+    {
+        uroll  = do_control( &ctrl_roll,
+            sensor_data.roll/1000.0, command_data.roll/1000.0,
+            sensor_data.droll/1000.0, sensor_data.ddroll/1000.0 )*1000.0;
+        upitch = do_control( &ctrl_pitch,
+            sensor_data.pitch/1000.0, command_data.pitch/1000.0,
+            sensor_data.dpitch/1000.0, sensor_data.ddpitch/1000.0 )*1000.0;
+        uyaw   = do_control( &ctrl_yaw,
+            sensor_data.yaw/1000.0, command_data.yaw/1000.0,
+            sensor_data.dyaw/1000.0, sensor_data.ddyaw/1000.0 )*1000.0;
+    }
+
+    uz_new += idle_speed
+#ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
+        / (cos_roll * cos_pitch)
+#endif
+    ;
+
+#else /* APPLY_AUTOMATIC_REVVING_UP_AND_DOWN */
+
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
         uz_new = uz_old + motor_revving_add;
         ++revving_step;
     }
-#endif
     else
     {
         uroll  = do_control( &ctrl_roll,
@@ -803,22 +844,23 @@ static int compute_motor_signals( void )
             sensor_data.dyaw/1000.0, sensor_data.ddyaw/1000.0 )*1000.0;
 
         if( compute_z )
-	{
+	    {
 
-		uz_new = base_motor_speed 
+		    uz_new = base_motor_speed 
 #ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-			/ (cos_roll * cos_pitch)
+			    / (cos_roll * cos_pitch)
 #endif
-		;
-		uz_new += do_control( &ctrl_z, z_estimated,
+		    ;
+		    uz_new += do_control( &ctrl_z, z_estimated,
 				command_data.z/1000.0, dz_estimated, ddz_filtered )*1000.0;
-	}
+	    }
         else
         {
             uz_new = command_data.z;
         }
-
     }
+
+#endif /* APPLY_AUTOMATIC_REVVING_UP_AND_DOWN */
 
     signals[0] = (int)( uz_new + uyaw + upitch );
     signals[1] = (int)( uz_new - uyaw - uroll );
