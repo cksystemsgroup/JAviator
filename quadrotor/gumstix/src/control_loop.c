@@ -77,8 +77,8 @@
 
 /* plant parameters */
 #define JAVIATOR_MASS           2.3                 /* [kg] total mass of the JAviator */
-#define SONAR_POS_ROLL          90                  /* [mm] sonar position on roll axis */
-#define SONAR_POS_PITCH         -90                 /* [mm] sonar position on pitch axis */
+#define SONAR_POS_ROLL          -95.0               /* [mm] sonar position on roll axis */
+#define SONAR_POS_PITCH         -95.0               /* [mm] sonar position on pitch axis */
 #define THRUST_DELAY            0.1                 /* [s] delay in response of rotors */
 #define GRAVITY                 9.81                /* [m/s^2] gravitational acceleration */
 
