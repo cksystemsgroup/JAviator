@@ -19,6 +19,7 @@ public class MotorSignals extends NumeratedSendable
         right = 0;
         rear  = 0;
         left  = 0;
+        id    = 0;
     }
 
     public String toString( )
@@ -28,6 +29,7 @@ public class MotorSignals extends NumeratedSendable
         result += " right: " + right;
         result += " rear: "  + rear;
         result += " left: "  + left;
+        result += " ID: "    + id;
 
         return( result );
     }
@@ -38,6 +40,7 @@ public class MotorSignals extends NumeratedSendable
         right = data.right;
         rear  = data.rear;
         left  = data.left;
+        id    = data.id;
     }
 
     public synchronized Packet toPacket( )
@@ -58,6 +61,8 @@ public class MotorSignals extends NumeratedSendable
 		packet.payload[ offset + 5 ] = (byte)( rear );
 		packet.payload[ offset + 6 ] = (byte)( left >> 8 );
 		packet.payload[ offset + 7 ] = (byte)( left );
+		packet.payload[ offset + 8 ] = (byte)( id >> 8 );
+		packet.payload[ offset + 9 ] = (byte)( id );
 	}
 
     public synchronized Packet toPacket( byte type )
@@ -80,6 +85,7 @@ public class MotorSignals extends NumeratedSendable
         right = (short)( (packet.payload[ offset + 2 ] << 8) | (packet.payload[ offset + 3 ] & 0xFF) );
         rear  = (short)( (packet.payload[ offset + 4 ] << 8) | (packet.payload[ offset + 5 ] & 0xFF) );
         left  = (short)( (packet.payload[ offset + 6 ] << 8) | (packet.payload[ offset + 7 ] & 0xFF) );
+        id    = (char) ( (packet.payload[ offset + 8 ] << 8) | (packet.payload[ offset + 9 ] & 0xFF) );
     }
 
     public synchronized Object clone( )
@@ -103,10 +109,12 @@ public class MotorSignals extends NumeratedSendable
         copy.right        = right;
         copy.rear         = rear;
         copy.left         = left;
+        copy.id           = id;
 	}
 
     public short front;
     public short right;
     public short rear;
     public short left;
+    public char  id;
 }

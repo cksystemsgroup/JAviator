@@ -33,7 +33,7 @@ import java.awt.Color;
 import java.awt.event.FocusEvent;
 
 import javiator.util.MotorSignals;
-import javiator.util.CommandData;
+import javiator.util.MotorOffsets;
 import javiator.util.ControllerConstants;
 
 /*****************************************************************************/
@@ -56,7 +56,7 @@ public class DigitalMeter extends Panel
         return( motorSignals );
     }
 
-    public CommandData getMotorOffsets( )
+    public MotorOffsets getMotorOffsets( )
     {
         return( motorOffsets );
     }
@@ -107,7 +107,7 @@ public class DigitalMeter extends Panel
         }
     }
 
-    public void setMotorOffsets( CommandData data )
+    public void setMotorOffsets( MotorOffsets data )
     {
         if( motorOffsets.roll != data.roll )
         {
@@ -353,82 +353,7 @@ public class DigitalMeter extends Panel
     /*   Private Section                                                     */
     /*                                                                       */
     /*************************************************************************/
-/*
-    private static final String D       = "d";
-    private static final String DD      = "dd";
-    private static final String X       = "X";
-    private static final String Y       = "Y";
-    private static final String Z       = "Z";
 
-    private static final String[] STATE_MODE_LIST =
-    {
-    	"State",
-    	"Mode"
-    };
-*/
-/*
-    private static final String[] SENSOR_DATA_LIST =
-    {
-    	     ControlTerminal.ROLL,
-             ControlTerminal.PITCH,
-             ControlTerminal.YAW,
-    	D  + ControlTerminal.ROLL,
-    	D  + ControlTerminal.PITCH,
-    	D  + ControlTerminal.YAW,
-    	DD + ControlTerminal.ROLL,
-    	DD + ControlTerminal.PITCH,
-    	DD + ControlTerminal.YAW,
-    	     X,
-    	     Y,
-    	     Z,
-    	D  + X,
-    	D  + Y,
-    	D  + Z,
-    	DD + X,
-    	DD + Y,
-    	DD + Z//,
-        //"Battery"
-    };
-*/
-/*
-    private static final String[] SENSOR_DATA_LIST =
-    {
-    	     ControlTerminal.ROLL,
-    	     X,
-             ControlTerminal.PITCH,
-    	     Y,
-             ControlTerminal.YAW,
-    	     Z,
-    	D  + ControlTerminal.ROLL,
-    	D  + X,
-    	D  + ControlTerminal.PITCH,
-    	D  + Y,
-    	D  + ControlTerminal.YAW,
-    	D  + Z,
-    	DD + ControlTerminal.ROLL,
-    	DD + X,
-    	DD + ControlTerminal.PITCH,
-    	DD + Y,
-    	DD + ControlTerminal.YAW,
-    	DD + Z
-    };
-
-    private static final String[] MOTOR_SIGNALS_LIST =
-    {
-    	"Front",
-        "Right",
-        "Rear",
-        "Left"
-    };
-
-    private static final String[] MOTOR_OFFSETS_LIST =
-    {
-    	ControlTerminal.ROLL,
-        ControlTerminal.PITCH,
-        ControlTerminal.YAW,
-        Z
-    };
-*/
     private ControlTerminal parent        = null;
     private Label           altitudeMode  = null;
     private Label           controlFront  = null;
@@ -457,7 +382,7 @@ public class DigitalMeter extends Panel
     private Color           colorAlerting = null;
 
     private MotorSignals    motorSignals  = null;
-    private CommandData     motorOffsets  = null;
+    private MotorOffsets    motorOffsets  = null;
     private byte            heliState     = 0;
     private byte            heliMode      = 0;
 
@@ -492,7 +417,7 @@ public class DigitalMeter extends Panel
         colorAlerting = Color.RED;
 
         motorSignals  = new MotorSignals( );
-        motorOffsets  = new CommandData( );
+        motorOffsets  = new MotorOffsets( );
 
         offsetRoll  .setForeground( colorOffsets );
         offsetPitch .setForeground( colorOffsets );

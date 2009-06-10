@@ -29,7 +29,7 @@ import java.awt.Color;
 import javiator.util.ReportToGround;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
-import javiator.util.CommandData;
+import javiator.util.MotorOffsets;
 import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
@@ -91,7 +91,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
     protected ControlTerminal parent       = null;
     protected SensorData      sensorData   = null;
     protected MotorSignals    motorSignals = null;
-    protected CommandData     motorOffsets = null;
+    protected MotorOffsets    motorOffsets = null;
     protected TraceData       traceData    = null;
 
     protected Transceiver( ControlTerminal parent )
@@ -101,7 +101,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
         this.parent  = parent;
         sensorData   = new SensorData( );
         motorSignals = new MotorSignals( );
-        motorOffsets = new CommandData( );
+        motorOffsets = new MotorOffsets( );
         traceData    = new TraceData( );
     }
 
