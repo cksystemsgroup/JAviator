@@ -763,7 +763,7 @@ static int compute_motor_signals( void )
             {
                 uz_new = do_control( &ctrl_z,
                     z_estimated, command_data.z,
-                    dz_estimated, ddz_filtered );
+                    dz_estimated, -ddz_filtered );
             }
         }
         else
@@ -772,7 +772,7 @@ static int compute_motor_signals( void )
             {
                 uz_new = do_control( &ctrl_z,
                     z_estimated, command_data.z,
-                    dz_estimated, ddz_filtered );
+                    dz_estimated, -ddz_filtered );
             }
             else
             if( idle_speed > 0 )
@@ -841,7 +841,7 @@ static int compute_motor_signals( void )
 		    ;
 		    uz_new += do_control( &ctrl_z,
                 z_estimated, command_data.z,
-                dz_estimated, ddz_filtered );
+                dz_estimated, -ddz_filtered );
 	    }
         else
         {
