@@ -80,7 +80,7 @@ static double pidd_compute(struct controller_state *state,
     state->dTerm  = state->Kd  * derror; //!< velocity error contribution to control effort
     state->ddTerm = state->Kdd * acceleration; //!< acceleration error contribution to control effort
 
-    return( state->pTerm + state->iTerm + state->dTerm - state->ddTerm );
+    return( state->pTerm + state->iTerm + state->dTerm + state->ddTerm );
 }
 
 static inline double get_error(double current, double desired)
