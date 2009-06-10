@@ -263,7 +263,7 @@ static void set_control_params( ctrl_params_t *params,
             fprintf( stdout, "/%s", ctrl_2->name );
         }
 
-        fprintf( stdout, "\n-->\tKp: %.3f\tKi: %.3f\tKd: %.3f\tKdd: %.3f\n",
+        fprintf( stdout, "\n-->\tKp: %1.3f\tKi: %1.3f\tKd: %1.3f\tKdd: %1.3f\n",
             FACTOR_PARAMETER * params->kp, FACTOR_PARAMETER * params->ki,
             FACTOR_PARAMETER * params->kd, FACTOR_PARAMETER * params->kdd );
         fflush( stdout );
