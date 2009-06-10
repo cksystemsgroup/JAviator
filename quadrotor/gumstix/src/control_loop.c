@@ -90,6 +90,7 @@
 #define FACTOR_SONAR            2.8/1024.0          /* [0-5V]   --> [0-2.8m] */
 #define FACTOR_PRESSURE         1.0                 /* [0-5V]   --> [?] */
 #define FACTOR_BATTERY          18.0/1024.0         /* [0-5V]   --> [0-18V] */
+#define FACTOR_PARAMETER        0.001               /* [param]  --> [param/1000] */
 
 /* control loop parameters */
 static volatile int running;
@@ -262,8 +263,9 @@ static void set_control_params( ctrl_params_t *params,
             fprintf( stdout, "/%s", ctrl_2->name );
         }
 
-        fprintf( stdout, "\n-->\tKp: %5d\tKi: %5d\tKd: %5d\tKdd: %5d\n",
-            params->kp, params->ki, params->kd, params->kdd );
+        fprintf( stdout, "\n-->\tKp: %1.3f\tKi: %1.3f\tKd: %1.3f\tKdd: %1.3f\n",
+            FACTOR_PARAMETER * params->kp, FACTOR_PARAMETER * params->ki,
+            FACTOR_PARAMETER * params->kd, FACTOR_PARAMETER * params->kdd );
         fflush( stdout );
     }
 }

@@ -209,7 +209,7 @@ int pidd_controller_init(struct controller *controller, double period)
     memset(state, 0, sizeof(struct controller_state));
 
     state->dtime           = period;
-    state->iMax            = MOTOR_MAX;// / 1000.0;
+    state->iMax            = MOTOR_MAX;
     state->iMin            = -state->iMax;
     state->last_desired    = 0;
 
