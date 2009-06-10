@@ -31,6 +31,7 @@
 
 #define SPI_MAX_NAME    32
 
+
 /* create busy wait spi channel */
 int spi_channel_init( comm_channel_t *channel, char *interface, int baudrate );
 int spi_channel_create( comm_channel_t *channel );

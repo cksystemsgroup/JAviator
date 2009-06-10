@@ -23,7 +23,9 @@
  *
  */
 
+#include <stdint.h>
 #include "kalman_filter.h"
+
 
 //initialize kalman filter
 void init_kalman_filter(struct kalman_filter *filter){

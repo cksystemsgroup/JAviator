@@ -29,26 +29,19 @@
 #define NULL  0
 #endif
 
-extern int pid_controller_init(struct controller *, int);
-extern int pid_controller_destroy(struct controller *);
-extern int pidd_controller_init(struct controller *, int);
-extern int pidd_controller_destroy(struct controller *);
-extern int pidd_yaw_controller_init(struct controller *, int);
+extern int pidd_controller_init(struct controller *controller, double period);
+extern int pidd_yaw_controller_init(struct controller *controller, double period);
+extern int pidd_controller_destroy(struct controller *controller);
 
 
 /* only PID controllers supported */
 
 int controller_init(struct controller *controller, 
-    char * name, controller_type type, int period)
+    char * name, controller_type type, double period)
 {
     int retval = -1;;
     controller->name = name;
     switch (type) {
-    case CTRL_PID:
-        retval = pid_controller_init(controller, period);
-        break;
-    case CTRL_PID_YAW:
-        break;
     case CTRL_PIDD:
         retval = pidd_controller_init(controller, period);
         break;
@@ -64,10 +57,6 @@ int controller_destroy(struct controller *controller)
     int retval = -1;;
     controller->name = NULL;
     switch (controller->type) {
-    case CTRL_PID:
-    case CTRL_PID_YAW:
-        retval = pid_controller_destroy(controller);
-        break;
     case CTRL_PIDD:
     case CTRL_PIDD_YAW:
         retval = pidd_controller_destroy(controller);

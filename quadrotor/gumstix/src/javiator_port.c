@@ -30,8 +30,8 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "shared/protocol.h"
-#include "shared/transfer.h"
+#include "protocol.h"
+#include "transfer.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"

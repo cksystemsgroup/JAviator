@@ -40,9 +40,7 @@ typedef int (*set_params)(struct controller *controller,
         double p, double i, double d, double dd);
 
 typedef enum {
-    CTRL_PID = 1,
-    CTRL_PID_YAW,
-    CTRL_PIDD,
+    CTRL_PIDD = 1,
     CTRL_PIDD_YAW,
 } controller_type;
 
@@ -55,7 +53,7 @@ struct controller {
     struct controller_state *state;
 };
 
-int controller_init(struct controller *controller, char *name, controller_type type, int period);
+int controller_init(struct controller *controller, char *name, controller_type type, double period);
 int controller_destroy(struct controller *controller);
 double controller_get_p_term( struct controller *controller );
 double controller_get_i_term( struct controller *controller );

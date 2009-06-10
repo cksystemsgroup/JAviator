@@ -51,9 +51,66 @@ typedef struct
 #define TRACE_DATA_SIZE     26  /* byte size of trace_data_t */
 
 
-int trace_data_to_stream( const trace_data_t *data, char *buf, int len );
+static inline
+int trace_data_to_stream( const trace_data_t *data, char *buf, int len )
+{
+    if( len == TRACE_DATA_SIZE )
+    {
+        buf[0]  = (char)( data->z >> 8 );
+        buf[1]  = (char)( data->z );
+        buf[2]  = (char)( data->z_filtered >> 8 );
+        buf[3]  = (char)( data->z_filtered );
+        buf[4]  = (char)( data->z_estimated >> 8 );
+        buf[5]  = (char)( data->z_estimated );
+        buf[6]  = (char)( data->dz_estimated >> 8 );
+        buf[7]  = (char)( data->dz_estimated );
+        buf[8]  = (char)( data->ddz >> 8 );
+        buf[9]  = (char)( data->ddz );
+        buf[10] = (char)( data->ddz_filtered >> 8 );
+        buf[11] = (char)( data->ddz_filtered );
+        buf[12] = (char)( data->p_term >> 8 );
+        buf[13] = (char)( data->p_term );
+        buf[14] = (char)( data->i_term >> 8 );
+        buf[15] = (char)( data->i_term );
+        buf[16] = (char)( data->d_term >> 8 );
+        buf[17] = (char)( data->d_term );
+        buf[18] = (char)( data->dd_term >> 8 );
+        buf[19] = (char)( data->dd_term );
+        buf[20] = (char)( data->uz >> 8 );
+        buf[21] = (char)( data->uz );
+        buf[22] = (char)( data->z_cmd >> 8 );
+        buf[23] = (char)( data->z_cmd );
+        buf[24] = (char)( data->id >> 8 );
+        buf[25] = (char)( data->id );
+        return( 0 );
+    }
 
-int trace_data_from_stream( trace_data_t *data, const char *buf, int len );
+    return( -1 );
+}
+
+static inline
+int trace_data_from_stream( trace_data_t *data, const char *buf, int len )
+{
+    if( len == TRACE_DATA_SIZE )
+    {
+        data->z            = (int16_t)( (buf[0]  << 8) | (buf[1]  & 0xFF) );
+        data->z_filtered   = (int16_t)( (buf[2]  << 8) | (buf[3]  & 0xFF) );
+        data->z_estimated  = (int16_t)( (buf[4]  << 8) | (buf[5]  & 0xFF) );
+        data->dz_estimated = (int16_t)( (buf[6]  << 8) | (buf[7]  & 0xFF) );
+        data->ddz          = (int16_t)( (buf[8]  << 8) | (buf[9]  & 0xFF) );
+        data->ddz_filtered = (int16_t)( (buf[10] << 8) | (buf[11] & 0xFF) );
+        data->p_term       = (int16_t)( (buf[12] << 8) | (buf[13] & 0xFF) );
+        data->i_term       = (int16_t)( (buf[14] << 8) | (buf[15] & 0xFF) );
+        data->d_term       = (int16_t)( (buf[16] << 8) | (buf[17] & 0xFF) );
+        data->dd_term      = (int16_t)( (buf[18] << 8) | (buf[19] & 0xFF) );
+        data->uz           = (int16_t)( (buf[20] << 8) | (buf[21] & 0xFF) );
+        data->z_cmd        = (int16_t)( (buf[22] << 8) | (buf[23] & 0xFF) );
+        data->id           = (int16_t)( (buf[24] << 8) | (buf[25] & 0xFF) );
+        return( 0 );
+    }
+
+    return( -1 );
+}
 
 
 #endif /* !TRACE_DATA_H */

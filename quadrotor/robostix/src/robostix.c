@@ -26,8 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "shared/protocol.h"
-#include "shared/transfer.h"
+#include "protocol.h"
+#include "transfer.h"
 #include "config.h"
 #include "ports.h"
 #include "adc.h"

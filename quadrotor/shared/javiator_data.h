@@ -26,6 +26,9 @@
 #ifndef JAVIATOR_DATA_H
 #define JAVIATOR_DATA_H
 
+#include <stdint.h>
+
+
 /* Structure for shared JAviator data */
 typedef struct
 {
@@ -284,7 +287,6 @@ int javiator_data_short_from_stream( javiator_data_short_t *data, const uint8_t 
     return( -1 );
 }
 
-
 static inline
 int javiator_data_to_stream( const javiator_data_t *data, uint8_t *buf, int len )
 {
@@ -296,6 +298,8 @@ int javiator_data_from_stream( javiator_data_t *data, const uint8_t *buf, int le
 {
 	return javiator_data_long_from_stream(data, buf, len);
 }
+
+
 #endif /* !JAVIATOR_DATA_H */
 
 /* End of file */

@@ -23,11 +23,6 @@
  *
  */
 
-#ifndef MOTOR_SIGNALS_H
-#define MOTOR_SIGNALS_H
-
 #include "shared/motor_signals.h"
-
-#endif /* !MOTOR_SIGNALS_H */
 
 /* End of file */

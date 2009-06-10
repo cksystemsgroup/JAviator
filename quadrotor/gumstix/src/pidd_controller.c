@@ -29,9 +29,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <math.h>
-#include "controller.h"
 
-#define INTEGRAL_LIMIT  16.0 //!< Limit used for integral anti-windup (rad*s)
+#include "controller.h"
+#include "motor_signals.h"
 
 /** \brief State of a controller for 1 degree of freedom. */
 struct controller_state {
@@ -108,13 +108,15 @@ static inline double get_yaw_error(double current, double desired)
     return( error );
 }
 
-static inline double get_velocity_error(double desired,
+static inline double get_velocity_error(
+    double desired,
     double last_desired,
     double velocity,
     double period)
 {
     double desired_velocity;
     double derror;
+
     desired_velocity = (desired - last_desired)/period;
     derror = desired_velocity - velocity;
     return derror;
@@ -153,10 +155,10 @@ static double pidd_control( struct controller *controller, double current,
     double desired, double velocity, double acceleration )
 {
     // Local definition to avoid double indirection in use
-    struct controller_state *state  = controller->state;
+    struct controller_state *state = controller->state;
     double error, derror;
 
-    error = get_error(current, desired);
+    error  = get_error(current, desired);
     derror = get_velocity_error(desired, state->last_desired, velocity, state->dtime);
     state->last_desired = desired;
     return pidd_compute(state, error, derror, acceleration);
@@ -166,7 +168,7 @@ static double pidd_control( struct controller *controller, double current,
  *
  * \return 0
  */
-static int pid_reset_zero( struct controller *controller )
+static int pidd_reset_zero( struct controller *controller )
 {
     controller->state->integral = 0;
 
@@ -183,6 +185,7 @@ static int setPIDD( struct controller *controller,
     state->Ki  = i;
     state->Kd  = d;
     state->Kdd = dd;
+
     return 0;
 }
 
@@ -190,10 +193,10 @@ static int setPIDD( struct controller *controller,
  *
  * Allocate memory for the state, set constants for the state and for the controller.
  * \param controller *controller, pointer to the controller to be created
- * \param period int, control loop period (ms)
+ * \param period double, control loop period (s)
  * \return If allocation succeeds, returns 0, otherwise returns -1.
  */
-int pidd_controller_init(struct controller *controller, int period)
+int pidd_controller_init(struct controller *controller, double period)
 {
     struct controller_state *state;
 
@@ -204,20 +207,21 @@ int pidd_controller_init(struct controller *controller, int period)
     }
 
     memset(state, 0, sizeof(struct controller_state));
-    state->dtime = period/1000.0;   //controller uses period in seconds
-    state->iMax  = INTEGRAL_LIMIT;
-    state->iMin  = -INTEGRAL_LIMIT;
-    state->last_desired = 0;
 
-    controller->control      = pidd_control;
-    controller->reset_zero   = pid_reset_zero;
-    controller->set_params   = setPIDD;
-    controller->state        = state;
+    state->dtime           = period;
+    state->iMax            = MOTOR_MAX;// / 1000.0;
+    state->iMin            = -state->iMax;
+    state->last_desired    = 0;
+
+    controller->control    = pidd_control;
+    controller->reset_zero = pidd_reset_zero;
+    controller->set_params = setPIDD;
+    controller->state      = state;
 
     return 0;
 }
 
-int pidd_yaw_controller_init(struct controller *controller, int period)
+int pidd_yaw_controller_init(struct controller *controller, double period)
 {
     int retval;
     retval = pidd_controller_init(controller, period);

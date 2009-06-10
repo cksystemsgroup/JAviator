@@ -25,7 +25,7 @@
 #define DM3GX1_H
 
 #include <stdint.h>
-#include "shared/javiator_data.h"
+#include "javiator.h"
 
 
 /*****************************************************************************/

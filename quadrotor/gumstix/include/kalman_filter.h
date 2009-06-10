@@ -26,7 +26,6 @@
 #ifndef KALMAN_FILTER
 #define KALMAN_FILTER
 
-#include <stdint.h>
 
 #define KALMAN_Q 10000
 #define KALMAN_R 0.01

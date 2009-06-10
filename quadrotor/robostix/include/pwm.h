@@ -25,8 +25,8 @@
 #define PWM_H
 
 #include <stdint.h>
+#include "signals.h"
 
-#include "shared/motor_signals.h"
 
 /*****************************************************************************/
 /*                                                                           */
