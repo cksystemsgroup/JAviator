@@ -45,6 +45,7 @@
 #include "motor_signals.h"
 #include "motor_offsets.h"
 #include "ctrl_params.h"
+#include "rev_params.h"
 #include "trace_data.h"
 #include "kalman_filter.h"
 #include "us_timer.h"
@@ -52,7 +53,7 @@
 //#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-//#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
 
@@ -123,6 +124,7 @@ static inertial_data_t  inertial_data;
 static sensor_data_t    sensor_data;
 static motor_signals_t  motor_signals;
 static motor_offsets_t  motor_offsets;
+static rev_params_t     rev_params;
 static trace_data_t     trace_data;
 
 static double sin_roll  = 0;
@@ -133,14 +135,6 @@ static double cos_pitch = 0;
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 static double sin_yaw   = 0;
 static double cos_yaw   = 0;
-#endif
-
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-static double idle_speed     = 0;
-static double idle_limit     = 8300;
-static double ctrl_speed     = 5000;
-static double speed_rev_up   = 50;
-static double speed_rev_down = 25;
 #endif
 
 /* function pointers */
@@ -215,7 +209,15 @@ int control_loop_setup( int ms_period, int enable_z )
     memset( &sensor_data,   0, sizeof( sensor_data ) );
     memset( &motor_signals, 0, sizeof( motor_signals ) );
     memset( &motor_offsets, 0, sizeof( motor_offsets ) );
+    memset( &rev_params,    0, sizeof( rev_params ) );
     memset( &trace_data,    0, sizeof( trace_data ) );
+
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+    rev_params.idle_limit = 8300;
+    rev_params.ctrl_speed = 5000;
+    rev_params.rev_up_inc = 50;
+    rev_params.rev_dn_dec = 25;
+#endif
 
     if( sigaction( SIGUSR1, &act, NULL ) )
     {
@@ -663,10 +665,6 @@ static int perform_ground_actions( void )
         controller_state = 0;
     }
 
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-    idle_speed = 0;
-#endif
-
     return( 1 );
 }
 
@@ -674,10 +672,6 @@ static int perform_shut_down( void )
 {
     controller_state = 0;
     revving_step     = 0;
-
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-    idle_speed = 0;
-#endif
 
     reset_controllers( );
     reset_motor_signals( );
@@ -734,6 +728,10 @@ static inline double filter_dz( double z, double ddz )
 
 static int compute_motor_signals( void )
 {
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+    static int16_t idle_speed = 0;
+#endif
+
     double z_filtered   = 0;    /* median-filtered z */
     double z_estimated  = 0;    /* kalman-estimated z */
     double dz_estimated = 0;    /* kalman-estimated dz */
@@ -755,9 +753,9 @@ static int compute_motor_signals( void )
     {
         if( command_data.z > ZERO_JITTER )
         {
-            if( idle_speed < idle_limit )
+            if( idle_speed < rev_params.idle_limit )
             {
-                idle_speed += speed_rev_up;
+                idle_speed += rev_params.rev_up_inc;
             }
             else
             {
@@ -768,7 +766,7 @@ static int compute_motor_signals( void )
         }
         else
         {   
-            if( idle_speed >= idle_limit && z_estimated > ZERO_JITTER )
+            if( idle_speed >= rev_params.idle_limit && z_estimated > ZERO_JITTER )
             {
                 uz_new = do_control( &ctrl_z,
                     z_estimated, command_data.z,
@@ -777,7 +775,7 @@ static int compute_motor_signals( void )
             else
             if( idle_speed > 0 )
             {
-                idle_speed -= speed_rev_down;
+                idle_speed -= rev_params.rev_dn_dec;
             }
             else
             {
@@ -787,10 +785,10 @@ static int compute_motor_signals( void )
     }
     else
     {
-        idle_speed = command_data.z * MOTOR_MAX;
+        idle_speed = (int16_t)( command_data.z * MOTOR_MAX );
     }
 
-    if( idle_speed > ctrl_speed )
+    if( idle_speed > rev_params.ctrl_speed )
     {
         uroll  = do_control( &ctrl_roll,
             sensor_data.roll, command_data.roll,
