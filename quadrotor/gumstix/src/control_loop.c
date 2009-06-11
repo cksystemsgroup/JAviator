@@ -301,6 +301,21 @@ static void get_control_params( void )
     }
 }
 
+static void get_revving_params( void )
+{
+    if( terminal_port_is_new_rev_params( ) )
+    {
+        terminal_port_get_rev_params( &rev_params );
+        fprintf( stdout, "parameter update: Revving Up/Down\n"
+            "-->\tlimit: %1.3f\tctrl: %1.3f\tinc: %1.3f\tdec: %1.3f\n",
+            FACTOR_PARAMETER * rev_params.idle_limit,
+            FACTOR_PARAMETER * rev_params.ctrl_speed,
+            FACTOR_PARAMETER * rev_params.rev_up_inc,
+            FACTOR_PARAMETER * rev_params.rev_dn_dec );
+        fflush( stdout );
+    }
+}
+
 /* TODO: make median buffer generic for general usage
          (also used to filter sensor_data.z ) */
 static void filter_battery( void )
@@ -616,6 +631,9 @@ static int get_command_data( void )
     /* check for new control parameters */
     get_control_params( );
 
+    /* check for new revving parameters */
+    get_revving_params( );
+
     return( 0 );
 }
 
@@ -659,7 +677,7 @@ static int perform_ground_actions( void )
     }
     else
     {
-        base_motor_speed = terminal_port_get_base_motor_speed( );
+        //base_motor_speed = terminal_port_get_base_motor_speed( );
         reset_controllers( );
         reset_motor_signals( );
         controller_state = 0;

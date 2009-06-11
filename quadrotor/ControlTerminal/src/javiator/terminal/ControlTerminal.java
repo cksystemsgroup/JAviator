@@ -52,6 +52,7 @@ import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.CommandData;
 import javiator.util.ControlParams;
+import javiator.util.RevvingParams;
 import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
@@ -69,11 +70,10 @@ import com.centralnexus.input.Joystick;
 public class ControlTerminal extends Frame
 {
     public static final long serialVersionUID = 1;
-    
-    protected int idlingSpeed = 8300;
 
     private static final boolean SMALL_DISPLAY = true;
     private static final boolean SHOW_3DWINDOW = false;
+
     private boolean show_diagrams = false;
 
     public static final String  LOG_FILE_NAME = "traces/z_.csv";
@@ -137,16 +137,6 @@ public class ControlTerminal extends Frame
         return( data );
     }
 
-    public boolean isNewIdlingSpeed( )
-    {
-    	return( newIdlingSpeed );
-    }
-    
-    public void resetNewIdlingSpeed( )
-    {
-    	newIdlingSpeed = false;
-    }
-
 	public boolean isNew_R_P_Params( )
 	{
 		if( changedParamID[0] >= 0 && changedParamID[0] <= 3 )
@@ -185,6 +175,16 @@ public class ControlTerminal extends Frame
 		}
 
 		return( new_X_Y_Params );
+	}
+
+	public boolean isNew_Rev_Params( )
+	{
+		if( changedParamID[0] >= 16 && changedParamID[0] <= 19 )
+		{
+            new_Rev_Params = true;
+		}
+
+		return( new_Rev_Params );
 	}
 
     public ControlParams getNew_R_P_Params( )
@@ -239,6 +239,19 @@ public class ControlTerminal extends Frame
     	return( ctrlParams );
     }
 
+    public RevvingParams getNew_Rev_Params( )
+    {    	
+    	RevvingParams revParams = new RevvingParams( );
+
+    	revParams.idleLimit = (short) controlParams[16];
+    	revParams.ctrlSpeed = (short) controlParams[17];
+    	revParams.revUpStep = (short) controlParams[18];
+    	revParams.revDnStep = (short) controlParams[19];
+    	new_Rev_Params = false;
+
+    	return( revParams );
+    }
+
     public void resetChangedParamID( )
     {
     	changedParamID[0] = -1;
@@ -286,14 +299,16 @@ public class ControlTerminal extends Frame
         
         if( show_diagrams )
         {
-        	if (signalsDialog == null) { 
-        		signalsDialog = new SignalsDialog();
-        	} else if (signalsDialog.isClosed()) {
+        	if( signalsDialog == null )
+        	{ 
+        		signalsDialog = new SignalsDialog( );
+        	}
+        	else
+        	if( signalsDialog.isClosed( ) )
+        	{
         		show_diagrams = false;
         	}
-        	
-        	
-        	
+
             MotorSignals motor = digitalMeter.getMotorSignals( );
 
             signalsDialog.z         .add( data.z );
@@ -501,7 +516,8 @@ public class ControlTerminal extends Frame
 		    controlParams[0],  controlParams[1],  controlParams[2],  controlParams[3],
 		    controlParams[4],  controlParams[5],  controlParams[6],  controlParams[7],
 		    controlParams[8],  controlParams[9],  controlParams[10], controlParams[11],
-		    controlParams[12], controlParams[13], controlParams[14], controlParams[15]
+		    controlParams[12], controlParams[13], controlParams[14], controlParams[15],
+		    controlParams[16], controlParams[17], controlParams[18], controlParams[19]
 		};
 
         try
@@ -583,7 +599,6 @@ public class ControlTerminal extends Frame
     protected String              relayHost        = "192.168.2.3";
     protected int                 relayPort        = 7000;
     protected int                 motionDelay      = 10;
-    //protected int                 idlingSpeed      = 530;
     protected boolean             stickControl     = false;
     protected boolean             udpConnect       = true;
     protected boolean             connected        = false;
@@ -807,11 +822,11 @@ public class ControlTerminal extends Frame
     {
         if( this.connected = connected )
         {
-        	newIdlingSpeed = true;
             new_R_P_Params = true;
             new_Yaw_Params = true;
             new_Alt_Params = true;
             new_X_Y_Params = true;
+            new_Rev_Params = true;
         }
 
         toggleConnMode .setEnabled( !connected );
@@ -827,7 +842,7 @@ public class ControlTerminal extends Frame
     /*************************************************************************/
 
     private static final int       MOTION_STEP    = 5; // mrad
-    private static final int       CTRL_PARAMS    = 16;
+    private static final int       CTRL_PARAMS    = 20;
 
     private Image                  iconImage      = null;
     private JAviator3DControlPanel visualization  = null;
@@ -840,11 +855,11 @@ public class ControlTerminal extends Frame
     private Label                  logDataLabel   = null;
     private short[]                controlParams  = null;
     private int[]                  changedParamID = null;
-    private boolean                newIdlingSpeed = false;
     private boolean                new_R_P_Params = false;
     private boolean                new_Yaw_Params = false;
     private boolean                new_Alt_Params = false;
     private boolean                new_X_Y_Params = false;
+    private boolean                new_Rev_Params = false;
     private boolean                logData        = false;
 
     private void initWindow( )

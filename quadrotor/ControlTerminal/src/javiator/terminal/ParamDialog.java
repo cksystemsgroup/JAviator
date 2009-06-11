@@ -2,7 +2,7 @@
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
 /*   ParamDialog.java	Constructs a non-modal dialog that allows to change  */
-/*                      the PID/PIDD controller parameters.                  */
+/*                      the PIDD controller parameters.                      */
 /*                                                                           */
 /*   Copyright (c) 2006-2009  Rainer Trummer                                 */
 /*                                                                           */
@@ -68,7 +68,8 @@ public class ParamDialog extends Dialog
     /*                                                                       */
     /*************************************************************************/
 
-    private static final String[] PARAMETERS     = { "Kp", "Ki", "Kd", "Kdd" };
+    private static final String[] PID_PARAMS     = { "Kp", "Ki", "Kd", "Kdd" };
+    private static final String[] REV_PARAMS     = { "Limit", "Ctrl", "Inc", "Dec" };
     private static final int      SCALING_FACTOR = 1000;
     private static final int      MOTION_DELAY   = 50; // ms
     private static final int      PARAM_STEP     = 1;
@@ -138,13 +139,15 @@ public class ParamDialog extends Dialog
 
     private void makePanel( )
     {
-        int   sectionRows = 4;
-        int   sectionCols = 4;
-        Panel r_p_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
-        Panel yaw_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
-        Panel alt_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
-        Panel x_y_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
-        Panel panel;
+        String[] paramNames  = PID_PARAMS;
+        int      sectionRows = 4;
+        int      sectionCols = 4;
+        Panel    r_p_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
+        Panel    yaw_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
+        Panel    alt_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
+        Panel    x_y_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
+        Panel    rev_Section = new Panel( new GridLayout( sectionRows, sectionCols, 20, 0 ) );
+        Panel    panel;
 
         for( int i = 0; i < controlParams.length; ++i )
         {
@@ -181,7 +184,7 @@ public class ParamDialog extends Dialog
                 }
             } );
             
-            if( i < sectionRows )
+            if( i < sectionRows * 1 )
             {
                 panel = r_p_Section;
             }
@@ -201,12 +204,18 @@ public class ParamDialog extends Dialog
                 panel = x_y_Section;
             }
             else
+            if( i < sectionRows * 5 )
+            {
+                paramNames = REV_PARAMS;
+                panel = rev_Section;
+            }
+            else
             {
             	System.err.println( "ParamDialog.makePanel: invalid parameter count" );
             	return;
             }
 
-            panel.add( new Label( PARAMETERS[ i % PARAMETERS.length ], Label.LEFT ) );
+            panel.add( new Label( paramNames[ i % paramNames.length ], Label.LEFT ) );
             panel.add( paramLabels[i] );
             Panel buttonPanel = new Panel( new BorderLayout( ) );
             buttonPanel.add( minusButton, BorderLayout.WEST );
@@ -237,11 +246,17 @@ public class ParamDialog extends Dialog
         x_y_Panel.add( new Label( "X / Y", Label.CENTER ), BorderLayout.CENTER );
         x_y_Panel.add( x_y_Section, BorderLayout.SOUTH );
 
-        setLayout( new GridLayout( 4, 1, 0, 0 ) );
+        Panel rev_Panel = new Panel( new BorderLayout( ) );
+        rev_Panel.add( new Label( ), BorderLayout.NORTH );
+        rev_Panel.add( new Label( "Revving", Label.CENTER ), BorderLayout.CENTER );
+        rev_Panel.add( rev_Section, BorderLayout.SOUTH );
+
+        setLayout( new GridLayout( 5, 1, 0, 0 ) );
         add( r_p_Panel );
         add( yaw_Panel );
         add( alt_Panel );
         add( x_y_Panel );
+        add( rev_Panel );
     }
 
     /*************************************************************************/

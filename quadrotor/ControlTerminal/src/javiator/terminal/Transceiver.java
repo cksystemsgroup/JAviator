@@ -143,18 +143,10 @@ public abstract class Transceiver extends javiator.util.Transceiver
 
     protected void processPacket( Packet packet )
     {
-    //	 System.out.println("got packet " + packet.type);
         switch( packet.type )
         {
-       
 	        case PacketType.COMM_SENSOR_DATA:
                 sendPacket( parent.getCommandData( ).toPacket( PacketType.COMM_COMMAND_DATA ) );
-                if( parent.isNewIdlingSpeed( ) )
-                {
-                	byte[] maxIdlingSpeed = { (byte)( parent.idlingSpeed >> 8 ), (byte)( parent.idlingSpeed ) };
-                	sendPacket( new Packet( PacketType.COMM_IDLE_LIMIT, maxIdlingSpeed ) );
-                	parent.resetNewIdlingSpeed( );
-                }
                 if( parent.isNew_R_P_Params( ) )
                 {
             	    sendPacket( parent.getNew_R_P_Params( ).toPacket( PacketType.COMM_R_P_PARAMS ) );
@@ -170,6 +162,10 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 if( parent.isNew_X_Y_Params( ) )
                 {
             	    sendPacket( parent.getNew_X_Y_Params( ).toPacket( PacketType.COMM_X_Y_PARAMS ) );
+                }
+                if( parent.isNew_Rev_Params( ) )
+                {
+            	    sendPacket( parent.getNew_Rev_Params( ).toPacket( PacketType.COMM_REV_PARAMS ) );
                 }
                 parent.resetChangedParamID( );
 	        	sensorData.fromPacket( packet );
@@ -193,12 +189,6 @@ public abstract class Transceiver extends javiator.util.Transceiver
 
             case PacketType.COMM_GROUND_REPORT:
                 sendPacket( parent.getCommandData( ).toPacket( PacketType.COMM_COMMAND_DATA ) );
-                if( parent.isNewIdlingSpeed( ) )
-                {
-                	byte[] maxIdlingSpeed = { (byte)( parent.idlingSpeed >> 8 ), (byte)( parent.idlingSpeed ) };
-                	sendPacket( new Packet( PacketType.COMM_IDLE_LIMIT, maxIdlingSpeed ) );
-                	parent.resetNewIdlingSpeed( );
-                }
                 if( parent.isNew_R_P_Params( ) )
                 {
             	    sendPacket( parent.getNew_R_P_Params( ).toPacket( PacketType.COMM_R_P_PARAMS ) );
@@ -214,6 +204,10 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 if( parent.isNew_X_Y_Params( ) )
                 {
             	    sendPacket( parent.getNew_X_Y_Params( ).toPacket( PacketType.COMM_X_Y_PARAMS ) );
+                }
+                if( parent.isNew_Rev_Params( ) )
+                {
+            	    sendPacket( parent.getNew_Rev_Params( ).toPacket( PacketType.COMM_REV_PARAMS ) );
                 }
                 parent.resetChangedParamID( );
                 ReportToGround report = new ReportToGround( );

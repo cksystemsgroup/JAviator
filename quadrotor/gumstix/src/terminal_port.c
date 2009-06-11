@@ -41,21 +41,23 @@ static ctrl_params_t    r_p_params;
 static ctrl_params_t    yaw_params;
 static ctrl_params_t    alt_params;
 static ctrl_params_t    x_y_params;
+static rev_params_t     rev_params;
 static comm_channel_t * comm_channel;
 static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
 static volatile int     shut_down;
 static volatile int     test_mode;
 static volatile int     mode_switch;
-static volatile int     base_motor_speed;
 static volatile int     multiplier = 1;
 static volatile int     new_r_p_params;
 static volatile int     new_yaw_params;
 static volatile int     new_alt_params;
 static volatile int     new_x_y_params;
+static volatile int     new_rev_params;
 static volatile int     new_command_data;
 
 static pthread_mutex_t terminal_lock = PTHREAD_MUTEX_INITIALIZER;
+
 
 static inline void lock(void)
 {
@@ -66,7 +68,7 @@ static inline void unlock(void)
 {
 	pthread_mutex_unlock(&terminal_lock);
 }
-
+/*
 static inline int set_idle_limit( const comm_packet_t *packet )
 {
     char *p = (char *) packet->payload;
@@ -75,7 +77,7 @@ static inline int set_idle_limit( const comm_packet_t *packet )
 
     return( 0 );
 }
-
+*/
 static inline int set_test_mode( const comm_packet_t *packet )
 {
     char *p = (char *) packet->payload;
@@ -125,6 +127,12 @@ static inline int parse_x_y_params_packet( const comm_packet_t *packet )
     return ctrl_params_from_stream( &x_y_params, packet->payload, packet->size );
 }
 
+static inline int parse_rev_params_packet( const comm_packet_t *packet )
+{
+    new_rev_params = 1;
+    return rev_params_from_stream( &rev_params, packet->payload, packet->size );
+}
+
 static int process_data_packet( const comm_packet_t *packet )
 {
 	int retval;
@@ -156,8 +164,8 @@ static int process_data_packet( const comm_packet_t *packet )
             retval = parse_x_y_params_packet( packet );
 			break;
 
-        case COMM_IDLE_LIMIT:
-            retval = set_idle_limit( packet );
+        case COMM_REV_PARAMS:
+            retval = parse_rev_params_packet( packet );
 			break;
 
         case COMM_TEST_MODE:
@@ -305,6 +313,11 @@ int terminal_port_is_new_x_y_params( void )
     return( new_x_y_params );
 }
 
+int terminal_port_is_new_rev_params( void )
+{
+    return( new_rev_params );
+}
+
 int terminal_port_is_test_mode( void )
 {
     return( test_mode );
@@ -367,11 +380,20 @@ int terminal_port_get_x_y_params( ctrl_params_t *params )
     return( 0 );
 }
 
+int terminal_port_get_rev_params( rev_params_t *params )
+{
+	lock();
+    memcpy( params, &rev_params, sizeof( *params ) );
+    new_rev_params = 0;
+	unlock();
+    return( 0 );
+}
+/*
 int terminal_port_get_base_motor_speed( void )
 {
     return( base_motor_speed );
 }
-
+*/
 int terminal_port_send_sensor_data( const sensor_data_t *data )
 {
     uint8_t buf[ SENSOR_DATA_SIZE ];
