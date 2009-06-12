@@ -12,6 +12,8 @@ nobase_noinst_HEADERS = \
     javiator_data.h \
     javiator_port.h \
     kalman_filter.h \
+    low_pass_filter.h \
+    median_filter.h \
     motor_offsets.h \
     motor_signals.h \
     protocol.h \

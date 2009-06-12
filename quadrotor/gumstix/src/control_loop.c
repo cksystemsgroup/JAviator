@@ -48,12 +48,14 @@
 #include "rev_params.h"
 #include "trace_data.h"
 #include "kalman_filter.h"
+#include "low_pass_filter.h"
+#include "median_filter.h"
 #include "us_timer.h"
 
 //#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
 //#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 //#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+//#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
 
@@ -66,9 +68,7 @@
 #define FILTER_FACTOR_CMD       0.1
 #define FILTER_FACTOR_DDZ       0.1
 #define FILTER_FACTOR_Z         0.9
-
-#define MEDIAN_BUFFER_SIZE      9
-#define MEDIAN_BUFFER_INIT      {0,0,0,0,0,0,0,0,0}
+#define BATTERY_FILTER_SIZE     15
 
 /* plant parameters */
 #define SONAR_POS_ROLL          -0.095              /* [m] sonar position on roll axis */
@@ -115,7 +115,8 @@ static struct controller ctrl_yaw;
 static struct controller ctrl_z;
 
 /* filter objects */
-static struct kalman_filter z_kalman_filter;
+static kalman_filter_t  dz_filter;
+static median_filter_t  battery_filter;
 
 /* sensor and input data */
 static command_data_t   command_data;
@@ -201,7 +202,8 @@ int control_loop_setup( int ms_period, int enable_z )
     controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, period );
     controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     period );
 
-    init_kalman_filter( &z_kalman_filter );
+    kalman_filter_init( &dz_filter );
+    median_filter_init( &battery_filter, BATTERY_FILTER_SIZE );
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -314,50 +316,6 @@ static void get_revving_params( void )
             FACTOR_PARAMETER * rev_params.rev_dn_dec );
         fflush( stdout );
     }
-}
-
-/* TODO: make median buffer generic for general usage
-         (also used to filter sensor_data.z ) */
-static void filter_battery( void )
-{
-    static double median_buffer[ MEDIAN_BUFFER_SIZE ] = MEDIAN_BUFFER_INIT;
-    int i, j;
-
-    for( i = 0; i < MEDIAN_BUFFER_SIZE; ++i )
-    {
-        if( sensor_data.battery < median_buffer[i] )
-        {
-            break;
-        }
-    }
-
-    if( i < MEDIAN_BUFFER_SIZE )
-    {
-        j = MEDIAN_BUFFER_SIZE - 1;
-
-        while( j > i )
-        {
-            median_buffer[j] = median_buffer[j-1];
-            --j;
-        }
-
-        median_buffer[j] = sensor_data.battery;
-    }
-    else
-    {
-        i = MEDIAN_BUFFER_SIZE - 1;
-        j = 0;
-
-        while( j < i )
-        {
-            median_buffer[j] = median_buffer[j+1];
-            ++j;
-        }
-
-        median_buffer[j] = sensor_data.battery;
-    }
-
-    sensor_data.battery = median_buffer[ MEDIAN_BUFFER_SIZE >> 1 ];
 }
 
 #ifdef ADJUST_YAW
@@ -476,11 +434,9 @@ static int get_javiator_data( void )
     sensor_data.dy = (sensor_data.y - sensor_data.dy) * FACTOR_LINEAR_RATE;
     sensor_data.dz = (sensor_data.z - sensor_data.dz) * FACTOR_LINEAR_RATE;
 
-    /* copy and scale battery level */
-    sensor_data.battery = javiator_data.battery * FACTOR_BATTERY;
-
-    /* apply filter to battery data */
-    filter_battery( );
+    /* scale and filter battery level */
+    sensor_data.battery = median_filter_apply( &battery_filter,
+        javiator_data.battery * FACTOR_BATTERY );
 
     return( 0 );
 }
@@ -643,9 +599,11 @@ static void reset_controllers( void )
     ctrl_pitch .reset_zero( &ctrl_pitch );
     ctrl_yaw   .reset_zero( &ctrl_yaw );
     ctrl_z     .reset_zero( &ctrl_z );
+}
 
-    reset_kalman_filter( &z_kalman_filter );
-    
+static void reset_filters( void )
+{
+    kalman_filter_reset( &dz_filter );   
     uz_old = 0;
 }
 
@@ -679,6 +637,7 @@ static int perform_ground_actions( void )
     {
         //base_motor_speed = terminal_port_get_base_motor_speed( );
         reset_controllers( );
+        reset_filters( );
         reset_motor_signals( );
         controller_state = 0;
     }
@@ -692,6 +651,7 @@ static int perform_shut_down( void )
     revving_step     = 0;
 
     reset_controllers( );
+    reset_filters( );
     reset_motor_signals( );
 
     return( 1 );
@@ -741,7 +701,7 @@ static inline double filter_ddz( void )
 
 static inline double filter_dz( double z, double ddz )
 {
-    return apply_kalman_filter( &z_kalman_filter, z, ddz, period );
+    return kalman_filter_apply( &dz_filter, z, ddz, period );
 }
 
 static int compute_motor_signals( void )
@@ -763,7 +723,7 @@ static int compute_motor_signals( void )
     z_filtered   = filter_z( );
     ddz_filtered = filter_ddz( );
     dz_estimated = filter_dz( z_filtered, -ddz_filtered );
-    z_estimated  = z_kalman_filter.z;
+    z_estimated  = dz_filter.z;
 
 #ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 
@@ -1128,8 +1088,14 @@ int control_loop_run( void )
         }
     }
 
-    print_stats();
+    controller_destroy( &ctrl_roll );
+    controller_destroy( &ctrl_pitch );
+    controller_destroy( &ctrl_yaw );
+    controller_destroy( &ctrl_z );
 
+    median_filter_destroy( &battery_filter );
+
+    print_stats( );
     return( 0 );
 }
 

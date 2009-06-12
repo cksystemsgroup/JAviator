@@ -14,7 +14,9 @@ control_SOURCES = \
     inertial_port.c \
     javiator_port.c \
     kalman_filter.c \
+    low_pass_filter.c \
     main.c \
+    median_filter.c \
     pidd_controller.c \
     serial_channel.c \
     socket_channel.c \

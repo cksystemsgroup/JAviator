@@ -23,42 +23,40 @@
  *
  */
 
-#ifndef KALMAN_FILTER
-#define KALMAN_FILTER
+#ifndef MEDIAN_FILTER
+#define MEDIAN_FILTER
 
 
-#define KALMAN_STATES   2   /* number of Kalman states */
-#define KALMAN_P        4   /* elements in the covariance matrix */
-#define KALMAN_Q        10000.0
-#define KALMAN_R        0.01
-
-/* Structure for representing Kalman filter parameters */
+/* Structure for representing median filter parameters */
 typedef struct
 {
-    double x[ KALMAN_STATES ];
-    double p[ KALMAN_P ];
-    double z;
-    double dz;
+    int     size;
+    double *array;
 
-} kalman_filter_t;
+} median_filter_t;
 
 
-/* Initializes the Kalman filter
+/* Initializes the median filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void   kalman_filter_init( kalman_filter_t *filter );
+int    median_filter_init( median_filter_t *filter, int size );
 
-/* Resets the Kalman filter
+/* Resets the median filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void   kalman_filter_reset( kalman_filter_t *filter );
+int    median_filter_reset( median_filter_t *filter );
 
-/* Estimates the vertical speed dz.  Parameters are expected to be
-   given as follows: z in [m], ddz in [m/s^2], and period in [s].
-   Returns the estimated velocity in [m/s].
+/* Destroys the median filter.
+   Returns 0 if successful, -1 otherwise.
 */
-double kalman_filter_apply( kalman_filter_t *filter,
-                            double z, double ddz, double period );
+int    median_filter_destroy( median_filter_t *filter );
+
+/* Applies the median filter to the given update value.
+   Returns the filtered value.
+*/
+double median_filter_apply( median_filter_t *filter, double update );
 
 
-#endif /* !KALMAN_FILTER */
+#endif /* !MEDIAN_FILTER */
 
 /* End of file */

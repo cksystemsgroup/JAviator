@@ -23,42 +23,33 @@
  *
  */
 
-#ifndef KALMAN_FILTER
-#define KALMAN_FILTER
+#ifndef LOW_PASS_FILTER
+#define LOW_PASS_FILTER
 
 
-#define KALMAN_STATES   2   /* number of Kalman states */
-#define KALMAN_P        4   /* elements in the covariance matrix */
-#define KALMAN_Q        10000.0
-#define KALMAN_R        0.01
-
-/* Structure for representing Kalman filter parameters */
+/* Structure for representing low-pass filter parameters */
 typedef struct
 {
-    double x[ KALMAN_STATES ];
-    double p[ KALMAN_P ];
-    double z;
-    double dz;
+    double gain;
+    double value;
 
-} kalman_filter_t;
+} low_pass_filter_t;
 
 
-/* Initializes the Kalman filter
+/* Initializes the low-pass filter
 */
-void   kalman_filter_init( kalman_filter_t *filter );
+void   low_pass_filter_init( low_pass_filter_t *filter, double gain );
 
-/* Resets the Kalman filter
+/* Resets the low-pass filter
 */
-void   kalman_filter_reset( kalman_filter_t *filter );
+void   low_pass_filter_reset( low_pass_filter_t *filter );
 
-/* Estimates the vertical speed dz.  Parameters are expected to be
-   given as follows: z in [m], ddz in [m/s^2], and period in [s].
-   Returns the estimated velocity in [m/s].
+/* Applies the low-pass filter to the given update value.
+   Returns the filtered value.
 */
-double kalman_filter_apply( kalman_filter_t *filter,
-                            double z, double ddz, double period );
+double low_pass_filter_apply( low_pass_filter_t *filter, double update );
 
 
-#endif /* !KALMAN_FILTER */
+#endif /* !LOW_PASS_FILTER */
 
 /* End of file */
