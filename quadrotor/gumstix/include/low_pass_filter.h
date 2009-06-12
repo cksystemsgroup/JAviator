@@ -36,13 +36,15 @@ typedef struct
 } low_pass_filter_t;
 
 
-/* Initializes the low-pass filter
+/* Initializes the low-pass filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void   low_pass_filter_init( low_pass_filter_t *filter, double gain );
+int    low_pass_filter_init( low_pass_filter_t *filter, double gain );
 
-/* Resets the low-pass filter
+/* Resets the low-pass filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void   low_pass_filter_reset( low_pass_filter_t *filter );
+int    low_pass_filter_reset( low_pass_filter_t *filter );
 
 /* Applies the low-pass filter to the given update value.
    Returns the filtered value.

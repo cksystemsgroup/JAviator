@@ -23,21 +23,38 @@
  *
  */
 
+#include <stdio.h>
 #include "kalman_filter.h"
 
 
-/* Initializes the Kalman filter
+/* Initializes the Kalman filter with the given period in [s].
+   Returns 0 if successful, -1 otherwise.
 */
-void kalman_filter_init( kalman_filter_t *filter )
+int kalman_filter_init( kalman_filter_t *filter, double period )
 {
-    kalman_filter_reset( filter );
+    if( period < 1 )
+    {
+        fprintf( stderr, "ERROR: invalid Kalman filter period\n" );
+        return( -1 );
+    }
+
+    filter->dtime = period;
+
+    return kalman_filter_reset( filter );
 }
 
-/* Resets the Kalman filter
+/* Resets the Kalman filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void kalman_filter_reset( kalman_filter_t *filter )
+int kalman_filter_reset( kalman_filter_t *filter )
 {
     int i;
+
+    if( KALMAN_STATES != 2 || KALMAN_P != 4 )
+    {
+        fprintf( stderr, "ERROR: invalid Kalman filter constants\n" );
+        return( -1 );
+    }
 
     /* reset Kalman states */
     for( i = 0; i < KALMAN_STATES; ++i )
@@ -53,14 +70,15 @@ void kalman_filter_reset( kalman_filter_t *filter )
 
     filter->z  = 0;
     filter->dz = 0;
+
+    return( 0 );
 }
 
-/* Estimates the vertical speed dz.  Parameters are expected to be
-   given as follows: z in [m], ddz in [m/s^2], and period in [s].
+/* Estimates the vertical speed dz.  Parameters are expected
+   to be given as follows: z in [m] and ddz in [m/s^2].
    Returns the estimated velocity in [m/s].
 */
-double kalman_filter_apply( kalman_filter_t *filter,
-                            double z, double ddz, double period )
+double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
 {
     double x1, x2, p11, p12, p21, p22, k1, k2;
 
@@ -77,14 +95,14 @@ double kalman_filter_apply( kalman_filter_t *filter,
         /* TIME UPDATE */
 
         /* project state ahead */
-        x1 = x1 + period * x2;
-        x2 = x2 + period * ddz;
+        x1 = x1 + filter->dtime * x2;
+        x2 = x2 + filter->dtime * ddz;
 
         /* project error covariance ahead */
-        p11 = p11 + period * (p21 + p12) + period * period * p22;
-        p12 = p12 + period * p22;
-        p21 = p21 + period * p22;
-        p22 = p22 + period * period * KALMAN_Q;
+        p11 = p11 + filter->dtime * (p21 + p12) + filter->dtime * filter->dtime * p22;
+        p12 = p12 + filter->dtime * p22;
+        p21 = p21 + filter->dtime * p22;
+        p22 = p22 + filter->dtime * filter->dtime * KALMAN_Q;
 
         /* MEASURE UPDATE */
 

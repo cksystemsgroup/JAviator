@@ -35,6 +35,7 @@
 /* Structure for representing Kalman filter parameters */
 typedef struct
 {
+    double dtime;
     double x[ KALMAN_STATES ];
     double p[ KALMAN_P ];
     double z;
@@ -43,20 +44,21 @@ typedef struct
 } kalman_filter_t;
 
 
-/* Initializes the Kalman filter
+/* Initializes the Kalman filter with the given period in [s].
+   Returns 0 if successful, -1 otherwise.
 */
-void   kalman_filter_init( kalman_filter_t *filter );
+int    kalman_filter_init( kalman_filter_t *filter, double period );
 
-/* Resets the Kalman filter
+/* Resets the Kalman filter.
+   Returns 0 if successful, -1 otherwise.
 */
-void   kalman_filter_reset( kalman_filter_t *filter );
+int    kalman_filter_reset( kalman_filter_t *filter );
 
-/* Estimates the vertical speed dz.  Parameters are expected to be
-   given as follows: z in [m], ddz in [m/s^2], and period in [s].
+/* Estimates the vertical speed dz.  Parameters are expected
+   to be given as follows: z in [m] and ddz in [m/s^2].
    Returns the estimated velocity in [m/s].
 */
-double kalman_filter_apply( kalman_filter_t *filter,
-                            double z, double ddz, double period );
+double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz );
 
 
 #endif /* !KALMAN_FILTER */

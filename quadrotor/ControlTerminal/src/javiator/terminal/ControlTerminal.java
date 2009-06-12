@@ -98,7 +98,7 @@ public class ControlTerminal extends Frame
                                                 "d-term," +
                                                 "dd-term," +
                                                 "uz," +
-                                                "z cmd";
+                                                "z-cmd";
 
     public ControlTerminal( )
     {
@@ -404,17 +404,17 @@ public class ControlTerminal extends Frame
         {
 	        String csv = NIL +
 	            (short) data.z            + ',' +
-	            (short) data.z_filtered   + ',' +
-	            (short) data.z_estimated  + ',' +
-	            (short) data.dz_estimated + ',' +
+	            (short) data.filtered_z   + ',' +
+	            (short) data.estimated_z  + ',' +
+	            (short) data.estimated_dz + ',' +
 	            (short) data.ddz          + ',' +
-	            (short) data.ddz_filtered + ',' +
+	            (short) data.filtered_ddz + ',' +
 	            (short) data.p_term       + ',' +
 	            (short) data.i_term       + ',' +
 	            (short) data.d_term       + ',' +
 	            (short) data.dd_term      + ',' +
 	            (short) data.uz           + ',' +
-	            (short) data.z_cmd        + ',' + 
+	            (short) data.cmd_z        + ',' + 
 	            (short) data.id           + '\n';
 
 	        try
