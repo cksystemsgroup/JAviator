@@ -30,8 +30,6 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Color;
-import java.awt.Point;
-import java.awt.GraphicsEnvironment;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -69,7 +67,7 @@ public class ParamDialog extends Dialog
     /*************************************************************************/
 
     private static final String[] PID_PARAMS     = { "Kp", "Ki", "Kd", "Kdd" };
-    private static final String[] REV_PARAMS     = { "Limit", "Ctrl", "Inc", "Dec" };
+    private static final String[] REV_PARAMS     = { "Limit", "Ctrl", "Ru", "Rd" };
     private static final int      SCALING_FACTOR = 1000;
     private static final int      MOTION_DELAY   = 50; // ms
     private static final int      PARAM_STEP     = 1;
@@ -84,6 +82,7 @@ public class ParamDialog extends Dialog
         short[] controlParams, int[] changedParamID )
     {
         super( parent, title, false );
+        this.setResizable( true );
 
         this.controlParams  = controlParams;
         this.changedParamID = changedParamID;
@@ -122,9 +121,16 @@ public class ParamDialog extends Dialog
             }
         } );
 
-        Point center = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getCenterPoint( );
-        setLocation( center.x - ( getWidth( ) >> 1 ), center.y - ( getHeight( ) >> 1 ) );
-        setResizable( false );
+        if( parent.getX( ) < getWidth( ) )
+        {
+            setLocation( parent.getX( ) + parent.getWidth( ), parent.getY( ) );
+        }
+        else
+        {
+            setLocation( parent.getX( ) - getWidth( ), parent.getY( ) );
+        }
+
+        setSize( getWidth( ), parent.getHeight( ) );
         setVisible( true );
 
         motion = new MotionThread( );
@@ -226,28 +232,23 @@ public class ParamDialog extends Dialog
         }
 
         Panel r_p_Panel = new Panel( new BorderLayout( ) );
-        r_p_Panel.add( new Label( ), BorderLayout.NORTH );
         r_p_Panel.add( new Label( "   " + ControlTerminal.ROLL + " / "
             + ControlTerminal.PITCH + "   ", Label.CENTER ), BorderLayout.CENTER );
         r_p_Panel.add( r_p_Section, BorderLayout.SOUTH );
 
         Panel yaw_Panel = new Panel( new BorderLayout( ) );
-        yaw_Panel.add( new Label( ), BorderLayout.NORTH );
         yaw_Panel.add( new Label( ControlTerminal.YAW, Label.CENTER ), BorderLayout.CENTER );
         yaw_Panel.add( yaw_Section, BorderLayout.SOUTH );
 
         Panel alt_Panel = new Panel( new BorderLayout( ) );
-        alt_Panel.add( new Label( ), BorderLayout.NORTH );
         alt_Panel.add( new Label( ControlTerminal.ALTITUDE, Label.CENTER ), BorderLayout.CENTER );
         alt_Panel.add( alt_Section, BorderLayout.SOUTH );
 
         Panel x_y_Panel = new Panel( new BorderLayout( ) );
-        x_y_Panel.add( new Label( ), BorderLayout.NORTH );
         x_y_Panel.add( new Label( "X / Y", Label.CENTER ), BorderLayout.CENTER );
         x_y_Panel.add( x_y_Section, BorderLayout.SOUTH );
 
         Panel rev_Panel = new Panel( new BorderLayout( ) );
-        rev_Panel.add( new Label( ), BorderLayout.NORTH );
         rev_Panel.add( new Label( "Revving", Label.CENTER ), BorderLayout.CENTER );
         rev_Panel.add( rev_Section, BorderLayout.SOUTH );
 

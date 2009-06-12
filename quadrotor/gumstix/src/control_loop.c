@@ -306,8 +306,8 @@ static void get_revving_params( void )
     if( terminal_port_is_new_rev_params( ) )
     {
         terminal_port_get_rev_params( &rev_params );
-        fprintf( stdout, "parameter update: Revving Up/Down\n"
-            "-->\tlimit: %1.3f\tctrl: %1.3f\tinc: %1.3f\tdec: %1.3f\n",
+        fprintf( stdout, "parameter update: Revving\n"
+            "-->\tIL: %1.3f\tCS: %1.3f\tRu: %1.3f\tRd: %1.3f\n",
             FACTOR_PARAMETER * rev_params.idle_limit,
             FACTOR_PARAMETER * rev_params.ctrl_speed,
             FACTOR_PARAMETER * rev_params.rev_up_inc,
