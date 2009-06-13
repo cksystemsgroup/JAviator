@@ -39,7 +39,7 @@ int javiator_port_send_ctrl_period( int period );
 
 int javiator_port_send_enable_sensors( int enable );
 
-int javiator_port_send_motor_signals( const motor_signals_t *signals );
+int javiator_port_send_motor_signals( motor_signals_t *signals );
 
 int javiator_port_forward( const comm_packet_t *packet );
 

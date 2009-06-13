@@ -56,7 +56,6 @@ static volatile uint8_t     flag_send_spi;
 /* Global structures */
 static javiator_data_t      javiator_data;
 static motor_signals_t      motor_signals;
-uint8_t current_response = RESP_FULL;
 
 /* Forward declarations */
 void controller_init        ( void );
@@ -102,7 +101,7 @@ void controller_init( void )
 
     /* register ADC channels */
     adc_add_channel( ADC_CH_MINIA );
-    /*adc_add_channel( ADC_CH_MPX4115A );*/
+    adc_add_channel( ADC_CH_MPX4115A );
     adc_add_channel( ADC_CH_BATTERY );
 
     /* register watchdog event and start timer */
@@ -330,7 +329,7 @@ void check_signals_delay( )
     flag_new_signals = 0;
 }
 
-/* Sends the JAviator data to the controller
+/* Sends the JAviator data to the Gumstix
 */
 void send_javiator_data( void )
 {
@@ -351,7 +350,7 @@ void send_javiator_data( void )
 
 	    if( spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE ) )
         {
-			LED_TOGGLE( RED ); /* could not send packet; previous packet still enqueued */
+			LED_TOGGLE( RED ); /* packet could not be sent, hence still enqueued */
 		}
     }
 
@@ -389,10 +388,10 @@ int main( void )
             process_data_packet( );
         }
 
-        /* check if new laser data available */
+        /* check if new IMU data available */
         if( dm3gx1_is_new_data( ) )
         {
-            if( dm3gx1_get_data( &javiator_data ) )
+            if( dm3gx1_get_data( (dm3gx1_data_t *) &javiator_data ) )
             {
                 javiator_data.error |= JE_IMU_GET_DATA;
             }
@@ -414,7 +413,7 @@ int main( void )
                 javiator_data.state |= JS_NEW_SONAR_DATA;
             }
         }
-#if 0
+
         /* check if new pressure data available */
         if( adc_is_new_data( ADC_CH_MPX4115A ) )
         {
@@ -427,7 +426,7 @@ int main( void )
                 javiator_data.state |= JS_NEW_PRESS_DATA;
             }
         }
-#endif
+
         /* check if new battery data available */
         if( adc_is_new_data( ADC_CH_BATTERY ) )
         {

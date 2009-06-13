@@ -29,11 +29,8 @@
 #include <stdint.h>
 
 
-#define	RESP_FULL   1
-#define RESP_SHORT  2
-
-#define MOTOR_MAX   16000
-#define MOTOR_MIN   0
+#define MOTOR_MAX       16000   /* maximum value for Fast PWM mode */
+#define MOTOR_MIN       0       /* minimum value for any mode */
 
 /* Structure for shared motor signals */
 typedef struct
@@ -47,8 +44,6 @@ typedef struct
 } motor_signals_t;
 
 #define MOTOR_SIGNALS_SIZE  10  /* byte size of motor_signals_t */
-
-extern uint8_t current_response;
 
 
 static inline
