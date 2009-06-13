@@ -108,6 +108,9 @@ static double       uz_old;
 static int motor_revving_add = 50;
 static int base_motor_speed  = 8300;
 static int revving_step      = 0;
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+static int16_t idle_speed = 0;
+#endif
 
 /* controller objects */
 static struct controller ctrl_roll;
@@ -590,7 +593,12 @@ static void reset_controllers( void )
 
 static void reset_filters( void )
 {
-    kalman_filter_reset( &filter_dz );   
+    low_pass_filter_reset( &filter_ddz );
+    low_pass_filter_reset( &filter_cmd_roll );
+    low_pass_filter_reset( &filter_cmd_pitch );
+    low_pass_filter_reset( &filter_cmd_z );
+    median_filter_reset  ( &filter_battery );
+    kalman_filter_reset  ( &filter_dz );
     uz_old = 0;
 }
 
@@ -627,6 +635,9 @@ static int perform_ground_actions( void )
         reset_filters( );
         reset_motor_signals( );
         controller_state = 0;
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+        idle_speed = 0;
+#endif
     }
 
     return( 1 );
@@ -636,6 +647,9 @@ static int perform_shut_down( void )
 {
     controller_state = 0;
     revving_step     = 0;
+#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+    idle_speed = 0;
+#endif
 
     reset_controllers( );
     reset_filters( );
@@ -675,10 +689,6 @@ static inline double get_filtered_ddz( void )
 
 static int compute_motor_signals( void )
 {
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-    static int16_t idle_speed = 0;
-#endif
-
     double filtered_z   = 0;    /* low-pass-filtered z */
     double estimated_z  = 0;    /* Kalman-estimated z */
     double estimated_dz = 0;    /* Kalman-estimated dz */
@@ -723,10 +733,6 @@ static int compute_motor_signals( void )
             if( idle_speed > 0 )
             {
                 idle_speed -= rev_params.rev_dn_dec;
-            }
-            else
-            {
-                idle_speed = 0;
             }
         }
     }
