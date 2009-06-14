@@ -52,12 +52,7 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-#define ADJUST_YAW
-#define ADJUST_Z
 
 /* controller modes */
 #define ALT_MODE_GROUND         0x00
@@ -95,77 +90,74 @@
 #define FACTOR_TRACE_DATA       1000.0              /* [value]  --> [value*1000] */
 
 /* control loop parameters */
-static volatile int running;
-static double       period;                         /* [s] */
-static int          us_period;                      /* [us] */
-static int          control_z;
-static int          controller_state;
-static int          altitude_mode;
-static long long    next_period;
-static double       uz_old;
+static volatile int             running;
+static double                   period;             /* [s] */
+static int                      us_period;          /* [us] */
+static int                      control_z;
+static int                      controller_state;
+static int                      altitude_mode;
+static long long                next_period;
+static double                   uz_old;
 
 /* motor speed up threshold */
-static int motor_revving_add = 25;
-static int base_motor_speed  = 8300;
-static int revving_step      = 0;
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
-static int16_t idle_speed = 0;
+#ifndef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+static int                      motor_revving_add = 25;
+static int                      base_motor_speed  = 8300;
+static int                      revving_step      = 0;
+#else
+static int16_t                  idle_speed = 0;
 #endif
 
 /* controller objects */
-static struct controller ctrl_roll;
-static struct controller ctrl_pitch;
-static struct controller ctrl_yaw;
-static struct controller ctrl_z;
+static struct controller        ctrl_roll;
+static struct controller        ctrl_pitch;
+static struct controller        ctrl_yaw;
+static struct controller        ctrl_z;
 
 /* filter objects */
-static low_pass_filter_t    filter_z;
-static low_pass_filter_t    filter_ddz;
-static low_pass_filter_t    filter_cmd_roll;
-static low_pass_filter_t    filter_cmd_pitch;
-static low_pass_filter_t    filter_cmd_z;
-static median_filter_t      filter_battery;
-static kalman_filter_t      filter_dz;
+static low_pass_filter_t        filter_z;
+static low_pass_filter_t        filter_ddz;
+static low_pass_filter_t        filter_cmd_roll;
+static low_pass_filter_t        filter_cmd_pitch;
+static low_pass_filter_t        filter_cmd_z;
+static median_filter_t          filter_battery;
+static kalman_filter_t          filter_dz;
 
 /* sensor and input data */
-static command_data_t   command_data;
-static javiator_data_t  javiator_data;
-static inertial_data_t  inertial_data;
-static sensor_data_t    sensor_data;
-static motor_signals_t  motor_signals;
-static motor_offsets_t  motor_offsets;
-static rev_params_t     rev_params;
-static trace_data_t     trace_data;
+static command_data_t           command_data;
+static javiator_data_t          javiator_data;
+static inertial_data_t          inertial_data;
+static sensor_data_t            sensor_data;
+static motor_signals_t          motor_signals;
+static motor_offsets_t          motor_offsets;
+static rev_params_t             rev_params;
+static trace_data_t             trace_data;
 
-static double sin_roll  = 0;
-static double cos_roll  = 0;
-static double sin_pitch = 0;
-static double cos_pitch = 0;
+/* sine/cosine variables */
+static double                   sin_roll;
+static double                   cos_roll;
+static double                   sin_pitch;
+static double                   cos_pitch;
+static double                   sin_yaw;
+static double                   cos_yaw;
 
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-static double sin_yaw   = 0;
-static double cos_yaw   = 0;
-#endif
+/* statistics definitions */
+#define STAT_IMU                0
+#define STAT_TO_JAV             1
+#define STAT_FROM_JAV           2
+#define STAT_FROM_TERM          3
+#define STAT_TO_TERM            4
+#define STAT_CONTROL            5
+#define STAT_SLEEP              6
+#define STAT_READ               7
+#define STAT_ALL                8
+#define NUM_STATS               9
 
-/* function pointers */
-static void signal_handler( int num );
-static void int_handler( int num );
-
-#define NUM_STATS        9
-#define STAT_IMU         0
-#define STAT_TO_JAV      1
-#define STAT_FROM_JAV    2
-#define STAT_FROM_TERM   3
-#define STAT_TO_TERM     4
-#define STAT_CONTROL     5
-#define STAT_SLEEP       6
-#define STAT_READ        7
-#define STAT_ALL         8
-
-static int       loop_count = 0;
-static long long stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
-static long long max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
-static char *    stats_name[ NUM_STATS ] =
+/* statistics variables */
+static int                      loop_count;
+static long long                stats[ NUM_STATS ];
+static long long                max_stats[ NUM_STATS ];
+static const char *             stats_name[ NUM_STATS ] =
 {
     "IMU           ",
     "to javiator   ",
@@ -178,7 +170,9 @@ static char *    stats_name[ NUM_STATS ] =
     "complete loop "
 };
 
+/* function pointers */
 static void signal_handler( int num );
+static void int_handler( int num );
 static void print_stats( void );
 
 
@@ -190,15 +184,23 @@ int control_loop_setup( int ms_period, int enable_z )
 {
     struct sigaction act;
 
-    running          = 1;
-    period           = ms_period * 0.001;
-    us_period        = ms_period * 1000;
-    control_z        = enable_z;
-    controller_state = 0;
-    altitude_mode    = ALT_MODE_GROUND;
-    next_period      = 0;
-    uz_old           = 0;
-    act.sa_handler   = signal_handler;
+    running           = 1;
+    period            = ms_period * 0.001;
+    us_period         = ms_period * 1000;
+    control_z         = enable_z;
+    controller_state  = 0;
+    altitude_mode     = ALT_MODE_GROUND;
+    next_period       = 0;
+    uz_old            = 0;
+#ifndef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+    motor_revving_add = 25;
+    base_motor_speed  = 8300;
+    revving_step      = 0;
+#else
+    idle_speed        = 0;
+#endif
+    loop_count        = 0;
+    act.sa_handler    = signal_handler;
 
     controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD,     period );
     controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD,     period );
@@ -221,6 +223,8 @@ int control_loop_setup( int ms_period, int enable_z )
     memset( &motor_offsets, 0, sizeof( motor_offsets ) );
     memset( &rev_params,    0, sizeof( rev_params ) );
     memset( &trace_data,    0, sizeof( trace_data ) );
+    memset( &stats,         0, sizeof( stats ) );
+    memset( &max_stats,     0, sizeof( max_stats ) );
 
     if( sigaction( SIGUSR1, &act, NULL ) )
     {
@@ -316,10 +320,31 @@ static void get_revving_params( void )
             FACTOR_PARAMETER * rev_params.rev_up_inc,
             FACTOR_PARAMETER * rev_params.rev_dn_dec );
         fflush( stdout );
+#ifndef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+        base_motor_speed = rev_params.idle_limit;
+#endif
     }
 }
 
-#ifdef ADJUST_YAW
+static double reject_z_outliers( double new_z )
+{
+    static double old_z = 13;
+    static int    count = 2;
+
+    if( abs( old_z - new_z ) > 20 && count < 2 )
+    {
+        new_z = old_z;
+        ++count;
+    }
+    else
+    {
+        old_z = new_z;
+        count = 0;
+    }
+
+    return( new_z );
+}
+
 static void adjust_yaw( void )
 {
     static double offset_yaw = 0;
@@ -336,9 +361,7 @@ static void adjust_yaw( void )
         sensor_data.yaw = 0;
     }
 }
-#endif
 
-#ifdef ADJUST_Z
 static void adjust_z( void )
 {
     static double offset_z = 0;
@@ -355,14 +378,11 @@ static void adjust_z( void )
         sensor_data.z = 0;
     }
 }
-#endif
 
 static int get_javiator_data( void )
 {
     static uint16_t last_id = 0;
-    static double   old_z   = 13;
-    static int      count   = 2;
-    int             res;
+    int res;
 
     res = javiator_port_get_data( &javiator_data );
 
@@ -416,19 +436,7 @@ static int get_javiator_data( void )
     /* copy and scale positions */
     sensor_data.x  = 0;
     sensor_data.y  = 0;
-    sensor_data.z  = javiator_data.sonar * FACTOR_SONAR;
-
-    if( abs( old_z - sensor_data.z ) > 20 && count < 2 )
-    {
-        sensor_data.z = old_z;
-        ++count;
-    }
-    else
-    {
-        count = 0;
-    }
-
-    old_z = sensor_data.z;
+    sensor_data.z  = reject_z_outliers( javiator_data.sonar * FACTOR_SONAR );
 
     /* compute linear rates */
     sensor_data.dx = (sensor_data.x - sensor_data.dx) * FACTOR_LINEAR_RATE;
@@ -501,10 +509,8 @@ static int get_inertial_data( void )
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-    double rotated_roll, rotated_pitch;
-#endif
+    double yaw_rotated_roll;
+    double yaw_rotated_pitch;
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -513,20 +519,25 @@ static int get_command_data( void )
 
         if( sensors_enabled )
         {
-            javiator_port_send_enable_sensors( 0 );
-			if (inertial_is_local())
-				inertial_port_send_stop();
             sensors_enabled = 0;
+            javiator_port_send_enable_sensors( 0 );
+
+			if( inertial_is_local( ) )
+            {
+				inertial_port_send_stop( );
+            }
         }
     }
     else
     if( terminal_port_is_mode_switch( ) )
     {
-		printf("Mode Switch...\n");
-		print_stats();
+		printf( "Mode Switch ...\n" );
+		print_stats( );
+
 		loop_count = 0;
-		memset(stats, 0, sizeof(stats));
-		memset(max_stats, 0, sizeof(max_stats));
+		memset( stats, 0, sizeof( stats ) );
+		memset( max_stats, 0, sizeof( max_stats ) );
+
         switch( altitude_mode )
         {
             case ALT_MODE_GROUND:
@@ -542,10 +553,13 @@ static int get_command_data( void )
 
                 if( !sensors_enabled )
                 {
-                    javiator_port_send_enable_sensors( 1 );
-					if (inertial_is_local())
-						inertial_port_send_start();
                     sensors_enabled = 1;
+                    javiator_port_send_enable_sensors( 1 );
+
+					if( inertial_is_local( ) )
+                    {
+						inertial_port_send_start( );
+                    }
                 }
                 break;
 
@@ -564,15 +578,13 @@ static int get_command_data( void )
     command_data.pitch = low_pass_filter_apply( &filter_cmd_pitch, command_data.pitch );
     command_data.z     = low_pass_filter_apply( &filter_cmd_z,     command_data.z );
 
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
     /* apply rotation matrix to roll and pitch commands */
-    rotated_roll  = command_data.roll * cos_yaw + command_data.pitch * sin_yaw;
-    rotated_pitch = command_data.roll * sin_yaw - command_data.pitch * cos_yaw;
+    yaw_rotated_roll   = command_data.roll * cos_yaw + command_data.pitch * sin_yaw;
+    yaw_rotated_pitch  = command_data.roll * sin_yaw - command_data.pitch * cos_yaw;
 
     /* replace original commands with rotated commands */
-    command_data.roll  =  rotated_roll;
-    command_data.pitch = -rotated_pitch;
-#endif
+    command_data.roll  =  yaw_rotated_roll;
+    command_data.pitch = -yaw_rotated_pitch;
 
     /* check for new control parameters */
     get_control_params( );
@@ -611,6 +623,7 @@ static inline void reset_motor_signals( void )
 
 static int perform_ground_actions( void )
 {
+#ifndef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
     if( revving_step > 0 )
     {
         if( motor_signals.front > 0 ) 
@@ -629,15 +642,16 @@ static int perform_ground_actions( void )
     }
     else
     {
-        //base_motor_speed = terminal_port_get_base_motor_speed( );
+#endif
         reset_controllers( );
         reset_filters( );
         reset_motor_signals( );
         controller_state = 0;
 #ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
         idle_speed = 0;
-#endif
+#else
     }
+#endif
 
     return( 1 );
 }
@@ -645,8 +659,9 @@ static int perform_ground_actions( void )
 static int perform_shut_down( void )
 {
     controller_state = 0;
+#ifndef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
     revving_step     = 0;
-#ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
+#else
     idle_speed = 0;
 #endif
 
@@ -665,13 +680,9 @@ static inline double do_control( struct controller *ctrl,
 
 static inline double get_filtered_z( void )
 {
-#ifdef APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
     double corrected_z = SONAR_POS_ROLL  * sin_pitch *   -1
                        + SONAR_POS_PITCH * cos_pitch * sin_roll
                        + sensor_data.z   * cos_pitch * cos_roll;
-#else
-    double corrected_z = sensor_data.z;
-#endif
 
     return low_pass_filter_apply( &filter_z, corrected_z );
 }
@@ -755,11 +766,7 @@ static int compute_motor_signals( void )
             sensor_data.dyaw, sensor_data.ddyaw );
     }
 
-    uz_new += idle_speed
-#ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-        / (cos_roll * cos_pitch)
-#endif
-    ;
+    uz_new += idle_speed / (cos_roll * cos_pitch);
 
 #else /* APPLY_AUTOMATIC_REVVING_UP_AND_DOWN */
 
@@ -784,11 +791,7 @@ static int compute_motor_signals( void )
 
         if( control_z )
 	    {
-		    uz_new = base_motor_speed 
-#ifdef APPLY_COS_SIN_UZ_VECTOR_CORRECTION
-			    / (cos_roll * cos_pitch)
-#endif
-		    ;
+		    uz_new = base_motor_speed / (cos_roll * cos_pitch);
 		    uz_new += do_control( &ctrl_z,
                 estimated_z, command_data.z,
                 estimated_dz, -filtered_ddz );
@@ -883,38 +886,46 @@ static int send_trace_data_to_terminal( void )
 
 static int wait_for_next_period( void )
 {
-    if( sleep_until( next_period ) ) {
+    if( sleep_until( next_period ) )
+    {
         fprintf( stderr, "error in sleep_until\n" );
         exit( 1 );
     }
+
     next_period += us_period;
     return( 0 );
 }
-
 
 void calc_stats( long long time, int id )
 {
     stats[id] += time;
 
-    if(loop_count > 10 && time > max_stats[id]) 
-		// drop the first few stats for max calculation
+    /* drop first few stats for max calculation */
+    if( loop_count > 10 && time > max_stats[id] )
+    {
         max_stats[id] = time;
+    }
 }
 
 static void print_stats( void )
 {
     int i;
-    if (loop_count) {
-        printf("Loop Statistics:\n");
-        for (i=0;i<NUM_STATS; ++i) {
-            printf("\t%s %8lld us\tmax %8lld us\n", stats_name[i], stats[i]/loop_count, max_stats[i]);
+
+    if( loop_count > 0 )
+    {
+        printf( "Loop Statistics:\n" );
+
+        for( i = 0; i < NUM_STATS; ++i )
+        {
+            printf( "\t%s %8lld us\tmax %8lld us\n",
+                stats_name[i], stats[i] / loop_count, max_stats[i] );
         }
     }
 }
 
 static void signal_handler( int num )
 {
-    print_stats();
+    print_stats( );
 }
 
 static void int_handler( int num )
@@ -924,56 +935,53 @@ static void int_handler( int num )
 
 static int read_sensors( void )
 {
-	uint64_t start, end;
-	start = get_utime();
-	if (get_javiator_data()) {
-            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
-			return -1;
+	long long start, end;
 
+    start = get_utime( );
+
+	if( get_javiator_data( ) )
+    {
+        fprintf( stderr, "ERROR: connection to JAviator broken\n" );
+        return( -1 );
 	}
-	end = get_utime();
 
-	calc_stats(end - start, STAT_FROM_JAV);
-	if(inertial_is_local()) {
-		start = get_utime();
+	end = get_utime( );
+	calc_stats( end - start, STAT_FROM_JAV );
+
+	if( inertial_is_local( ) )
+    {
+		start = get_utime( );
+
 		if( get_inertial_data( ) )
 		{
 			fprintf( stderr, "ERROR: connection to IMU broken\n" );
-			return -1;
+			return( -1 );
 		}
 		else
 		{
 			inertial_port_send_request( );
 		}
-		end = get_utime();
-		calc_stats(end - start, STAT_IMU);
+
+		end = get_utime( );
+		calc_stats( end - start, STAT_IMU );
 	}
 
-#ifdef ADJUST_YAW
 	/* IMPORTANT: yaw angle must be adjusted BEFORE
 	   computation of sine/cosine values */
 	adjust_yaw( );
-#endif
-
-#ifdef ADJUST_Z
 	adjust_z( );
-#endif
 
 	/* compute sine/cosine values */
 	sin_roll  = sin( sensor_data.roll );
 	cos_roll  = cos( sensor_data.roll );
 	sin_pitch = sin( sensor_data.pitch );
 	cos_pitch = cos( sensor_data.pitch );
-
-#ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
 	sin_yaw   = sin( sensor_data.yaw );
 	cos_yaw   = cos( sensor_data.yaw );
-#endif
 
-	return 0;
+	return( 0 );
 }
 
-/* the control loop for our helicopter */
 int control_loop_run( void )
 {
     int first_time = 1;
@@ -982,18 +990,23 @@ int control_loop_run( void )
     long long start, end;
 	long long loop_start;
 
-	if (inertial_is_local())
-		inertial_port_send_request();
+	if( inertial_is_local( ) )
+    {
+		inertial_port_send_request( );
+    }
 
     while( running )
     {
-        start = loop_start = get_utime();
+        start = get_utime( );
+        loop_start = start;
+
         if( send_motor_signals( ) )
         {
             break;
         }
-        end = get_utime();
-        calc_stats(end - start, STAT_TO_JAV);
+
+        end = get_utime( );
+        calc_stats( end - start, STAT_TO_JAV );
 
         if( read_sensors( ) )
         {
@@ -1002,7 +1015,8 @@ int control_loop_run( void )
             break;
         }
 
-        start = get_utime();
+        start = get_utime( );
+
         if( check_terminal_connection( ) )
         {
             altitude_mode = ALT_MODE_SHUTDOWN;
@@ -1017,11 +1031,14 @@ int control_loop_run( void )
         {
             first_time = 1;
         }
-        get_command_data( );
-        end = get_utime();
-        calc_stats(end - start, STAT_FROM_TERM);
 
-        start = get_utime(); 
+        get_command_data( );
+
+        end = get_utime( );
+        calc_stats( end - start, STAT_FROM_TERM );
+
+        start = get_utime( ); 
+
         switch( altitude_mode )
         {
             case ALT_MODE_GROUND:
@@ -1039,26 +1056,32 @@ int control_loop_run( void )
             default:
                 fprintf( stderr, "ERROR: invalid altitude mode %d\n", altitude_mode );
         }
-        end = get_utime();
-        calc_stats(end - start, STAT_CONTROL);
 
-        start = get_utime();
+        end = get_utime( );
+        calc_stats( end - start, STAT_CONTROL );
+
+        start = get_utime( );
+
         send_report_to_terminal( );
         send_trace_data_to_terminal( );
-        end = get_utime();
-        calc_stats(end - start, STAT_TO_TERM);
-        calc_stats(end-loop_start, STAT_ALL);
 
-        start = get_utime();
+        end = get_utime( );
+        calc_stats( end - start, STAT_TO_TERM );
+        calc_stats( end - loop_start, STAT_ALL );
+
+        start = get_utime( );
+
         wait_for_next_period( );
-        end = get_utime();
-        calc_stats(end-start, STAT_SLEEP);
+
+        end = get_utime( );
+        calc_stats( end - start, STAT_SLEEP );
 
 
-        if (++loop_count < 0) {
-            printf("WARNING: stats overrun\n");
+        if( ++loop_count < 0 )
+        {
+            printf( "WARNING: statistics overrun\n" );
             loop_count = 0;
-            memset(stats, 0, sizeof(stats));
+            memset( stats, 0, sizeof( stats ) );
         }
     }
 
