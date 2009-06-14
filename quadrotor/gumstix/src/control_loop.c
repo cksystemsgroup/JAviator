@@ -52,9 +52,9 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-//#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
-//#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
-//#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
+#define APPLY_COS_SIN_SONAR_SENSOR_CORRECTION
+#define APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
+#define APPLY_COS_SIN_UZ_VECTOR_CORRECTION
 //#define APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
 #define ADJUST_YAW
 #define ADJUST_Z
@@ -105,7 +105,7 @@ static long long    next_period;
 static double       uz_old;
 
 /* motor speed up threshold */
-static int motor_revving_add = 50;
+static int motor_revving_add = 25;
 static int base_motor_speed  = 8300;
 static int revving_step      = 0;
 #ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN
@@ -268,7 +268,7 @@ static void set_control_params( ctrl_params_t *params,
             fprintf( stdout, "/%s", ctrl_2->name );
         }
 
-        fprintf( stdout, "\n-->\tKp: %1.3f\tKi: %1.3f\tKd: %1.3f\tKdd: %1.3f\n",
+        fprintf( stdout, "\n-->\tKp: %+1.3f\tKi: %+1.3f\tKd: %+1.3f\tKdd: %+1.3f\n",
             FACTOR_PARAMETER * params->kp, FACTOR_PARAMETER * params->ki,
             FACTOR_PARAMETER * params->kd, FACTOR_PARAMETER * params->kdd );
         fflush( stdout );
@@ -597,7 +597,6 @@ static void reset_filters( void )
     low_pass_filter_reset( &filter_cmd_roll );
     low_pass_filter_reset( &filter_cmd_pitch );
     low_pass_filter_reset( &filter_cmd_z );
-    median_filter_reset  ( &filter_battery );
     kalman_filter_reset  ( &filter_dz );
     uz_old = 0;
 }
@@ -701,7 +700,7 @@ static int compute_motor_signals( void )
 
     filtered_z   = get_filtered_z( );
     filtered_ddz = get_filtered_ddz( );
-    estimated_dz = kalman_filter_apply( &filter_dz, filtered_z, -filtered_ddz );
+    estimated_dz = kalman_filter_apply( &filter_dz, filtered_z, filtered_ddz );
     estimated_z  = filter_dz.z;
 
 #ifdef APPLY_AUTOMATIC_REVVING_UP_AND_DOWN

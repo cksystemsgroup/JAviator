@@ -232,8 +232,8 @@ public class ParamDialog extends Dialog
         }
 
         Panel r_p_Panel = new Panel( new BorderLayout( ) );
-        r_p_Panel.add( new Label( "   " + ControlTerminal.ROLL + " / "
-            + ControlTerminal.PITCH + "   ", Label.CENTER ), BorderLayout.CENTER );
+        r_p_Panel.add( new Label( "     " + ControlTerminal.ROLL + " / "
+            + ControlTerminal.PITCH + "     ", Label.CENTER ), BorderLayout.CENTER );
         r_p_Panel.add( r_p_Section, BorderLayout.SOUTH );
 
         Panel yaw_Panel = new Panel( new BorderLayout( ) );

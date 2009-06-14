@@ -830,7 +830,7 @@ public class ControlTerminal extends Frame
         }
 
         toggleConnMode .setEnabled( !connected );
-        switchHeliMode .setEnabled(  connected && !stickControl );
+        switchHeliMode .setEnabled(  connected );//&& !stickControl );
         shutDownHeli   .setEnabled(  connected );
         setPortAndHost .setEnabled( !connected );
     }
@@ -1207,7 +1207,7 @@ public class ControlTerminal extends Frame
             toggleControl.setText( JOYSTICK + _MODE );
         }
         
-        switchHeliMode.setEnabled( connected && !stickControl );
+        //switchHeliMode.setEnabled( connected && !stickControl );
     }
 
     private void doToggleConnMode( )

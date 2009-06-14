@@ -32,7 +32,7 @@
 */
 int kalman_filter_init( kalman_filter_t *filter, double period )
 {
-    if( period < 1 )
+    if( period < 0 )
     {
         fprintf( stderr, "ERROR: invalid Kalman filter period\n" );
         return( -1 );

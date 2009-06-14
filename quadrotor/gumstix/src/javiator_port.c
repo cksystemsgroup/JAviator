@@ -108,7 +108,7 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( motor_signals_t *signals )
 {
-    uint8_t buf[MOTOR_SIGNALS_SIZE];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     signals->id = ++local_id;
