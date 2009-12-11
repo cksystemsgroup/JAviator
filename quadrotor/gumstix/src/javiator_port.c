@@ -30,8 +30,8 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "protocol.h"
-#include "transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"
@@ -44,20 +44,17 @@ static comm_channel_t * comm_channel;
 static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
 static volatile int     new_data;
-static uint16_t         local_id = 0;
+static uint16_t local_id = 0;
 
 
 static inline int parse_javiator_data( const comm_packet_t *packet )
 {
     int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
 
-	if( local_id - 1 != javiator_data.id )
-    {
-		printf( "local id %u received id %u\n", local_id, javiator_data.id );
-    }
+	if (local_id - 1 != javiator_data.id)
+		printf("local id %u received id %u\n", local_id, javiator_data.id);
 
     new_data = 1;
-
     return( res );
 }
 
@@ -106,12 +103,12 @@ int javiator_port_send_enable_sensors( int enable )
     return comm_send_packet( comm_channel, &packet );
 }
 
-int javiator_port_send_motor_signals( motor_signals_t *signals )
+int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
+    uint8_t buf[MOTOR_SIGNALS_SIZE];
     comm_packet_t packet;
 
-    signals->id = ++local_id;
+    *(uint16_t *) &signals->id = ++local_id;
     motor_signals_to_stream( signals, buf, MOTOR_SIGNALS_SIZE );
 
     packet.type     = COMM_MOTOR_SIGNALS;
@@ -184,8 +181,7 @@ int javiator_port_get_data( javiator_data_t *data )
         {
             return( -1 );
         }
-    }
-    while( !new_data );
+    } while( !new_data );
 
     memcpy( data, &javiator_data, sizeof( *data ) );
     new_data = 0;

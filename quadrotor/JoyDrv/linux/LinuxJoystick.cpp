@@ -40,7 +40,7 @@ int openJoystick(int joystick) {
     if (fd[joystick]>=0)
         return fd[joystick];
 
-    sprintf(device, "/dev/js%u", joystick);
+    sprintf(device, "/dev/input/js%u", joystick);
     return fd[joystick]=open(device, O_RDONLY);
 }
 

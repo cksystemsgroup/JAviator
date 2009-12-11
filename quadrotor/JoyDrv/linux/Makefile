@@ -48,7 +48,7 @@ TARGET=../lib/libjjstick.so
 # Application-specific definitions  -- EDIT THESE
 ##############################################################################
 
-INCS =	-I.
+INCS =	-I. -I/usr/lib/jvm/java-6-sun/include -I/usr/lib/jvm/java-6-sun/include/linux
 
 # other C and C++ common options
 

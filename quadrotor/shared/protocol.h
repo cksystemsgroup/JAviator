@@ -57,7 +57,7 @@
 #define COMM_YAW_PARAMS     0x0C    /* transmission of yaw params */
 #define COMM_ALT_PARAMS     0x0D    /* transmission of altitude params */
 #define COMM_X_Y_PARAMS     0x0E    /* transmission of x/y params */
-#define COMM_REV_PARAMS     0x0F    /* transmission of revving params */
+#define COMM_IDLE_LIMIT     0x0F    /* transmission of idle limit */
 #define COMM_STREAM         0x10    /* transmission of arbitrary stream */
 #define COMM_SWITCH_MODE    0x11    /* request to perform a mode switch */
 #define COMM_TEST_MODE      0x12    /* request to switch into test mode */

@@ -37,7 +37,7 @@ public final class PacketType
     public static final byte COMM_YAW_PARAMS    = 0x0C; /* transmission of yaw params */
     public static final byte COMM_ALT_PARAMS    = 0x0D; /* transmission of altitude params */
     public static final byte COMM_X_Y_PARAMS    = 0x0E; /* transmission of x/y params */
-    public static final byte COMM_REV_PARAMS    = 0x0F; /* transmission of revving params */
+    public static final byte COMM_IDLE_LIMIT    = 0x0F; /* transmission of idle limit */
     public static final byte COMM_STREAM        = 0x10; /* transmission of arbitrary stream */
     public static final byte COMM_SWITCH_MODE   = 0x11; /* request to perform a mode switch */
     public static final byte COMM_TEST_MODE     = 0x12; /* request to switch into test mode */

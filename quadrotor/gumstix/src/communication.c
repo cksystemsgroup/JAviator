@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include "protocol.h"
+#include "shared/protocol.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"

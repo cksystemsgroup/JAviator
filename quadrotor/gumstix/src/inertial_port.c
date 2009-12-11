@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "protocol.h"
+#include "shared/protocol.h"
 #include "controller.h"
 #include "serial_channel.h"
 #include "inertial_port.h"

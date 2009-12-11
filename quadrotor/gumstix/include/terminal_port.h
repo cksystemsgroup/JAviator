@@ -32,9 +32,7 @@
 #include "inertial_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
-#include "motor_offsets.h"
 #include "ctrl_params.h"
-#include "rev_params.h"
 #include "trace_data.h"
 
 
@@ -56,8 +54,6 @@ int terminal_port_is_new_alt_params( void );
 
 int terminal_port_is_new_x_y_params( void );
 
-int terminal_port_is_new_rev_params( void );
-
 int terminal_port_is_test_mode( void );
 
 int terminal_port_is_mode_switch( void );
@@ -74,22 +70,20 @@ int terminal_port_get_alt_params( ctrl_params_t *params );
 
 int terminal_port_get_x_y_params( ctrl_params_t *params );
 
-int terminal_port_get_rev_params( rev_params_t *params );
-
-//int terminal_port_get_base_motor_speed( void );
+int terminal_port_get_base_motor_speed( void );
 
 int terminal_port_send_sensor_data( const sensor_data_t *data );
 
 int terminal_port_send_motor_signals( const motor_signals_t *signals );
 
-int terminal_port_send_motor_offsets( const motor_offsets_t *offsets );
+int terminal_port_send_motor_offsets( const command_data_t *offsets );
 
 int terminal_port_send_state_and_mode( const int state, const int mode );
 
 int terminal_port_send_report(
         const sensor_data_t   *sensors,
         const motor_signals_t *signals,
-        const motor_offsets_t *offsets,
+        const command_data_t  *offsets,
         const int state, const int mode );
 
 int terminal_port_send_trace_data( const trace_data_t *data );

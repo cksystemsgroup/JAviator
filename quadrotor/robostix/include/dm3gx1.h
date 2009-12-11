@@ -25,7 +25,7 @@
 #define DM3GX1_H
 
 #include <stdint.h>
-#include "javiator.h"
+#include "shared/javiator_data.h"
 
 
 /*****************************************************************************/
@@ -93,7 +93,8 @@ uint8_t dm3gx1_is_new_data( void );
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  dm3gx1_get_data( dm3gx1_data_t *buf );
+//int8_t  dm3gx1_get_data( dm3gx1_data_t *buf );
+int8_t  dm3gx1_get_data( javiator_data_t *buf );
 
 /* Sets the baudrate to 115200bps
    (for IMU configuration only)

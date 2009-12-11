@@ -27,7 +27,7 @@
 #define CONTROL_LOOP_H
 
 
-int control_loop_setup( int ms_period, int enable_z );
+int control_loop_setup( int period, int control_z );
 
 int control_loop_run( void );
 

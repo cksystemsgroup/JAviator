@@ -345,7 +345,7 @@ public abstract class Transceiver implements Runnable, Port
             case PacketType.COMM_YAW_PARAMS:
             case PacketType.COMM_ALT_PARAMS:
             case PacketType.COMM_X_Y_PARAMS:
-            case PacketType.COMM_REV_PARAMS:
+            case PacketType.COMM_IDLE_LIMIT:
             case PacketType.COMM_STREAM:
             case PacketType.COMM_SWITCH_MODE:
             case PacketType.COMM_TEST_MODE:

@@ -4,7 +4,7 @@ import javiator.util.ControllerConstants;
 import javiator.util.ReportToGround;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
-import javiator.util.MotorOffsets;
+import javiator.util.CommandData;
 import javiator.util.StateAndMode;
 import javiator.util.Packet;
 
@@ -15,20 +15,20 @@ public class ReportToGround extends NumeratedSendable
 {
 	public final SensorData   sensorData;
     public final MotorSignals motorSignals;
-    public final MotorOffsets motorOffsets;
+    public final CommandData  motorOffsets;
     public final StateAndMode stateAndMode;
 
     public final static int PACKET_SIZE =
 	    SensorData   .PACKET_SIZE +
 	    MotorSignals .PACKET_SIZE +
-	    MotorOffsets .PACKET_SIZE +
+	    CommandData  .PACKET_SIZE +
 	    StateAndMode .PACKET_SIZE;
   
     public ReportToGround( )
     {
 	    sensorData   = new SensorData( );
 	    motorSignals = new MotorSignals( );
-	    motorOffsets = new MotorOffsets( );
+	    motorOffsets = new CommandData( );
 	    stateAndMode = new StateAndMode(
             (byte) 0, (byte) ControllerConstants.ALT_MODE_GROUND );
     }
@@ -36,13 +36,13 @@ public class ReportToGround extends NumeratedSendable
     public ReportToGround(
     		SensorData   sensorData,
     		MotorSignals motorSignals, 
-    		MotorOffsets motorOffsets,
+    		CommandData  motorOffsets,
     		byte         controlState,
     		byte         altitudeMode )
 	{
 		this.sensorData   = (SensorData) sensorData.clone( );
 		this.motorSignals = (MotorSignals) motorSignals.clone( );
-		this.motorOffsets = (MotorOffsets) motorOffsets.clone( );
+		this.motorOffsets = (CommandData)  motorOffsets.clone( );
 		this.stateAndMode = new StateAndMode( controlState, altitudeMode );
 	}
 
@@ -76,7 +76,7 @@ public class ReportToGround extends NumeratedSendable
 		motorSignals.decode( packet, offset );
 		offset += MotorSignals.PACKET_SIZE;
 		motorOffsets.decode( packet, offset );
-		offset += MotorOffsets.PACKET_SIZE;
+		offset += CommandData.PACKET_SIZE;
 		stateAndMode.decode( packet, offset );
 	}
 
@@ -93,7 +93,7 @@ public class ReportToGround extends NumeratedSendable
 		Packet packet = new Packet(
 			SensorData   .PACKET_SIZE +
 			MotorSignals .PACKET_SIZE + 
-			MotorOffsets .PACKET_SIZE +
+			CommandData  .PACKET_SIZE +
 			StateAndMode .PACKET_SIZE );
 		encode( packet, 0 );
 
@@ -107,7 +107,7 @@ public class ReportToGround extends NumeratedSendable
 		motorSignals.encode( packet, offset );
 		offset += MotorSignals.PACKET_SIZE;
 		motorOffsets.encode( packet, offset );
-		offset += MotorOffsets.PACKET_SIZE;
+		offset += CommandData.PACKET_SIZE;
 		stateAndMode.encode( packet, offset );
 	}
 

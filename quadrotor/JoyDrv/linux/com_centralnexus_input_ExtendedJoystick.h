@@ -111,7 +111,6 @@ extern "C" {
 #define com_centralnexus_input_ExtendedJoystick_AXIS_V 5L
 #undef com_centralnexus_input_ExtendedJoystick_AXIS_POV
 #define com_centralnexus_input_ExtendedJoystick_AXIS_POV 6L
-/* Inaccessible static: joyNotifier */
 /*
  * Class:     com_centralnexus_input_ExtendedJoystick
  * Method:    isPluggedIn

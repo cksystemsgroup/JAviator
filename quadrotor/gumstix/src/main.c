@@ -28,8 +28,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "protocol.h"
-#include "transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "comm_channel.h"
 #include "spi_channel.h"
 #include "serial_channel.h"
@@ -39,7 +39,7 @@
 #include "terminal_port.h"
 #include "control_loop.h"
 
-#define PERIOD_MULTIPLIER   5 /* communicate with terminal every 5th period */
+#define PERIOD_MULTIPLIER   1 /* communicate with terminal every period */
 #define Z_AXIS_CONTROLLER   1 /* enable z-axis controller */
 #define EXEC_CONTROL_LOOP   1 /* execute control loop */
 #define SPI_DEVICE          "/dev/mem"
@@ -204,7 +204,7 @@ static void usage( char *binary )
 			"\t               num == 3: serial device %s\n"
             "\t -m mult ... send data every <mult> period to terminal\n"
             "\t -t time ... controller period in milliseconds\n"
-            "\t -u      ... use UDP socket to communicate with the control terminal\n"
+            "\t -u      ... use TCP socket instead of UDP socket\n"
             "\t -z      ... disable z-controller\n"
             , binary, SERIAL_DEVICE, SERIAL_DEVICE);
 }
@@ -218,7 +218,7 @@ int main( int argc, char **argv )
 	int setup_imu = 0;
 	int automatic_imu = 0;
 	int opt;
-	int conn_type = SOCK_SERVER;
+	int conn_type = SOCK_UDP;
 	channel_type_t type = CH_SERIAL;
 
 
@@ -259,7 +259,7 @@ int main( int argc, char **argv )
 				control_z = 0;
 				break;
 			case 'u':
-				conn_type = SOCK_UDP;
+				conn_type = SOCK_SERVER;
 				break;
 			case 'h':
 			default:

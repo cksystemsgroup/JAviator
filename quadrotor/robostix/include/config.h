@@ -36,7 +36,7 @@
 /* Analog input channels assigned to the Analog/Digital Converter
 */
 #define ADC_CH_MINIA        PF7     /* pin where the Mini-A sensor connects to */
-#define ADC_CH_MPX4115A     -1      /* pin where the MPX4115A sensor connects to */
+#define ADC_CH_MPX4115A     PF2     /* pin where the MPX4115A sensor connects to */
 #define ADC_CH_BATTERY      PF6     /* pin where the battery sensor connects to */
 
 /* Max number of timer events that can be added to the timer event list

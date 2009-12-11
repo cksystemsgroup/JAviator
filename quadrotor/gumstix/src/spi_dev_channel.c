@@ -44,7 +44,7 @@
 #define BUF_SIZE 64
 #define N_BUF    16
 
-#include "protocol.h"
+#include "shared/protocol.h"
 #include "spi_channel.h"
 
 struct spi_data;

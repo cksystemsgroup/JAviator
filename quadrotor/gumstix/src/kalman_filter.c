@@ -23,104 +23,72 @@
  *
  */
 
-#include <stdio.h>
 #include "kalman_filter.h"
 
-
-/* Initializes the Kalman filter with the given period in [s].
-   Returns 0 if successful, -1 otherwise.
-*/
-int kalman_filter_init( kalman_filter_t *filter, double period )
-{
-    if( period < 0 )
-    {
-        fprintf( stderr, "ERROR: invalid Kalman filter period\n" );
-        return( -1 );
-    }
-
-    filter->dtime = period;
-
-    return kalman_filter_reset( filter );
+//initialize kalman filter
+void init_kalman_filter(struct kalman_filter *filter){
+        reset_kalman_filter(filter);
 }
 
-/* Resets the Kalman filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int kalman_filter_reset( kalman_filter_t *filter )
-{
-    int i;
+void reset_kalman_filter(struct kalman_filter *filter){
+    uint8_t i;
 
-    if( KALMAN_STATES != 2 || KALMAN_P != 4 )
-    {
-        fprintf( stderr, "ERROR: invalid Kalman filter constants\n" );
-        return( -1 );
-    }
-
-    /* reset Kalman states */
-    for( i = 0; i < KALMAN_STATES; ++i )
-    {
+    //reset state
+    for(i=0; i<MAX_KALMAN_STATE; i++){
         filter->x[i] = 0;
     }
 
-    /* reset covariance matrix */
-    for( i = 0; i < KALMAN_P; ++i )
-    {
+    //reset covariance matrix
+    for(i=0; i<MAX_KALMAN_P; i++){
         filter->p[i] = 0;
     }
 
-    filter->z  = 0;
+    filter->z = 0;
     filter->dz = 0;
-
-    return( 0 );
 }
 
-/* Estimates the vertical speed dz.  Parameters are expected
-   to be given as follows: z in [m] and ddz in [m/s^2].
-   Returns the estimated velocity in [m/s].
-*/
-double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
-{
+
+double apply_kalman_filter(struct kalman_filter *filter, double z, double ddz, double period){
     double x1, x2, p11, p12, p21, p22, k1, k2;
 
-    /* update local variables */
-    x1  = filter->x[0];
-    x2  = filter->x[1];
+    //update local variables
+    x1 = filter->x[0];
+    x2 = filter->x[1];
     p11 = filter->p[0];
     p12 = filter->p[1];
     p21 = filter->p[2];
     p22 = filter->p[3];
 
-    if( z > 0 )
-    {
-        /* TIME UPDATE */
+    if (z > 0){
+        //TIME UPDATE
+        //Project the state ahead
+        x1 = x1 + period*x2;
+        x2 = x2 + period*ddz;
 
-        /* project state ahead */
-        x1 = x1 + filter->dtime * x2;
-        x2 = x2 + filter->dtime * ddz;
+        //x2 = (z-x1)/period;
+                //x1 = z;
+        //Project the error covarience ahead
+        p11 = p11 + period*(p21 + p12) + period*period*p22;
+        p12 = p12 + period*p22;
+        p21 = p21 + period*p22;
+        p22 = p22 + KALMAN_Q*period*period;
 
-        /* project error covariance ahead */
-        p11 = p11 + filter->dtime * (p21 + p12) + filter->dtime * filter->dtime * p22;
-        p12 = p12 + filter->dtime * p22;
-        p21 = p21 + filter->dtime * p22;
-        p22 = p22 + filter->dtime * filter->dtime * KALMAN_Q;
+        //MEASURE UPDATE
+        //Compute the Kalman gain
+        k1 = p11/(p11 + KALMAN_R);
+        k2 = p21/(p11 + KALMAN_R);
 
-        /* MEASURE UPDATE */
+        //Update estimates with measurement zk
+        x2 = x2 + k2*(z-x1);
+        x1 = x1 + k1*(z-x1);
 
-        /* compute Kalman gain */
-        k1 = p11 / (p11 + KALMAN_R);
-        k2 = p21 / (p11 + KALMAN_R);
+        //Update the error covariance
+        p22 = p22 - k2*p12 ;
+        p21 = p21 - k2*p11;
+        p12 = (1 - k1)*p12;
+        p11 = (1 - k1)*p11;
 
-        /* update estimates */
-        x2 = x2 + k2 * (z - x1);
-        x1 = x1 + k1 * (z - x1);
-
-        /* update error covariance */
-        p22 = p22 - k2 * p12 ;
-        p21 = p21 - k2 * p11;
-        p12 = (1 - k1) * p12;
-        p11 = (1 - k1) * p11;
-
-        /* store local variables */
+        //save local variables
         filter->x[0] = x1;
         filter->x[1] = x2;
         filter->p[0] = p11;
@@ -128,22 +96,18 @@ double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
         filter->p[2] = p21;
         filter->p[3] = p22;
     }
-    else
-    {
-        /* reset local variables */
-        filter->x[0] = 0;
-        filter->x[1] = 0;
-        filter->p[0] = 0;
-        filter->p[1] = 0;
-        filter->p[2] = 0;
-        filter->p[3] = 0;
+    else{
+        //save local variables
+        filter->x[0] = 0.0;
+        filter->x[1] = 0.0;
+        filter->p[0] = 0.0;
+        filter->p[1] = 0.0;
+        filter->p[2] = 0.0;
+        filter->p[3] = 0.0;
     }
-
-    /* store z and dz value */
-    filter->z  = filter->x[0];
+    filter->z = filter->x[0];
     filter->dz = filter->x[1];
-
-    return( filter->dz );
+    return filter->x[1];
 }
 
 /* End of file */

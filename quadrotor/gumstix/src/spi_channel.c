@@ -36,7 +36,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "protocol.h"
+#include "shared/protocol.h"
 #include "spi_channel.h"
 
 /* Base clock rate */

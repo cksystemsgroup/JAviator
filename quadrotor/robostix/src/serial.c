@@ -24,7 +24,7 @@
 #include <avr/interrupt.h>
 #include <string.h>
 
-#include "protocol.h"
+#include "../shared/protocol.h"
 #include "config.h"
 #include "serial.h"
 

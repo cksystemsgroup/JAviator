@@ -26,8 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "protocol.h"
-#include "transfer.h"
+#include "shared/protocol.h"
+#include "shared/transfer.h"
 #include "config.h"
 #include "ports.h"
 #include "adc.h"
@@ -56,6 +56,7 @@ static volatile uint8_t     flag_send_spi;
 /* Global structures */
 static javiator_data_t      javiator_data;
 static motor_signals_t      motor_signals;
+uint8_t current_response = RESP_FULL;
 
 /* Forward declarations */
 void controller_init        ( void );
@@ -101,7 +102,7 @@ void controller_init( void )
 
     /* register ADC channels */
     adc_add_channel( ADC_CH_MINIA );
-    adc_add_channel( ADC_CH_MPX4115A );
+    /*adc_add_channel( ADC_CH_MPX4115A );*/
     adc_add_channel( ADC_CH_BATTERY );
 
     /* register watchdog event and start timer */
@@ -220,6 +221,9 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
         }
     }
 
+    /* request new IMU data */
+    dm3gx1_request( );
+
     /* send JAviator data to the Gumstix */
     send_javiator_data( );
 }
@@ -243,12 +247,12 @@ void process_en_sensors( uint8_t enable )
 {
     if( enable )
     {
-        dm3gx1_start( );
+        //dm3gx1_start( );
         minia_start( );
     }
     else
     {
-        dm3gx1_stop( );
+        //dm3gx1_stop( );
         minia_stop( );
 
         /* Sensors will be disabled either by the Gumstix after the helicopter
@@ -329,7 +333,7 @@ void check_signals_delay( )
     flag_new_signals = 0;
 }
 
-/* Sends the JAviator data to the Gumstix
+/* Sends the JAviator data to the controller
 */
 void send_javiator_data( void )
 {
@@ -350,7 +354,7 @@ void send_javiator_data( void )
 
 	    if( spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE ) )
         {
-			LED_TOGGLE( RED ); /* packet could not be sent, hence still enqueued */
+			LED_TOGGLE( RED ); /* could not send packet; previous packet still enqueued */
 		}
     }
 
@@ -388,10 +392,10 @@ int main( void )
             process_data_packet( );
         }
 
-        /* check if new IMU data available */
+        /* check if new laser data available */
         if( dm3gx1_is_new_data( ) )
         {
-            if( dm3gx1_get_data( (dm3gx1_data_t *) &javiator_data ) )
+            if( dm3gx1_get_data( &javiator_data ) )
             {
                 javiator_data.error |= JE_IMU_GET_DATA;
             }
@@ -413,7 +417,7 @@ int main( void )
                 javiator_data.state |= JS_NEW_SONAR_DATA;
             }
         }
-
+#if 0
         /* check if new pressure data available */
         if( adc_is_new_data( ADC_CH_MPX4115A ) )
         {
@@ -426,7 +430,7 @@ int main( void )
                 javiator_data.state |= JS_NEW_PRESS_DATA;
             }
         }
-
+#endif
         /* check if new battery data available */
         if( adc_is_new_data( ADC_CH_BATTERY ) )
         {
