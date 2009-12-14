@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   adc.c      Analog/Digital Converter interface.                          */
+/*   adc.c      Analog-to-Digital Converter interface.                       */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -48,14 +48,14 @@ static volatile int8_t      selected_channel;
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the Analog/Digital Converter
+/* Initializes the Analog-to-Digital Converter
 */
 void adc_init( void )
 {
-    /* enable ADC, start conversion to initialize ADC, set prescaler 128 */
-    ADCSR = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+    /* enable ADC unit and set prescaler 128 */
+    ADCSR = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
-    /* set ADC voltage reference to AVCC pin (internal VREF turned off) */
+    /* set ADC voltage reference to AVCC pin */
     ADMUX = (1 << REFS0);
 
     /* initialize data structures */
@@ -77,8 +77,8 @@ int8_t adc_convert( void )
         return( -1 );
     }
 
-    /* clear interrupt flag and start conversion cycle */
-    ADCSR |= (1 << ADSC) | (1 << ADIF);
+    /* start conversion cycle */
+    ADCSR |= (1 << ADSC);
 
     return( 0 );
 }
@@ -107,9 +107,6 @@ int8_t adc_add_channel( int8_t channel )
 
         /* set new input channel */
         ADMUX |= selected_channel;
-
-        /* enable ADC interrupts */
-        ADCSR |= (1 << ADIE);
     }
 
     return( 0 );
@@ -120,9 +117,59 @@ int8_t adc_add_channel( int8_t channel )
 */
 int8_t adc_is_new_data( int8_t channel )
 {
+    static uint8_t num_channels = 0;
+
     if( channel < 0 || channel > ADC_CHANNELS - 1 )
     {
         return( -1 );
+    }
+
+    /* check for interrupt */
+    if( (ADCSR & (1 << ADIF)) )
+    {
+        /* clear interrupt flag */
+        ADCSR |= (1 << ADIF);
+
+        /* to obtain correct 10-bit result: ADCL must be read before ADCH
+           (see page 247 in the ATmega128 manual for details) */
+        data_buf[ selected_channel ] = ADCL | (ADCH << 8);
+        new_data[ selected_channel ] = 1;
+
+        /* search for next enabled channel */
+        while( 1 )
+        {
+            /* increment number of channels handled so far */
+            ++num_channels;
+
+            /* check for end of valid channels */
+            if( ++selected_channel == ADC_CHANNELS )
+            {
+                selected_channel = 0;
+            }
+
+            /* check for enabled channel */
+            if( new_data[ selected_channel ] != -1 )
+            {
+                /* clear channel setting */
+                ADMUX &= 0xE0; /* ~00011111 = 11100000 */
+
+                /* set new input channel */
+                ADMUX |= selected_channel;
+
+                break;
+            }
+        }
+
+        /* check for end of conversion cycle */
+        if( num_channels >= ADC_CHANNELS )
+        {
+            num_channels = 0;
+        }
+        else
+        {
+            /* start next conversion */
+            ADCSR |= (1 << ADSC);
+        }
     }
 
     return( new_data[ channel ] );
@@ -155,61 +202,6 @@ int8_t adc_get_data( int8_t channel, uint16_t *buf )
     sei( ); /* enable interrupts */
 
     return( 0 );
-}
-
-
-/*****************************************************************************/
-/*                                                                           */
-/*   Private Functions                                                       */
-/*                                                                           */
-/*****************************************************************************/
-
-/* ADC Conversion Complete callback function
-*/
-SIGNAL( SIG_ADC )
-{
-    static uint8_t num_channels = 0;
-
-    /* to obtain correct 10-bit result: ADCL must be read before ADCH
-       (see page 247 in the ATmega128 manual for details) */
-    data_buf[ selected_channel ] = ADCL | (ADCH << 8);
-    new_data[ selected_channel ] = 1;
-
-    /* search for next enabled channel */
-    while( 1 )
-    {
-        /* increment number of channels handled so far */
-        ++num_channels;
-
-        /* check for end of valid channels */
-        if( ++selected_channel == ADC_CHANNELS )
-        {
-            selected_channel = 0;
-        }
-
-        /* check for enabled channel */
-        if( new_data[ selected_channel ] != -1 )
-        {
-            /* clear channel setting */
-            ADMUX &= 0xE0; /* ~00011111 = 11100000 */
-
-            /* set new input channel */
-            ADMUX |= selected_channel;
-
-            break;
-        }
-    }
-
-    /* check for end of conversion cycle */
-    if( num_channels >= ADC_CHANNELS )
-    {
-        num_channels = 0;
-    }
-    else
-    {
-        /* clear interrupt flag and start next conversion */
-        ADCSR |= (1 << ADSC) | (1 << ADIF);
-    }
 }
 
 /* End of file */

@@ -32,9 +32,8 @@
 #include "ports.h"
 #include "adc.h"
 #include "wdog.h"
-#include "serial.h"
 #include "spi.h"
-#include "dm3gx1.h"
+#include "lsm215.h"
 #include "minia.h"
 #include "pwm.h"
 #include "leds.h"
@@ -50,13 +49,10 @@
 static volatile uint8_t     flag_shut_down;
 static volatile uint8_t     flag_check_delay;
 static volatile uint8_t     flag_new_signals;
-static volatile uint8_t     flag_send_serial;
-static volatile uint8_t     flag_send_spi;
 
 /* Global structures */
 static javiator_data_t      javiator_data;
 static motor_signals_t      motor_signals;
-uint8_t current_response = RESP_FULL;
 
 /* Forward declarations */
 void controller_init        ( void );
@@ -82,8 +78,6 @@ void controller_init( void )
     flag_shut_down   = 0;
     flag_check_delay = 0;
     flag_new_signals = 0;
-    flag_send_serial = 0;
-    flag_send_spi    = 0;
 
     /* clear data structures */
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -93,16 +87,14 @@ void controller_init( void )
     ports_init( );
     adc_init( );
     wdog_init( );
-    serial_init( );
 	spi_init( );
-    dm3gx1_init( );
+    lsm215_init( );
     minia_init( );
     pwm_init( );
     leds_init( );
 
     /* register ADC channels */
     adc_add_channel( ADC_CH_MINIA );
-    /*adc_add_channel( ADC_CH_MPX4115A );*/
     adc_add_channel( ADC_CH_BATTERY );
 
     /* register watchdog event and start timer */
@@ -127,21 +119,9 @@ void process_data_packet( void )
     uint16_t checksum;
 
     /* receive packet from communication interface */
-    if( serial_recv_packet( packet ) )
+    if( spi_recv_packet( packet ) )
     {
-        if( spi_recv_packet( packet ) )
-        {
-            javiator_data.error |= JE_RECEIVE_PACKET;
-            return;
-        }
-        else
-        {
-            flag_send_spi = 1;
-        }
-    }
-    else
-    {
-        flag_send_serial = 1;
+        return;
     }
 
     /* check for valid packet content */
@@ -158,7 +138,6 @@ void process_data_packet( void )
     /* check for non-zero checksum*/
     if( checksum )
     {
-        javiator_data.error |= JE_INVALID_DATA;
         valid_packets = 0;
         LED_ON( RED );
         return;
@@ -185,7 +164,7 @@ void process_data_packet( void )
             break;
 
         default:
-            javiator_data.error |= JE_UNKNOWN_TYPE;
+            return;
     }
 }
 
@@ -202,11 +181,8 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
         /* check for correct data size before extracting */
         if( motor_signals_from_stream( &motor_signals, data, size ) == 0 )
         {
-            /* check for invalid signals */
-            if( pwm_set_signals( &motor_signals ) )
-            {
-                javiator_data.error |= JE_OUT_OF_RANGE;
-            }
+            /* set new motor signals */
+            pwm_set_signals( &motor_signals );
 
             /* get current ID to be returned to the Gumstix */
 			javiator_data.id = motor_signals.id;
@@ -216,13 +192,9 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
         }
         else
         {
-            javiator_data.error |= JE_INVALID_SIZE;
             LED_OFF( BLUE );
         }
     }
-
-    /* request new IMU data */
-    dm3gx1_request( );
 
     /* send JAviator data to the Gumstix */
     send_javiator_data( );
@@ -247,12 +219,12 @@ void process_en_sensors( uint8_t enable )
 {
     if( enable )
     {
-        //dm3gx1_start( );
+        lsm215_start( );
         minia_start( );
     }
     else
     {
-        //dm3gx1_stop( );
+        lsm215_stop( );
         minia_stop( );
 
         /* Sensors will be disabled either by the Gumstix after the helicopter
@@ -312,8 +284,7 @@ void check_signals_delay( )
             /* disable sensors to save power */
             process_en_sensors( 0 );
 
-            /* reset communication interfaces */
-            serial_reset( );
+            /* reset communication interface */
             spi_reset( );
 
             /* visualize that a timeout occurred */
@@ -339,28 +310,14 @@ void send_javiator_data( void )
 {
     uint8_t data[ JAVIATOR_DATA_SIZE ];
 
-	javiator_data_to_stream(&javiator_data, data, JAVIATOR_DATA_SIZE);
+    /* encode JAviator data */
+	javiator_data_to_stream( &javiator_data, data, JAVIATOR_DATA_SIZE );
 
-    /* send JAviator data to the Gumstix */
-    if( flag_send_serial )
-    {
-        flag_send_serial = 0;
-        serial_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
-    }
-    else
-    if( flag_send_spi )
-    {
-        flag_send_spi = 0;
+    /* transmit JAviator data */
+	spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
 
-	    if( spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE ) )
-        {
-			LED_TOGGLE( RED ); /* could not send packet; previous packet still enqueued */
-		}
-    }
-
-    /* clear state and error indicator */
+    /* reset state indicator */
     javiator_data.state = 0;
-    javiator_data.error = 0;
 
     /* start next ADC cycle */
     adc_convert( );
@@ -374,12 +331,6 @@ int main( void )
 
     while( 1 )
     {
-        /* check if shut-down flag is set */
-        if( flag_shut_down )
-        {
-            javiator_data.state |= JS_SHUT_DOWN_MODE;
-        }
-
         /* check if signals arrive in time */
         if( flag_check_delay )
         {
@@ -387,60 +338,44 @@ int main( void )
         }
 
         /* check if a new packet is available */
-        if( serial_is_new_packet( ) || spi_is_new_packet( ) )
+        if( spi_is_new_packet( ) )
         {
             process_data_packet( );
-        }
-
-        /* check if new laser data available */
-        if( dm3gx1_is_new_data( ) )
-        {
-            if( dm3gx1_get_data( &javiator_data ) )
-            {
-                javiator_data.error |= JE_IMU_GET_DATA;
-            }
-            else
-            {
-                javiator_data.state |= JS_NEW_IMU_DATA;
-            }
         }
 
         /* check if new sonar data available */
         if( adc_is_new_data( ADC_CH_MINIA ) )
         {
-            if( adc_get_data( ADC_CH_MINIA, &javiator_data.sonar ) )
-            {
-                javiator_data.error |= JE_SONAR_GET_DATA;
-            }
-            else
+            if( !adc_get_data( ADC_CH_MINIA, &javiator_data.sonar ) )
             {
                 javiator_data.state |= JS_NEW_SONAR_DATA;
             }
         }
-#if 0
-        /* check if new pressure data available */
-        if( adc_is_new_data( ADC_CH_MPX4115A ) )
-        {
-            if( adc_get_data( ADC_CH_MPX4115A, &javiator_data.pressure ) )
-            {
-                javiator_data.error |= JE_PRESS_GET_DATA;
-            }
-            else
-            {
-                javiator_data.state |= JS_NEW_PRESS_DATA;
-            }
-        }
-#endif
+
         /* check if new battery data available */
         if( adc_is_new_data( ADC_CH_BATTERY ) )
         {
-            if( adc_get_data( ADC_CH_BATTERY, &javiator_data.battery ) )
-            {
-                javiator_data.error |= JE_BATT_GET_DATA;
-            }
-            else
+            if( !adc_get_data( ADC_CH_BATTERY, &javiator_data.battery ) )
             {
                 javiator_data.state |= JS_NEW_BATT_DATA;
+            }
+        }
+
+        /* check if new laser x-data available */
+        if( lsm215_is_new_x_data( ) )
+        {
+            if( !lsm215_get_x_data( &javiator_data ) )
+            {
+                javiator_data.state |= JS_NEW_X_POS_DATA;
+            }
+        }
+
+        /* check if new laser y-data available */
+        if( lsm215_is_new_y_data( ) )
+        {
+            if( !lsm215_get_y_data( &javiator_data ) )
+            {
+                javiator_data.state |= JS_NEW_Y_POS_DATA;
             }
         }
     }

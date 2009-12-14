@@ -36,26 +36,12 @@
 /* Controller period */
 #define CONTROLLER_PERIOD   14      /* [ms] */
 
-/* JAviator States */
-#define JS_PERIOD_UPDATED   0x0001  /* controller period has been updated */
-#define JS_SHUT_DOWN_MODE   0x0002  /* JAviator is in shut-down mode */
-#define JS_NEW_IMU_DATA     0x0004  /* IMU data have been updated */
-#define JS_NEW_LASER_DATA   0x0008  /* laser data have been updated */
-#define JS_NEW_SONAR_DATA   0x0010  /* sonar data have been updated */
-#define JS_NEW_PRESS_DATA   0x0020  /* pressure data have been updated */
-#define JS_NEW_BATT_DATA    0x0040  /* battery data have been updated */
-
-/* JAviator Errors */
-#define JE_RECEIVE_PACKET   0x0001  /* error while receiving packet */
-#define JE_INVALID_DATA     0x0002  /* invalid data and/or checksum */
-#define JE_UNKNOWN_TYPE     0x0004  /* unknown or invalid packet type */
-#define JE_INVALID_SIZE     0x0008  /* invalid size of received data */
-#define JE_OUT_OF_RANGE     0x0010  /* one or more signals out of range */
-#define JE_IMU_GET_DATA     0x0020  /* error while receiving IMU data */
-#define JE_LASER_GET_DATA   0x0040  /* error while receiving laser data */
-#define JE_SONAR_GET_DATA   0x0080  /* error while receiving sonar data */
-#define JE_PRESS_GET_DATA   0x0100  /* error while receiving pressure data */
-#define JE_BATT_GET_DATA    0x0200  /* error while receiving battery data */
+/* JAviator states */
+#define JS_NEW_PRESS_DATA   0x0001  /* pressure data have been updated */
+#define JS_NEW_SONAR_DATA   0x0002  /* sonar data have been updated */
+#define JS_NEW_BATT_DATA    0x0004  /* battery data have been updated */
+#define JS_NEW_X_POS_DATA   0x0008  /* x-position data have been updated */
+#define JS_NEW_Y_POS_DATA   0x0010  /* y-position data have been updated */
 
 #include "shared/javiator_data.h"   /* definition of JAviator data structure */
 #include "shared/motor_signals.h"   /* definition of motor signals structure */

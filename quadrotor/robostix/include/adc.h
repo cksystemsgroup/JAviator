@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   adc.h      Analog/Digital Converter interface.                          */
+/*   adc.h      Analog-to-Digital Converter interface.                       */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -33,7 +33,7 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the Analog/Digital Converter
+/* Initializes the Analog-to-Digital Converter
 */
 void   adc_init( void );
 

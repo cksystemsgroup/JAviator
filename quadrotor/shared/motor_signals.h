@@ -26,9 +26,6 @@
 #ifndef MOTOR_SIGNALS_H
 #define MOTOR_SIGNALS_H
 
-#define	RESP_FULL  1
-#define RESP_SHORT 2
-
 /* Structure for shared motor signals */
 typedef struct
 {
@@ -41,8 +38,6 @@ typedef struct
 } motor_signals_t;
 
 #define MOTOR_SIGNALS_SIZE  10       /* byte size of motor_signals_t + 2 for id */
-
-extern uint8_t current_response;
 
 static inline
 int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int len )

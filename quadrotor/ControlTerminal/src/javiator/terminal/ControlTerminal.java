@@ -70,23 +70,23 @@ public class ControlTerminal extends Frame
 {
     public static final long serialVersionUID = 1;
     
-    protected int idlingSpeed = 8300;
+    protected int idlingSpeed = 8000;
 
     private static final boolean SMALL_DISPLAY = true;
     private static final boolean SHOW_3DWINDOW = false;
     private boolean show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/z_.csv";
-/*
+    public static final String  LOG_FILE_NAME = "traces/laser_test_.csv";
+
     public static final String  DATA_STRING   = "roll,pitch,yaw," +
     											"droll,dpitch,dyaw," +
     											"ddroll,ddpitch,ddyaw," +
     											"ddx,ddy,ddz," +
-    											"z,kalman_dz," +
+    											"x,y,z," +
+    											"dx,dy,dz," +
     											"front,right,rear,left," +
-    											"navi_roll,navi_pitch,navi_yaw,navi_z," +
-    											"median_z,kalman_z,mode";
-*/
+    											"croll,cpitch,cyaw,cz";
+/*
     public static final String  DATA_STRING   = "z," +
                                                 "z fil," +
                                                 "z est," +
@@ -98,8 +98,9 @@ public class ControlTerminal extends Frame
                                                 "d-term," +
                                                 "dd-term," +
                                                 "uz," +
-                                                "z cmd";
-
+                                                "z cmd," +
+                                                "ID";
+*/
     public ControlTerminal( )
     {
     	initWindow( );
@@ -286,14 +287,16 @@ public class ControlTerminal extends Frame
         
         if( show_diagrams )
         {
-        	if (signalsDialog == null) { 
-        		signalsDialog = new SignalsDialog();
-        	} else if (signalsDialog.isClosed()) {
+        	if( signalsDialog == null )
+        	{ 
+        		signalsDialog = new SignalsDialog( );
+        	}
+        	else
+        	if( signalsDialog.isClosed( ) )
+        	{
         		show_diagrams = false;
         	}
-        	
-        	
-        	
+
             MotorSignals motor = digitalMeter.getMotorSignals( );
 
             signalsDialog.z         .add( data.z );
@@ -356,20 +359,25 @@ public class ControlTerminal extends Frame
         {
 	        batteryLabel.setForeground( Color.RED );
         }
-        /*
+        
+        positionX.setText( NIL + data.x );
+        positionY.setText( NIL + data.y );
+
         if( logData && logFile != null )
         {
-            ActuatorData   motor = motorMeter.getMotorSignals( );
-            NavigationData navi  = getNaviData( );
-	        String         csv   = NIL +
+        	MotorSignals sig = digitalMeter.getMotorSignals( );
+            CommandData  cmd = getCommandData( );
+	        String       csv = NIL +
 	            (short) data.roll   + ',' + (short) data.pitch   + ',' + (short) data.yaw   + ',' +
 	            (short) data.droll  + ',' + (short) data.dpitch  + ',' + (short) data.dyaw  + ',' +
 	            (short) data.ddroll + ',' + (short) data.ddpitch + ',' + (short) data.ddyaw + ',' +
 	            (short) data.ddx    + ',' + (short) data.ddy     + ',' + (short) data.ddz   + ',' +
-	            (short) data.z      + ',' + (short) data.dz      + ',' +
-	            (short) motor.front + ',' + (short) motor.right  + ',' + (short) motor.rear + ',' + (short) motor.left + ',' +
-	            (short) navi.roll   + ',' + (short) navi.pitch   + ',' + (short) navi.yaw   + ',' + (short) navi.z     + ',' +
-	            (short) data.x      + ',' + (short) data.y       + ',' + motorMeter.getHeliMode() + '\n';
+	            (short) data.x      + ',' + (short) data.y       + ',' + (short) data.z     + ',' +
+	            (short) data.dx     + ',' + (short) data.dy      + ',' + (short) data.dz    + ',' +
+	            (short) sig.front   + ',' + (short) sig.right    + ',' +
+	            (short) sig.rear    + ',' + (short) sig.left     + ',' +
+	            (short) cmd.roll    + ',' + (short) cmd.pitch    + ',' +
+	            (short) cmd.yaw     + ',' + (short) cmd.z        + '\n';
 
 	        try
 	        {
@@ -380,11 +388,11 @@ public class ControlTerminal extends Frame
 	            System.err.println( "ControlTerminal.setSensorData: " + e.getMessage( ) );
 	        }
         }
-        */
     }
 
     public void setTraceData( TraceData data )
     {
+/*
         if( logData && logFile != null )
         {
 	        String csv = NIL +
@@ -411,6 +419,7 @@ public class ControlTerminal extends Frame
 	            System.err.println( "ControlTerminal.setTraceData: " + e.getMessage( ) );
 	        }
         }
+*/
     }
 
     public void resetMeterNeedles( )
@@ -583,7 +592,6 @@ public class ControlTerminal extends Frame
     protected String              relayHost        = "192.168.2.3";
     protected int                 relayPort        = 7000;
     protected int                 motionDelay      = 10;
-    //protected int                 idlingSpeed      = 530;
     protected boolean             stickControl     = false;
     protected boolean             udpConnect       = true;
     protected boolean             connected        = false;
@@ -838,6 +846,9 @@ public class ControlTerminal extends Frame
     private Joystick               stick          = null;
     private Label                  batteryLabel   = null;
     private Label                  logDataLabel   = null;
+    private Label                  testModeLabel  = null;
+    private Label                  positionX      = null;
+    private Label                  positionY      = null;
     private short[]                controlParams  = null;
     private int[]                  changedParamID = null;
     private boolean                newIdlingSpeed = false;
@@ -846,6 +857,7 @@ public class ControlTerminal extends Frame
     private boolean                new_Alt_Params = false;
     private boolean                new_X_Y_Params = false;
     private boolean                logData        = false;
+    private boolean                testMode       = false;
 
     private void initWindow( )
     {
@@ -935,7 +947,11 @@ public class ControlTerminal extends Frame
         digitalMeter  = new DigitalMeter( this );
         batteryLabel  = new Label( ZERO, Label.CENTER );
         logDataLabel  = new Label( LOGGING + _DATA, Label.CENTER );
-        logDataLabel.setForeground( Color.LIGHT_GRAY );
+        testModeLabel = new Label( "Test" + _MODE, Label.CENTER );
+        positionX     = new Label( ZERO, Label.RIGHT );
+        positionY     = new Label( ZERO, Label.RIGHT );
+        logDataLabel  .setForeground( Color.LIGHT_GRAY );
+        testModeLabel .setForeground( Color.LIGHT_GRAY );
 
         HiddenButton incAltitudeLimit = new HiddenButton( HiddenButton.SYMBOL_PLUS );
         incAltitudeLimit.setForeground( Color.GRAY );
@@ -998,12 +1014,12 @@ public class ControlTerminal extends Frame
         } );
 
         Panel altitudeLimitButtons = new Panel( new GridLayout( 1, 6 ) );
-        altitudeLimitButtons.add( new Label( ) );
-        altitudeLimitButtons.add( new Label( ) );
+        altitudeLimitButtons.add( new Label( "Pos X:", Label.RIGHT ) );
+        altitudeLimitButtons.add( positionX );
         altitudeLimitButtons.add( decAltitudeLimit );
         altitudeLimitButtons.add( incAltitudeLimit );
-        altitudeLimitButtons.add( new Label( ) );
-        altitudeLimitButtons.add( new Label( ) );
+        altitudeLimitButtons.add( new Label( "Pos Y:", Label.RIGHT ) );
+        altitudeLimitButtons.add( positionY );
 
         Panel rollPitchLimitButtons = new Panel( new GridLayout( 1, 6 ) );
         rollPitchLimitButtons.add( new Label( ) );
@@ -1027,11 +1043,15 @@ public class ControlTerminal extends Frame
         batteryPanel.add( new Label( "Battery", Label.LEFT ), BorderLayout.WEST );
         batteryPanel.add( batteryLabel, BorderLayout.CENTER );
         batteryPanel.add( new Label( "Volts", Label.RIGHT ), BorderLayout.EAST );
-        
+
+        Panel indicatorPanel = new Panel( new BorderLayout( ) );
+        indicatorPanel.add( testModeLabel, BorderLayout.NORTH );
+        indicatorPanel.add( logDataLabel, BorderLayout.SOUTH );
+
         Panel motorMeterPanel = new Panel( new BorderLayout( ) );
         motorMeterPanel.add( batteryPanel, BorderLayout.NORTH );
         motorMeterPanel.add( digitalMeter, BorderLayout.CENTER );
-        motorMeterPanel.add( logDataLabel, BorderLayout.SOUTH );
+        motorMeterPanel.add( indicatorPanel, BorderLayout.SOUTH );
 
         Panel centerPanel = new Panel( new BorderLayout( ) );
         centerPanel.add( yawAltitudePanel, BorderLayout.WEST );
@@ -1285,11 +1305,14 @@ public class ControlTerminal extends Frame
 
     private void doToggleDiagram( )
     {    	
-    	if (!show_diagrams) {
-    		if (signalsDialog == null)
-    			signalsDialog = new SignalsDialog();
+    	if( !show_diagrams )
+    	{
+    		if( signalsDialog == null )
+    		{
+    			signalsDialog = new SignalsDialog( );
+    		}
     		
-    		signalsDialog.open();
+    		signalsDialog.open( );
     	}
     	
     	show_diagrams = !show_diagrams;
@@ -1297,7 +1320,7 @@ public class ControlTerminal extends Frame
     
     private void doToggleLogData( )
     {
-        if( ( logData = !logData ) )
+        if( (logData = !logData) )
         {
 	        try
 	        {
@@ -1327,6 +1350,23 @@ public class ControlTerminal extends Frame
 		        logFile = null;
 	        }
         }
+    }
+
+    private void doToggleTestMode( )
+    {
+    	if( remote != null )
+    	{
+    		if( (testMode = !testMode) )
+    		{
+    			remote.sendPacket( new Packet( PacketType.COMM_TEST_MODE, (byte) 1 ) );
+    	        testModeLabel.setForeground( Color.RED );
+    		}
+    		else
+    		{
+    			remote.sendPacket( new Packet( PacketType.COMM_TEST_MODE, (byte) 0 ) );
+    	        testModeLabel.setForeground( Color.LIGHT_GRAY );
+    		}
+    	}
     }
 
     /*************************************************************************/
@@ -1449,7 +1489,9 @@ public class ControlTerminal extends Frame
         private int     offsetDesiredAltitude  = 0;
         private int     buttonsPressed         = 0;
         private int     buttonNotPressed       = 0;
-        private boolean alreadyToggled         = false;
+        private boolean alreadyToggledButton7  = false;
+        private boolean alreadyToggledButton9  = false;
+        private boolean alreadyToggledButton10 = false;
         private boolean halt                   = false;
 
         private void processJoystick( )
@@ -1467,11 +1509,11 @@ public class ControlTerminal extends Frame
             else
             if( (buttonsPressed & Joystick.BUTTON10) != 0 )
             {
-				// toggle the helicopter mode button
+				// toggle the heli-mode button
 				//
-				if( !alreadyToggled )
+				if( !alreadyToggledButton10 )
                 {
-                    alreadyToggled = true;
+                    alreadyToggledButton10 = true;
 
 					if( switchHeliMode.isEnabled( ) )
                     {
@@ -1484,14 +1526,37 @@ public class ControlTerminal extends Frame
             else
             {
             	buttonNotPressed = 0;
-                alreadyToggled = false;
+                alreadyToggledButton10 = false;
+            }
+
+            // toggle the test-mode button
+            //
+            if( (buttonsPressed & Joystick.BUTTON9) != 0 )
+            {
+				if( !alreadyToggledButton9 )
+                {
+                    alreadyToggledButton9 = true;
+            	    doToggleTestMode( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton9 = false;
             }
 
             // reset the green meter needles
             //
-            if( ( buttonsPressed & Joystick.BUTTON7 ) != 0 )
+            if( (buttonsPressed & Joystick.BUTTON7) != 0 )
             {
-                resetMeterNeedles( );   
+				if( !alreadyToggledButton7 )
+                {
+                    alreadyToggledButton7 = true;
+                    resetMeterNeedles( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton7 = false;
             }
 
             // update the four desired-value needles
@@ -1499,7 +1564,7 @@ public class ControlTerminal extends Frame
             meterRoll  .setDesired( (int)( meterRoll  .getMaximum( ) * stick.getX( ) ) );
             meterPitch .setDesired( (int)( meterPitch .getMaximum( ) * stick.getY( ) ) );
 
-            if( ( buttonsPressed & Joystick.BUTTON2 ) != 0 )
+            if( (buttonsPressed & Joystick.BUTTON2) != 0 )
             {
 	            int yaw = meterYaw.getDesired( ) + (int)( stick.getZ( ) * 10.0f );
 	

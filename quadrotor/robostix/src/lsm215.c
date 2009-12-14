@@ -34,48 +34,6 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Validation and selection of UART channel
-*/
-#if( UART_LSM215 == 0 )
-
-#define UBRRnH          UBRR0H
-#define UBRRnL          UBRR0L
-#define UCSRnA          UCSR0A
-#define UCSRnB          UCSR0B
-#define UCSRnC          UCSR0C
-#define RXCIEn          RXCIE0
-#define RXENn           RXEN0
-#define TXENn           TXEN0
-#define UPMn1           UPM01
-#define UCSZn1          UCSZ01
-#define UDRIEn          UDRIE0
-#define UDRn            UDR0
-#define SIG_UARTn_DATA  SIG_UART0_DATA
-#define SIG_UARTn_RECV  SIG_UART0_RECV
-
-#elif( UART_LSM215 == 1 )
-
-#define UBRRnH          UBRR1H
-#define UBRRnL          UBRR1L
-#define UCSRnA          UCSR1A
-#define UCSRnB          UCSR1B
-#define UCSRnC          UCSR1C
-#define RXCIEn          RXCIE1
-#define RXENn           RXEN1
-#define TXENn           TXEN1
-#define UPMn1           UPM11
-#define UCSZn1          UCSZ11
-#define UDRIEn          UDRIE1
-#define UDRn            UDR1
-#define SIG_UARTn_DATA  SIG_UART1_DATA
-#define SIG_UARTn_RECV  SIG_UART1_RECV
-
-#else /* UART_LSM215 */
-
-#error No valid UART channel for the LSM2-15 sensor defined.
-
-#endif /* UART_LSM215 */
-
 /* Command definitions */
 #define CMD_START           'h'     /* starts the continuous mode */
 #define CMD_STOP            'c'     /* stops any current execution */
@@ -86,16 +44,22 @@
 #define TX_DATA_SIZE        3       /* max size of transmitted data */
 #define RX_DATA_SIZE        33      /* max size of received data */
 
-/* Global variables */
-static          uint8_t     tx_buf[ TX_DATA_SIZE ];
-static          uint8_t     rx_buf[ RX_DATA_SIZE ];
-static volatile uint8_t     tx_items;
-static volatile uint8_t     tx_index;
-static volatile uint8_t     rx_index;
-static volatile uint8_t     new_data;
+/* Result buffer size */
+#define NUM_DATA_DIGITS     8       /* number of data digits */
 
-/* Forward declarations */
-static uint32_t str_to_uint32( uint8_t *, uint8_t );
+/* Global variables */
+static          uint8_t     x_tx_buf[ TX_DATA_SIZE ];
+static          uint8_t     y_tx_buf[ TX_DATA_SIZE ];
+static          uint8_t     x_rx_buf[ RX_DATA_SIZE ];
+static          uint8_t     y_rx_buf[ RX_DATA_SIZE ];
+static volatile uint8_t     x_tx_items;
+static volatile uint8_t     y_tx_items;
+static volatile uint8_t     x_tx_index;
+static volatile uint8_t     y_tx_index;
+static volatile uint8_t     x_rx_index;
+static volatile uint8_t     y_rx_index;
+static volatile uint8_t     x_new_data;
+static volatile uint8_t     y_new_data;
 
 
 /*****************************************************************************/
@@ -104,7 +68,7 @@ static uint32_t str_to_uint32( uint8_t *, uint8_t );
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the selected UART channel for the laser sensor
+/* Initializes the UART channels for the laser sensors
 */
 void lsm215_init( void )
 {
@@ -120,86 +84,178 @@ void lsm215_init( void )
 
             = (uint16_t) 0x0033
     */
-    UBRRnH = 0x00; /* baudrate high byte */
-    UBRRnL = 0x33; /* baudrate low byte */
-    UCSRnA = 0x00; /* no double-speed mode */
+    UBRR0H = 0x00; /* baudrate high byte */
+    UBRR1H = 0x00;
+    UBRR0L = 0x33; /* baudrate low byte */
+    UBRR1L = 0x33;
+    UCSR0A = 0x00; /* no double-speed mode */
+    UCSR1A = 0x00;
 
-    /* enable receive-complete interrupt, receiver, and transmitter */
-    UCSRnB = (1 << RXCIEn) | (1 << RXENn) | (1 << TXENn);
+    /* enable receiver and transmitter */
+    UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+    UCSR1B = (1 << RXEN1) | (1 << TXEN1);
 
     /* set frame format: parity even, 1 stop bit, 7 data bits */
-    UCSRnC = (1 << UPMn1) | (1 << UCSZn1);
+    UCSR0C = (1 << UPM01) | (1 << UCSZ01);
+    UCSR1C = (1 << UPM11) | (1 << UCSZ11);
 
     /* initialize global variables */
-    tx_items = 0;
-    tx_index = 0;
-    rx_index = 0;
-    new_data = 0;
+    x_tx_items = 0;
+    y_tx_items = 0;
+    x_tx_index = 0;
+    y_tx_index = 0;
+    x_rx_index = 0;
+    y_rx_index = 0;
+    x_new_data = 0;
+    y_new_data = 0;
 
     /* just for the case the laser was not stopped
        properly during the previous operation */
     lsm215_stop( );
 }
 
-/* Starts the laser sensor in continuous mode
+/* Starts the laser sensors in continuous mode
 */
 void lsm215_start( void )
 {
-    /* write command stream */
-    tx_buf[ tx_items++ ] = CMD_START;
-    tx_buf[ tx_items++ ] = CMD_CR;
-    tx_buf[ tx_items++ ] = CMD_LF;
+    /* write command streams */
+    x_tx_buf[ x_tx_items++ ] = CMD_START;
+    x_tx_buf[ x_tx_items++ ] = CMD_CR;
+    x_tx_buf[ x_tx_items++ ] = CMD_LF;
+    y_tx_buf[ y_tx_items++ ] = CMD_START;
+    y_tx_buf[ y_tx_items++ ] = CMD_CR;
+    y_tx_buf[ y_tx_items++ ] = CMD_LF;
 
-    /* enable DRE interrupt */
-    UCSRnB |= (1 << UDRIEn);
+    /* enable DRE interrupts */
+    UCSR0B |= (1 << UDRIE0);
+    UCSR1B |= (1 << UDRIE1);
 }
 
-/* Stops the laser sensor if in continuous mode
+/* Stops the laser sensors if in continuous mode
 */
 void lsm215_stop( void )
 {
-    /* write command stream */
-    tx_buf[ tx_items++ ] = CMD_STOP;
-    tx_buf[ tx_items++ ] = CMD_CR;
-    tx_buf[ tx_items++ ] = CMD_LF;
+    /* write command streams */
+    x_tx_buf[ x_tx_items++ ] = CMD_STOP;
+    x_tx_buf[ x_tx_items++ ] = CMD_CR;
+    x_tx_buf[ x_tx_items++ ] = CMD_LF;
+    y_tx_buf[ y_tx_items++ ] = CMD_STOP;
+    y_tx_buf[ y_tx_items++ ] = CMD_CR;
+    y_tx_buf[ y_tx_items++ ] = CMD_LF;
 
-    /* enable DRE interrupt */
-    UCSRnB |= (1 << UDRIEn);
+    /* enable DRE interrupts */
+    UCSR0B |= (1 << UDRIE0);
+    UCSR1B |= (1 << UDRIE1);
 }
 
-/* Returns 1 if new data available, 0 otherwise
+/* Returns 1 if new x-data available, 0 otherwise
 */
-uint8_t lsm215_is_new_data( void )
+uint8_t lsm215_is_new_x_data( void )
 {
-    return( new_data );
+    /* check for interrupt */
+    if( (UCSR0A & (1 << RXC)) )
+    {
+        /* indicate that the receive buffer is being updated
+           and thus data are no longer secure to be copied */
+        x_new_data = 0;
+
+        x_rx_buf[ x_rx_index ] = UDR0;
+
+        /* check for end of RX x-data stream */
+        if( x_rx_buf[ x_rx_index ] == CMD_LF || ++x_rx_index == RX_DATA_SIZE )
+        {
+            /* Data format if an error occurs: "@Ezzz\r\n", where
+               the 3-digit value 'zzz' represents an error code. */
+            if( x_rx_buf[0] != '@' )
+            {
+                x_new_data = 1;
+            }
+
+            x_rx_index = 0;
+	    }
+    }
+
+    return( x_new_data );
 }
 
-/* Copies the sampled data to the given buffer.
+/* Returns 1 if new y-data available, 0 otherwise
+*/
+uint8_t lsm215_is_new_y_data( void )
+{
+    /* check for interrupt */
+    if( (UCSR1A & (1 << RXC)) )
+    {
+        /* indicate that the receive buffer is being updated
+           and thus data are no longer secure to be copied */
+        y_new_data = 0;
+
+        y_rx_buf[ y_rx_index ] = UDR1;
+
+        /* check for end of RX y-data stream */
+        if( y_rx_buf[ y_rx_index ] == CMD_LF || ++y_rx_index == RX_DATA_SIZE )
+        {
+            /* Data format if an error occurs: "@Ezzz\r\n", where
+               the 3-digit value 'zzz' represents an error code. */
+            if( y_rx_buf[0] != '@' )
+            {
+                y_new_data = 1;
+            }
+
+            y_rx_index = 0;
+	    }
+    }
+
+    return( y_new_data );
+}
+
+/* Copies the sampled x-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t lsm215_get_data( uint32_t *buf )
+int8_t lsm215_get_x_data( javiator_data_t *buf )
 {
-    uint8_t str[8];
-
-    /* check that we're not receiving data currently */
-    if( !new_data )
+    /* check that we're not receiving x-data currently */
+    if( !x_new_data )
     {
         return( -1 );
     }
 
     cli( ); /* disable interrupts */
 
-    /* copy essential digits (see below) to conversion buffer */
-    memcpy( str, rx_buf + 7, sizeof( str ) );
+    /* Data format in tracking mode: "31..06+xxxxxxxx 51....+00000000\r\n", where
+       the 8-digit value 'xxxxxxxx' represents the measured distance in 1/10 mm. */
+    memcpy( buf->x_pos, x_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
+    buf->x_pos[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
 
     /* clear new-data indicator */
-    new_data = 0;
+    x_new_data = 0;
 
     sei( ); /* enable interrupts */
 
+    return( 0 );
+}
+
+/* Copies the sampled y-data to the given buffer.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t lsm215_get_y_data( javiator_data_t *buf )
+{
+    /* check that we're not receiving y-data currently */
+    if( !y_new_data )
+    {
+        return( -1 );
+    }
+
+    cli( ); /* disable interrupts */
+
     /* Data format in tracking mode: "31..06+xxxxxxxx 51....+00000000\r\n", where
        the 8-digit value 'xxxxxxxx' represents the measured distance in 1/10 mm. */
-    *buf = str_to_uint32( str, sizeof( str ) );
+    memcpy( buf->y_pos, y_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
+    buf->y_pos[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
+
+    /* clear new-data indicator */
+    y_new_data = 0;
+
+    sei( ); /* enable interrupts */
 
     return( 0 );
 }
@@ -211,101 +267,41 @@ int8_t lsm215_get_data( uint32_t *buf )
 /*                                                                           */
 /*****************************************************************************/
 
-/* Converts the given data string to a 32-bit unsigned integer
+/* UART0 Data Register Empty callback function
 */
-static uint32_t str_to_uint32( uint8_t *str, uint8_t n )
+SIGNAL( SIG_UART0_DATA )
 {
-    uint8_t  *r = str, *s = str, *t, quo, rem;
-    uint32_t res = 0;
-
-    while( *r == '0' && n > 0 )
-    {
-        ++r;
-        --n;
-    }
-
-    if( n == 0 )
-    {
-        return( res );
-    }
-
-    while( n-- > 0 )
-    {
-        if( *r < '0' || *r > '9' )
-        {
-            return( res );
-        }
-
-        *s++ = *r++ - '0';
-    }
-
-    for( n = 0, r = str; r < s; ++n )
-    {
-        t   = r;
-        res = (res >> 1) | ( (uint32_t)( *(s-1) & 1 ) << 31 );
-        rem = 0;
-
-        while( t < s )
-        {
-            quo  = (uint8_t)( (*t + rem) >> 1 );
-            rem  = (uint8_t)( (*t & 1) * 10 );
-            *t++ = quo;
-        }
-
-        if( *r == 0 )
-        {
-            ++r;
-        }
-    }
-
-    if( (n &= 31) > 0 )
-    {
-        res >>= 32 - n;
-    }
-
-    return( res );
-}
-
-/* UARTn Data Register Empty callback function
-*/
-SIGNAL( SIG_UARTn_DATA )
-{
-    /* check for end of TX data stream */
-    if( tx_index == tx_items )
+    /* check for end of TX x-data stream */
+    if( x_tx_index == x_tx_items )
     {
         /* disable DRE interrupt */
-        UCSRnB &= ~(1 << UDRIEn);
+        UCSR0B &= ~(1 << UDRIE0);
 
-        tx_items = 0;
-        tx_index = 0;
+        x_tx_items = 0;
+        x_tx_index = 0;
     }
     else
     {
-        UDRn = tx_buf[ tx_index++ ];
+        UDR0 = x_tx_buf[ x_tx_index++ ];
     }
 }
 
-/* UARTn Receive Complete callback function
+/* UART1 Data Register Empty callback function
 */
-SIGNAL( SIG_UARTn_RECV )
+SIGNAL( SIG_UART1_DATA )
 {
-    /* indicate that the receive buffer is being updated
-       and thus data are no longer secure to be copied */
-    new_data = 0;
-
-    rx_buf[ rx_index ] = UDRn;
-
-    /* check for end of RX data stream */
-    if( rx_buf[ rx_index ] == CMD_LF || ++rx_index == RX_DATA_SIZE )
+    /* check for end of TX y-data stream */
+    if( y_tx_index == y_tx_items )
     {
-        /* Data format if an error occurs: "@Ezzz\r\n", where
-           the 3-digit value 'zzz' represents an error code. */
-        if( rx_buf[0] != '@' )
-        {
-            new_data = 1;
-        }
+        /* disable DRE interrupt */
+        UCSR1B &= ~(1 << UDRIE1);
 
-        rx_index = 0;
+        y_tx_items = 0;
+        y_tx_index = 0;
+    }
+    else
+    {
+        UDR1 = y_tx_buf[ y_tx_index++ ];
     }
 }
 

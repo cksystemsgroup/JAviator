@@ -57,14 +57,15 @@ static volatile int     new_command_data;
 
 static pthread_mutex_t terminal_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static inline void lock(void)
+
+static inline void lock( void )
 {
-	pthread_mutex_lock(&terminal_lock);
+	pthread_mutex_lock( &terminal_lock );
 }
 
-static inline void unlock(void)
+static inline void unlock( void )
 {
-	pthread_mutex_unlock(&terminal_lock);
+	pthread_mutex_unlock( &terminal_lock );
 }
 
 static inline int set_idle_limit( const comm_packet_t *packet )
@@ -72,7 +73,6 @@ static inline int set_idle_limit( const comm_packet_t *packet )
     char *p = (char *) packet->payload;
     base_motor_speed = (int)( (short)( p[0] << 8 ) | (short)( p[1] & 0xFF ) );
     fprintf( stdout, "parameter update: Idle Limit\n--> %d\n", base_motor_speed );
-
     return( 0 );
 }
 
@@ -128,12 +128,14 @@ static inline int parse_x_y_params_packet( const comm_packet_t *packet )
 static int process_data_packet( const comm_packet_t *packet )
 {
 	int retval;
+
     if( !packet )
     {
         return( -1 );
     }
 
-	lock();
+	lock( );
+
     switch( packet->type )
     {
         case COMM_COMMAND_DATA:
@@ -173,10 +175,12 @@ static int process_data_packet( const comm_packet_t *packet )
 			break;
 
         default:
-			unlock();
+			unlock( );
             return javiator_port_forward( packet );
     }
-	unlock();
+
+	unlock( );
+
     return( retval );
 }
 
@@ -208,7 +212,7 @@ int terminal_port_tick( void )
 
 static int running;
 static pthread_t thread;
-static void *terminal_thread(void *arg)
+static void *terminal_thread( void *arg )
 {
 	int ret;
 	while (running) {

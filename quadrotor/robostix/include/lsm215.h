@@ -25,6 +25,7 @@
 #define LSM215_H
 
 #include <stdint.h>
+#include "shared/javiator_data.h"
 
 
 /*****************************************************************************/
@@ -33,26 +34,35 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the selected UART channel for the laser sensor
+/* Initializes the UART channels for the laser sensors
 */
 void    lsm215_init( void );
 
-/* Starts the laser sensor in continuous mode
+/* Starts the laser sensors in continuous mode
 */
 void    lsm215_start( void );
 
-/* Stops the laser sensor if in continuous mode
+/* Stops the laser sensors if in continuous mode
 */
 void    lsm215_stop( void );
 
-/* Returns 1 if new data available, 0 otherwise
+/* Returns 1 if new x-data available, 0 otherwise
 */
-uint8_t lsm215_is_new_data( void );
+uint8_t lsm215_is_new_x_data( void );
 
-/* Copies the sampled data to the given buffer.
+/* Returns 1 if new y-data available, 0 otherwise
+*/
+uint8_t lsm215_is_new_y_data( void );
+
+/* Copies the sampled x-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  lsm215_get_data( uint32_t *buf );
+int8_t  lsm215_get_x_data( javiator_data_t *buf );
+
+/* Copies the sampled y-data to the given buffer.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t  lsm215_get_y_data( javiator_data_t *buf );
 
 
 #endif /* !LSM215_H */

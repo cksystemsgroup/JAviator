@@ -36,7 +36,6 @@
 /* Analog input channels assigned to the Analog/Digital Converter
 */
 #define ADC_CH_MINIA        PF7     /* pin where the Mini-A sensor connects to */
-#define ADC_CH_MPX4115A     PF2     /* pin where the MPX4115A sensor connects to */
 #define ADC_CH_BATTERY      PF6     /* pin where the battery sensor connects to */
 
 /* Max number of timer events that can be added to the timer event list
@@ -61,15 +60,15 @@
 
 /* Selection of UART channel used for communication with the Gumstix
 */
-#define UART_SERIAL         0       /* must be either 0 for UART0 or 1 for UART1 */
+#define UART_SERIAL         -1      /* must be either 0 for UART0 or 1 for UART1 */
 
 /* Selection of UART channel used for the 3DM-GX1 inertial measurement unit
 */
-#define UART_DM3GX1         1       /* must be either 0 for UART0 or 1 for UART1 */
+#define UART_DM3GX1         -1      /* must be either 0 for UART0 or 1 for UART1 */
 
 /* Selection of UART channel used for the LSM2-15 laser distance sensor
 */
-#define UART_LSM215         1       /* must be either 0 for UART0 or 1 for UART1 */
+#define UART_LSM215         -1      /* must be either 0 for UART0 or 1 for UART1 */
 
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
