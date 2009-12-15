@@ -1352,18 +1352,22 @@ public class ControlTerminal extends Frame
         }
     }
 
+    private byte[] ON  = { (byte) 1 };
+    private byte[] OFF = { (byte) 0 };
+    private Packet enableTestMode  = new Packet( PacketType.COMM_TEST_MODE, ON );
+    private Packet disableTestMode = new Packet( PacketType.COMM_TEST_MODE, OFF );
     private void doToggleTestMode( )
     {
     	if( remote != null )
     	{
     		if( (testMode = !testMode) )
     		{
-    			remote.sendPacket( new Packet( PacketType.COMM_TEST_MODE, (byte) 1 ) );
+    			remote.sendPacket( enableTestMode );
     	        testModeLabel.setForeground( Color.RED );
     		}
     		else
     		{
-    			remote.sendPacket( new Packet( PacketType.COMM_TEST_MODE, (byte) 0 ) );
+    			remote.sendPacket( disableTestMode );
     	        testModeLabel.setForeground( Color.LIGHT_GRAY );
     		}
     	}
@@ -1531,32 +1535,32 @@ public class ControlTerminal extends Frame
 
             // toggle the test-mode button
             //
-            if( (buttonsPressed & Joystick.BUTTON9) != 0 )
-            {
-				if( !alreadyToggledButton9 )
-                {
-                    alreadyToggledButton9 = true;
-            	    doToggleTestMode( );
-                }
-            }
-            else
-            {
-                alreadyToggledButton9 = false;
-            }
-
-            // reset the green meter needles
-            //
             if( (buttonsPressed & Joystick.BUTTON7) != 0 )
             {
 				if( !alreadyToggledButton7 )
                 {
                     alreadyToggledButton7 = true;
-                    resetMeterNeedles( );
+            	    doToggleTestMode( );
                 }
             }
             else
             {
                 alreadyToggledButton7 = false;
+            }
+
+            // reset the green meter needles
+            //
+            if( (buttonsPressed & Joystick.BUTTON9) != 0 )
+            {
+				if( !alreadyToggledButton9 )
+                {
+                    alreadyToggledButton9 = true;
+                    resetMeterNeedles( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton9 = false;
             }
 
             // update the four desired-value needles

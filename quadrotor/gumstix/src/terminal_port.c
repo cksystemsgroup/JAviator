@@ -80,6 +80,9 @@ static inline int set_test_mode( const comm_packet_t *packet )
 {
     char *p = (char *) packet->payload;
     test_mode = (int) p[0];
+
+    fprintf( stdout, "\nTEST MODE %s\n\n", test_mode ? "ON" : "OFF" );
+
     return( 0 );
 }
 

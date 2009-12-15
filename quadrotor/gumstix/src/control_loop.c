@@ -26,8 +26,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <signal.h>
+#include <math.h>
 
 #include "shared/protocol.h"
 #include "shared/transfer.h"
@@ -87,6 +87,7 @@
 #define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
 #define MOTOR_MAX               16000               /* [PWM] */
 #define MOTOR_MIN               0                   /* [PWM] */
+#define MAX_ROLL_PITCH          100                 /* [mrad] */
 
 /* control loop parameters */
 static volatile int running;
@@ -374,9 +375,6 @@ static void adjust_z( void )
     {
         offset_z = sensor_data.z;
         sensor_data.z = 0;
-
-        desired_x = sensor_data.x;
-        desired_y = sensor_data.y;
     }
 }
 
@@ -505,6 +503,7 @@ static int get_command_data( void )
 {
     static int sensors_enabled = 0;
     static command_data_t commands = { 0, 0, 0, 0 };
+    int16_t controlled_roll, controlled_pitch;
 
 #ifdef APPLY_ROTATION_MATRIX_TO_ROLL_AND_PITCH
     int16_t rotated_roll, rotated_pitch;
@@ -564,8 +563,67 @@ static int get_command_data( void )
 #if 0
     if( terminal_port_is_test_mode( ) )
     {
-        commands.roll  = -do_control( &ctrl_x, sensor_data.x, desired_x, sensor_data.dx, 0 );
-        commands.pitch =  do_control( &ctrl_y, sensor_data.y, desired_y, sensor_data.dy, 0 );
+        commands.roll  = (int16_t) -do_control( &ctrl_x, sensor_data.x, desired_x, sensor_data.dx, 0 );
+        commands.pitch = (int16_t)  do_control( &ctrl_y, sensor_data.y, desired_y, sensor_data.dy, 0 );
+
+        if( commands.roll > MAX_ROLL_PITCH )
+        {
+            commands.roll = MAX_ROLL_PITCH;
+        }
+        else
+        if( commands.roll < -MAX_ROLL_PITCH )
+        {
+            commands.roll = -MAX_ROLL_PITCH;
+        }
+
+        if( commands.pitch > MAX_ROLL_PITCH )
+        {
+            commands.pitch = MAX_ROLL_PITCH;
+        }
+        else
+        if( commands.pitch < -MAX_ROLL_PITCH )
+        {
+            commands.pitch = -MAX_ROLL_PITCH;
+        }
+    }
+    else
+    {
+        desired_x = sensor_data.x;
+        desired_y = sensor_data.y;
+    }
+//#endif
+    if( terminal_port_is_test_mode( ) )
+    {
+        controlled_roll  = (int16_t) -do_control( &ctrl_x, sensor_data.x, desired_x, sensor_data.dx, 0 );
+        controlled_pitch = (int16_t)  do_control( &ctrl_y, sensor_data.y, desired_y, sensor_data.dy, 0 );
+
+        if( controlled_roll > MAX_ROLL_PITCH )
+        {
+            controlled_roll = MAX_ROLL_PITCH;
+        }
+        else
+        if( controlled_roll < -MAX_ROLL_PITCH )
+        {
+            controlled_roll = -MAX_ROLL_PITCH;
+        }
+
+        if( controlled_pitch > MAX_ROLL_PITCH )
+        {
+            controlled_pitch = MAX_ROLL_PITCH;
+        }
+        else
+        if( controlled_pitch < -MAX_ROLL_PITCH )
+        {
+            controlled_pitch = -MAX_ROLL_PITCH;
+        }
+
+        commands.roll  += controlled_roll;
+        commands.pitch += controlled_pitch;
+    }
+    else
+    {
+        desired_x = sensor_data.x;
+        desired_y = sensor_data.y;
     }
 #endif
     filter_and_assign_commands( &commands, &command_data );
@@ -990,7 +1048,7 @@ int control_loop_run( void )
         start = get_utime( );
 
         send_report_to_terminal( );
-        send_trace_data_to_terminal( );
+        //send_trace_data_to_terminal( );
 
         end = get_utime( );
         calc_stats( end - start, STAT_TO_TERM );
