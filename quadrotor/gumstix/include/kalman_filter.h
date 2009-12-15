@@ -26,36 +26,41 @@
 #ifndef KALMAN_FILTER
 #define KALMAN_FILTER
 
-#include <stdint.h>
 
-#define KALMAN_Q 10000
-#define KALMAN_R 0.01
+#define KALMAN_STATES   2   /* number of Kalman states */
+#define KALMAN_P        4   /* elements in the covariance matrix */
+#define KALMAN_Q        10000.0
+#define KALMAN_R        0.01
 
-#define MAX_KALMAN_STATE 2  //kalman states
-#define MAX_KALMAN_P 4      //the number of elements in the covariance matrix
-
-
-//data structure used to store Kalman filter parameters
-//
-struct kalman_filter{
-    double x[MAX_KALMAN_STATE];
-    double p[MAX_KALMAN_P];
+/* Structure for representing Kalman filter parameters */
+typedef struct
+{
+    double dtime;
+    double x[ KALMAN_STATES ];
+    double p[ KALMAN_P ];
     double z;
     double dz;
-};
 
-//initialize kalman filter
-void init_kalman_filter(struct kalman_filter *filter);
-
-//reset kalman state and covariance matrix
-void reset_kalman_filter(struct kalman_filter *filter);
+} kalman_filter_t;
 
 
-//Compute Kalman Filter, here the filter is used to estimate the
-//altitude speed, z should be in meters, period in seconds, ddz in m/s^2
-//this function returns the estimated velocity in m/s
-double apply_kalman_filter(struct kalman_filter *filter, double z, double ddz, double period);
+/* Initializes the Kalman filter with the given period in [s].
+   Returns 0 if successful, -1 otherwise.
+*/
+int    kalman_filter_init( kalman_filter_t *filter, double period );
 
-#endif
+/* Resets the Kalman filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    kalman_filter_reset( kalman_filter_t *filter );
+
+/* Estimates the vertical speed dz.  Parameters are expected
+   to be given as follows: z in [m] and ddz in [m/s^2].
+   Returns the estimated velocity in [m/s].
+*/
+double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz );
+
+
+#endif /* !KALMAN_FILTER */
 
 /* End of file */

@@ -55,16 +55,17 @@ libcontroller_platform_a_OBJECTS =  \
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_control_OBJECTS = butter_filter.$(OBJEXT) communication.$(OBJEXT) \
-	controller.$(OBJEXT) control_loop.$(OBJEXT) \
-	ctrl_params.$(OBJEXT) inertial_data.$(OBJEXT) \
-	inertial_port.$(OBJEXT) javiator_port.$(OBJEXT) \
-	kalman_filter.$(OBJEXT) main.$(OBJEXT) \
-	pid_controller.$(OBJEXT) pidd_controller.$(OBJEXT) \
-	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
-	udp_socket_channel.$(OBJEXT) spi_channel.$(OBJEXT) \
-	spi_dev_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
-	trace_data.$(OBJEXT) us_timer.$(OBJEXT)
+am_control_OBJECTS = communication.$(OBJEXT) controller.$(OBJEXT) \
+	control_loop.$(OBJEXT) ctrl_params.$(OBJEXT) \
+	inertial_data.$(OBJEXT) inertial_port.$(OBJEXT) \
+	javiator_port.$(OBJEXT) kalman_filter.$(OBJEXT) \
+	low_pass_filter.$(OBJEXT) main.$(OBJEXT) \
+	median_filter.$(OBJEXT) pid_controller.$(OBJEXT) \
+	pidd_controller.$(OBJEXT) serial_channel.$(OBJEXT) \
+	socket_channel.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
+	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
+	terminal_port.$(OBJEXT) trace_data.$(OBJEXT) \
+	us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -192,7 +193,6 @@ noinst_LIBRARIES = libcontroller-platform.a
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
-    butter_filter.c \
     communication.c \
     controller.c \
     control_loop.c \
@@ -201,7 +201,9 @@ control_SOURCES = \
     inertial_port.c \
     javiator_port.c \
     kalman_filter.c \
+    low_pass_filter.c \
     main.c \
+    median_filter.c \
     pid_controller.c \
     pidd_controller.c \
     serial_channel.c \
@@ -287,7 +289,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/butter_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/communication.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/control_loop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/controller.Po@am__quote@
@@ -296,7 +297,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inertial_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/javiator_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kalman_filter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/low_pass_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/median_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pid_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pidd_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial_channel.Po@am__quote@
