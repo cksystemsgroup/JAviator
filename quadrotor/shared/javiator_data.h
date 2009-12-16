@@ -26,6 +26,9 @@
 #ifndef JAVIATOR_DATA_H
 #define JAVIATOR_DATA_H
 
+#include <stdint.h>
+
+
 /* Structure for shared JAviator data */
 typedef struct
 {

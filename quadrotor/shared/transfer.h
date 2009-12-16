@@ -43,8 +43,8 @@
 #define JS_NEW_X_POS_DATA   0x0008  /* x-position data have been updated */
 #define JS_NEW_Y_POS_DATA   0x0010  /* y-position data have been updated */
 
-#include "shared/javiator_data.h"   /* definition of JAviator data structure */
-#include "shared/motor_signals.h"   /* definition of motor signals structure */
+#include "javiator_data.h"          /* definition of JAviator data structure */
+#include "motor_signals.h"          /* definition of motor signals structure */
 
 
 #endif /* !TRANSFER_H */

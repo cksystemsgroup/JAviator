@@ -29,9 +29,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <math.h>
-#include "controller.h"
 
-#define INTEGRAL_LIMIT  16.0 //!< Limit used for integral anti-windup (rad*s)
+#include "controller.h"
+#include "motor_signals.h"
 
 /** \brief State of a controller for 1 degree of freedom. */
 struct controller_state {
@@ -115,7 +115,7 @@ static inline double get_velocity_error(double desired,
 {
     double desired_velocity;
     double derror;
-    desired_velocity = (desired - last_desired)/period;
+    desired_velocity = (desired - last_desired) / period;
     derror = desired_velocity - velocity;
     return derror;
 }
@@ -199,20 +199,21 @@ int pidd_controller_init(struct controller *controller, int period)
 
     state = malloc(sizeof(struct controller_state));
 
-    if (!state) {
-    return ENOMEM;
+    if( !state )
+    {
+        return( ENOMEM );
     }
 
     memset(state, 0, sizeof(struct controller_state));
-    state->dtime = period/1000.0;   //controller uses period in seconds
-    state->iMax  = INTEGRAL_LIMIT;
-    state->iMin  = -INTEGRAL_LIMIT;
+    state->dtime = period / 1000.0; // controller uses period in seconds
+    state->iMax  = MOTOR_MAX;
+    state->iMin  = -MOTOR_MAX;
     state->last_desired = 0;
 
-    controller->control      = pidd_control;
-    controller->reset_zero   = pid_reset_zero;
-    controller->set_params   = setPIDD;
-    controller->state        = state;
+    controller->control    = pidd_control;
+    controller->reset_zero = pid_reset_zero;
+    controller->set_params = setPIDD;
+    controller->state      = state;
 
     return 0;
 }

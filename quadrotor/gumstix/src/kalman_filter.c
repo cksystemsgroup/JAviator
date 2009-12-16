@@ -27,10 +27,10 @@
 #include "kalman_filter.h"
 
 
-/* Initializes the Kalman filter with the given period in [s].
+/* Initializes the Kalman filter with the given period [ms].
    Returns 0 if successful, -1 otherwise.
 */
-int kalman_filter_init( kalman_filter_t *filter, double period )
+int kalman_filter_init( kalman_filter_t *filter, int period )
 {
     if( period < 0 )
     {
@@ -38,7 +38,7 @@ int kalman_filter_init( kalman_filter_t *filter, double period )
         return( -1 );
     }
 
-    filter->dtime = period;
+    filter->dtime = period / 1000.0; // Kalman filter uses period in seconds
 
     return kalman_filter_reset( filter );
 }
@@ -75,8 +75,8 @@ int kalman_filter_reset( kalman_filter_t *filter )
 }
 
 /* Estimates the vertical speed dz.  Parameters are expected
-   to be given as follows: z in [m] and ddz in [m/s^2].
-   Returns the estimated velocity in [m/s].
+   to be given as follows: z in [mm] and ddz in [mm/s^2].
+   Returns the estimated velocity in [mm/s].
 */
 double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
 {

@@ -26,18 +26,25 @@
 #ifndef MOTOR_SIGNALS_H
 #define MOTOR_SIGNALS_H
 
+#include <stdint.h>
+
+
+#define MOTOR_MAX           16000   /* [PWM] */
+#define MOTOR_MIN           0       /* [PWM] */
+
 /* Structure for shared motor signals */
 typedef struct
 {
-    int16_t     front;              /* [units] If Fast PWM Mode enabled,  */
-    int16_t     right;              /* [units] then range 0...16000,      */
-    int16_t     rear;               /* [units] if Fast PWM Mode disabled, */
-    int16_t     left;               /* [units] then range 0...1000.       */
+    int16_t     front;              /* [PWM] If Fast PWM Mode enabled,  */
+    int16_t     right;              /* [PWM] then range 0...16000,      */
+    int16_t     rear;               /* [PWM] if Fast PWM Mode disabled, */
+    int16_t     left;               /* [PWM] then range 0...1000.       */
     uint16_t    id;                 /* transmisson ID */
 
 } motor_signals_t;
 
 #define MOTOR_SIGNALS_SIZE  10       /* byte size of motor_signals_t + 2 for id */
+
 
 static inline
 int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int len )
@@ -75,6 +82,7 @@ int motor_signals_from_stream( motor_signals_t *signals, const uint8_t *buf, int
 
     return( -1 );
 }
+
 
 #endif /* !MOTOR_SIGNALS_H */
 

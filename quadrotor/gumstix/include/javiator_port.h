@@ -26,7 +26,7 @@
 #ifndef JAVIATOR_PORT_H
 #define JAVIATOR_PORT_H
 
-#include "shared/transfer.h"
+#include "transfer.h"
 #include "comm_channel.h"
 #include "communication.h"
 

@@ -30,8 +30,8 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "shared/protocol.h"
-#include "shared/transfer.h"
+#include "protocol.h"
+#include "transfer.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"
@@ -50,11 +50,15 @@ static uint16_t local_id = 0;
 static inline int parse_javiator_data( const comm_packet_t *packet )
 {
     int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
-
-	if (local_id - 1 != javiator_data.id)
-		printf("local id %u received id %u\n", local_id, javiator_data.id);
-
+#if 0
+    if( (uint16_t)( local_id - 1 ) != javiator_data.id )
+    {
+        fprintf( stderr, "WARNING: local ID %u != received ID %u\n",
+            local_id, javiator_data.id );
+    }
+#endif
     new_data = 1;
+
     return( res );
 }
 

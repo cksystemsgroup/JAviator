@@ -23,11 +23,6 @@
  *
  */
 
-#ifndef JAVIATOR_DATA_H
-#define JAVIATOR_DATA_H
-
 #include "shared/javiator_data.h"
-
-#endif /* !JAVIATOR_DATA_H */
 
 /* End of file */

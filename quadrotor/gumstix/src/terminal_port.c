@@ -28,8 +28,8 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "shared/protocol.h"
-#include "shared/transfer.h"
+#include "protocol.h"
+#include "transfer.h"
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"
