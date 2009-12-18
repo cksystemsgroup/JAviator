@@ -458,7 +458,7 @@ int terminal_port_send_report(
         command_data_to_stream( offsets, &buf[i], COMMAND_DATA_SIZE );
         i += COMMAND_DATA_SIZE;
 
-        buf[i++] = (char)( state | test_mode )
+        buf[i++] = (char)( state | test_mode );
         buf[i++] = (char)( mode );
 
         packet.type     = COMM_GROUND_REPORT;
