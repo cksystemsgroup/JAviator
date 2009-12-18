@@ -68,17 +68,17 @@ int kalman_filter_reset( kalman_filter_t *filter )
         filter->p[i] = 0;
     }
 
-    filter->z  = 0;
-    filter->dz = 0;
+    filter->s  = 0;
+    filter->ds = 0;
 
     return( 0 );
 }
 
-/* Estimates the vertical speed dz.  Parameters are expected
-   to be given as follows: z in [mm] and ddz in [mm/s^2].
-   Returns the estimated velocity in [mm/s].
+/* Estimates the speed ds.  Parameters are expected
+   to be given as follows: s in [mm] and dds in [mm/s^2].
+   Returns the estimated velocity ds in [mm/s].
 */
-double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
+double kalman_filter_apply( kalman_filter_t *filter, double s, double dds )
 {
     double x1, x2, p11, p12, p21, p22, k1, k2;
 
@@ -90,13 +90,13 @@ double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
     p21 = filter->p[2];
     p22 = filter->p[3];
 
-    if( z > 0 )
+    if( s > 0 )
     {
         /* TIME UPDATE */
 
         /* project state ahead */
         x1 = x1 + filter->dtime * x2;
-        x2 = x2 + filter->dtime * ddz;
+        x2 = x2 + filter->dtime * dds;
 
         /* project error covariance ahead */
         p11 = p11 + filter->dtime * (p21 + p12) + filter->dtime * filter->dtime * p22;
@@ -111,8 +111,8 @@ double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
         k2 = p21 / (p11 + KALMAN_R);
 
         /* update estimates */
-        x2 = x2 + k2 * (z - x1);
-        x1 = x1 + k1 * (z - x1);
+        x2 = x2 + k2 * (s - x1);
+        x1 = x1 + k1 * (s - x1);
 
         /* update error covariance */
         p22 = p22 - k2 * p12 ;
@@ -140,10 +140,10 @@ double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz )
     }
 
     /* store z and dz value */
-    filter->z  = filter->x[0];
-    filter->dz = filter->x[1];
+    filter->s  = filter->x[0];
+    filter->ds = filter->x[1];
 
-    return( filter->dz );
+    return( filter->ds );
 }
 
 /* End of file */

@@ -165,79 +165,22 @@ public class DigitalMeter extends Panel
 
         if( this.heliState != heliState )
         {
-            if( ( this.heliState & ControllerConstants.ADJUSTING_ROLL ) !=
-                ( heliState & ControllerConstants.ADJUSTING_ROLL ) )
+            if( ( this.heliState & ControllerConstants.STATE_TEST_MODE ) !=
+                ( heliState & ControllerConstants.STATE_TEST_MODE ) )
             {
-                if( ( heliState & ControllerConstants.ADJUSTING_ROLL ) != 0 )
-                {
-                    controlRight .setForeground( colorAlerting );
-                    controlLeft  .setForeground( colorAlerting );
-                }
-                else if( ( heliState & ControllerConstants.ADJUSTING_YAW ) == 0 )
-                {
-                    controlRight .setForeground( colorDefault );
-                    controlLeft  .setForeground( colorDefault );
-                }
-            }
-
-            if( ( this.heliState & ControllerConstants.ADJUSTING_PITCH ) !=
-                ( heliState & ControllerConstants.ADJUSTING_PITCH ) )
-            {
-                if( ( heliState & ControllerConstants.ADJUSTING_PITCH ) != 0 )
+                if( ( heliState & ControllerConstants.STATE_TEST_MODE ) != 0 )
                 {
                     controlFront .setForeground( colorAlerting );
+                    controlRight .setForeground( colorAlerting );
                     controlRear  .setForeground( colorAlerting );
-                }
-                else if( ( heliState & ControllerConstants.ADJUSTING_YAW ) == 0 )
-                {
-                    controlFront .setForeground( colorDefault );
-                    controlRear  .setForeground( colorDefault );
-                }
-            }
-
-            if( ( this.heliState & ControllerConstants.ADJUSTING_YAW ) !=
-                ( heliState & ControllerConstants.ADJUSTING_YAW ) )
-            {
-                if( ( heliState & ControllerConstants.ADJUSTING_ROLL ) == 0 )
-                {
-                    if( ( heliState & ControllerConstants.ADJUSTING_YAW ) != 0 )
-                    {
-                        controlRight .setForeground( colorWarning );
-                        controlLeft  .setForeground( colorWarning );
-                    }
-                    else
-                    {
-                        controlRight .setForeground( colorDefault );
-                        controlLeft  .setForeground( colorDefault );
-                    }
-                }
-
-                if( ( heliState & ControllerConstants.ADJUSTING_PITCH ) == 0 )
-                {
-                    if( ( heliState & ControllerConstants.ADJUSTING_YAW ) != 0 )
-                    {
-                        controlFront .setForeground( colorWarning );
-                        controlRear  .setForeground( colorWarning );
-                    }
-                    else
-                    {
-                        controlFront .setForeground( colorDefault );
-                        controlRear  .setForeground( colorDefault );
-                    }
-                }
-            }
-
-            if( this.heliMode != ControllerConstants.ALT_MODE_SHUTDOWN &&
-                ( this.heliState & ControllerConstants.ADJUSTING_Z ) !=
-                ( heliState & ControllerConstants.ADJUSTING_Z ) )
-            {
-                if( ( heliState & ControllerConstants.ADJUSTING_Z ) != 0 )
-                {
-                    altitudeMode.setForeground( colorAlerting );
+                    controlLeft  .setForeground( colorAlerting );
                 }
                 else
                 {
-                    altitudeMode.setForeground( colorDefault );
+                    controlFront .setForeground( colorDefault );
+                    controlRight .setForeground( colorDefault );
+                    controlRear  .setForeground( colorDefault );
+                    controlLeft  .setForeground( colorDefault );
                 }
             }
 
@@ -297,14 +240,12 @@ public class DigitalMeter extends Panel
         {
             colorDefault  = Color.DARK_GRAY;
             colorOffsets  = Color.GRAY;
-            colorWarning  = Color.LIGHT_GRAY;
             colorAlerting = Color.GRAY;
         }
         else
         {
             colorDefault  = Color.BLACK;
             colorOffsets  = Color.BLUE;
-            colorWarning  = Color.ORANGE;
             colorAlerting = Color.RED;
         }
 
@@ -453,7 +394,6 @@ public class DigitalMeter extends Panel
 
     private Color           colorDefault  = null;
     private Color           colorOffsets  = null;
-    private Color           colorWarning  = null;
     private Color           colorAlerting = null;
 
     private MotorSignals    motorSignals  = null;
@@ -488,7 +428,6 @@ public class DigitalMeter extends Panel
 
         colorDefault  = Color.BLACK;
         colorOffsets  = Color.BLUE;
-        colorWarning  = Color.ORANGE;
         colorAlerting = Color.RED;
 
         motorSignals  = new MotorSignals( );

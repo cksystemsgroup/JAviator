@@ -38,8 +38,8 @@ typedef struct
     double dtime;
     double x[ KALMAN_STATES ];
     double p[ KALMAN_P ];
-    double z;
-    double dz;
+    double s;
+    double ds;
 
 } kalman_filter_t;
 
@@ -54,11 +54,11 @@ int    kalman_filter_init( kalman_filter_t *filter, int period );
 */
 int    kalman_filter_reset( kalman_filter_t *filter );
 
-/* Estimates the vertical speed dz.  Parameters are expected
-   to be given as follows: z in [mm] and ddz in [mm/s^2].
-   Returns the estimated velocity in [mm/s].
+/* Estimates the speed ds.  Parameters are expected
+   to be given as follows: s in [mm] and dds in [mm/s^2].
+   Returns the estimated velocity ds in [mm/s].
 */
-double kalman_filter_apply( kalman_filter_t *filter, double z, double ddz );
+double kalman_filter_apply( kalman_filter_t *filter, double s, double dds );
 
 
 #endif /* !KALMAN_FILTER */

@@ -565,6 +565,7 @@ public class ControlTerminal extends Frame
     protected static final String DISCONNECT       = "Disconnect";
     protected static final String SHUT_DOWN        = "Shut Down";
     protected static final String LOGGING          = "Logging";
+    protected static final String TOGGLE_          = "Toggle ";
     protected static final String _FAILED          = " failed";
     protected static final String _DATA            = " Data";
     protected static final String PORT_SETTINGS    = "Port Settings";
@@ -572,6 +573,7 @@ public class ControlTerminal extends Frame
     protected static final String RESET_NEEDLES    = "Reset Needles";
     protected static final String KEY_ASSISTANCE   = "Key Assistance";
     protected static final String ABOUT_TERMINAL   = "About Terminal";
+    protected static final String DIAGRAMS         = "Diagrams";
 
     protected AnalogMeter         meterRoll        = null;
     protected AnalogMeter         meterPitch       = null;
@@ -667,7 +669,7 @@ public class ControlTerminal extends Frame
                 motion.setOffsetDesiredRoll( MOTION_STEP );
                 break;
 
-            case KeyEvent.VK_UP: // pitch forward
+            case KeyEvent.VK_UP: /* pitch forward */
                 motion.setOffsetDesiredPitch( -MOTION_STEP );
                 break;
 
@@ -690,6 +692,11 @@ public class ControlTerminal extends Frame
 
             case KeyEvent.VK_W: /* ascend */
                 motion.setOffsetDesiredAltitude( MOTION_STEP );
+                break;
+
+            /* command keys for different purposes */
+            case KeyEvent.VK_T:
+            	doToggleTestMode( );
                 break;
 
             case KeyEvent.VK_F1:
@@ -834,7 +841,7 @@ public class ControlTerminal extends Frame
     /*                                                                       */
     /*************************************************************************/
 
-    private static final int       MOTION_STEP    = 5; // mrad
+    private static final int       MOTION_STEP    = 5; /* mrad */
     private static final int       CTRL_PARAMS    = 16;
 
     private Image                  iconImage      = null;
@@ -846,7 +853,6 @@ public class ControlTerminal extends Frame
     private Joystick               stick          = null;
     private Label                  batteryLabel   = null;
     private Label                  logDataLabel   = null;
-    private Label                  testModeLabel  = null;
     private Label                  positionX      = null;
     private Label                  positionY      = null;
     private short[]                controlParams  = null;
@@ -857,7 +863,6 @@ public class ControlTerminal extends Frame
     private boolean                new_Alt_Params = false;
     private boolean                new_X_Y_Params = false;
     private boolean                logData        = false;
-    private boolean                testMode       = false;
 
     private void initWindow( )
     {
@@ -947,11 +952,9 @@ public class ControlTerminal extends Frame
         digitalMeter  = new DigitalMeter( this );
         batteryLabel  = new Label( ZERO, Label.CENTER );
         logDataLabel  = new Label( LOGGING + _DATA, Label.CENTER );
-        testModeLabel = new Label( "Test" + _MODE, Label.CENTER );
         positionX     = new Label( ZERO, Label.RIGHT );
         positionY     = new Label( ZERO, Label.RIGHT );
         logDataLabel  .setForeground( Color.LIGHT_GRAY );
-        testModeLabel .setForeground( Color.LIGHT_GRAY );
 
         HiddenButton incAltitudeLimit = new HiddenButton( HiddenButton.SYMBOL_PLUS );
         incAltitudeLimit.setForeground( Color.GRAY );
@@ -1044,14 +1047,10 @@ public class ControlTerminal extends Frame
         batteryPanel.add( batteryLabel, BorderLayout.CENTER );
         batteryPanel.add( new Label( "Volts", Label.RIGHT ), BorderLayout.EAST );
 
-        Panel indicatorPanel = new Panel( new BorderLayout( ) );
-        indicatorPanel.add( testModeLabel, BorderLayout.NORTH );
-        indicatorPanel.add( logDataLabel, BorderLayout.SOUTH );
-
         Panel motorMeterPanel = new Panel( new BorderLayout( ) );
         motorMeterPanel.add( batteryPanel, BorderLayout.NORTH );
         motorMeterPanel.add( digitalMeter, BorderLayout.CENTER );
-        motorMeterPanel.add( indicatorPanel, BorderLayout.SOUTH );
+        motorMeterPanel.add( logDataLabel, BorderLayout.SOUTH );
 
         Panel centerPanel = new Panel( new BorderLayout( ) );
         centerPanel.add( yawAltitudePanel, BorderLayout.WEST );
@@ -1352,24 +1351,12 @@ public class ControlTerminal extends Frame
         }
     }
 
-    private byte[] ON  = { (byte) 1 };
-    private byte[] OFF = { (byte) 0 };
-    private Packet enableTestMode  = new Packet( PacketType.COMM_TEST_MODE, ON );
-    private Packet disableTestMode = new Packet( PacketType.COMM_TEST_MODE, OFF );
+    private Packet testModePacket = new Packet( PacketType.COMM_TEST_MODE, null );
     private void doToggleTestMode( )
     {
     	if( remote != null )
     	{
-    		if( (testMode = !testMode) )
-    		{
-    			remote.sendPacket( enableTestMode );
-    	        testModeLabel.setForeground( Color.RED );
-    		}
-    		else
-    		{
-    			remote.sendPacket( disableTestMode );
-    	        testModeLabel.setForeground( Color.LIGHT_GRAY );
-    		}
+            remote.sendPacket( testModePacket );
     	}
     }
 
@@ -1407,8 +1394,7 @@ public class ControlTerminal extends Frame
                     processKeyboard( );
                 }
 
-                // animate the three maximum-value needles
-                //
+                /* animate the three maximum-value needles */
                 if( offsetMaximumRollPitch != 0 )
                 {
                     meterPitch .setMaximum( meterPitch .getMaximum( ) + offsetMaximumRollPitch );
@@ -1513,8 +1499,7 @@ public class ControlTerminal extends Frame
             else
             if( (buttonsPressed & Joystick.BUTTON10) != 0 )
             {
-				// toggle the heli-mode button
-				//
+				/* toggle the heli-mode button */
 				if( !alreadyToggledButton10 )
                 {
                     alreadyToggledButton10 = true;
@@ -1533,23 +1518,7 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton10 = false;
             }
 
-            // toggle the test-mode button
-            //
-            if( (buttonsPressed & Joystick.BUTTON7) != 0 )
-            {
-				if( !alreadyToggledButton7 )
-                {
-                    alreadyToggledButton7 = true;
-            	    doToggleTestMode( );
-                }
-            }
-            else
-            {
-                alreadyToggledButton7 = false;
-            }
-
-            // reset the green meter needles
-            //
+            /* reset the green meter needles */
             if( (buttonsPressed & Joystick.BUTTON9) != 0 )
             {
 				if( !alreadyToggledButton9 )
@@ -1563,8 +1532,21 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton9 = false;
             }
 
-            // update the four desired-value needles
-            //
+            /* toggle the test-mode button */
+            if( (buttonsPressed & Joystick.BUTTON7) != 0 )
+            {
+				if( !alreadyToggledButton7 )
+                {
+                    alreadyToggledButton7 = true;
+            	    doToggleTestMode( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton7 = false;
+            }
+
+            /* update the four desired-value needles */
             meterRoll  .setDesired( (int)( meterRoll  .getMaximum( ) * stick.getX( ) ) );
             meterPitch .setDesired( (int)( meterPitch .getMaximum( ) * stick.getY( ) ) );
 
@@ -1589,8 +1571,7 @@ public class ControlTerminal extends Frame
 
         private void processKeyboard( )
         {
-            // animate the four desired-value needles
-            //
+            /* animate the four desired-value needles */
             if( offsetDesiredRoll != 0 )
 	        {
 	            meterRoll.setDesired( meterRoll.getDesired( ) + offsetDesiredRoll );
@@ -1625,4 +1606,4 @@ public class ControlTerminal extends Frame
     }
 }
 
-// End of file.
+/* End of file */

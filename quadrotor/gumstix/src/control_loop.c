@@ -50,7 +50,7 @@
 #include "kalman_filter.h"
 #include "us_timer.h"
 
-//#define ENABLE_POSITION_CONTROLLERS
+#define ENABLE_POSITION_CONTROLLERS
 
 /* controller modes */
 #define ALT_MODE_GROUND         0x00
@@ -58,14 +58,22 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* filter parameters */
-#define FILTER_GAIN_SONAR       0.9
+#define FILTER_GAIN_DDX         0.1
+#define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
 #define FILTER_GAIN_CMD         0.1
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
-#define SONAR_POS_ROLL          -95                 /* [mm] sonar position on roll axis */
-#define SONAR_POS_PITCH         -95                 /* [mm] sonar position on pitch axis */
+#define SONAR_POS_ROLL         -95                  /* [mm] sonar position on roll axis */
+#define SONAR_POS_PITCH        -95                  /* [mm] sonar position on pitch axis */
+#define SONAR_POS_YAW           55                  /* [mm] sonar position on yaw axis */
+#define X_LASER_POS_ROLL        80                  /* [mm] x-laser position on roll axis */
+#define X_LASER_POS_PITCH      -30                  /* [mm] x-laser position on pitch axis */
+#define X_LASER_POS_YAW        -80                  /* [mm] x-laser position on yaw axis */
+#define Y_LASER_POS_ROLL       -75                  /* [mm] y-laser position on roll axis */
+#define Y_LASER_POS_PITCH       60                  /* [mm] y-laser position on pitch axis */
+#define Y_LASER_POS_YAW        -80                  /* [mm] y-laser position on yaw axis */
 #define EARTH_GRAVITY           9810                /* [mm/s^2] gravitational acceleration */
 
 /* controller parameters */
@@ -100,18 +108,22 @@ static int revving_step      = 0;
 static struct controller ctrl_roll;
 static struct controller ctrl_pitch;
 static struct controller ctrl_yaw;
-static struct controller ctrl_z;
 #ifdef ENABLE_POSITION_CONTROLLERS
 static struct controller ctrl_x;
 static struct controller ctrl_y;
 #endif
+static struct controller ctrl_z;
+
 /* filter objects */
-static low_pass_filter_t    filter_sonar;
+static low_pass_filter_t    filter_ddx;
+static low_pass_filter_t    filter_ddy;
 static low_pass_filter_t    filter_ddz;
 static low_pass_filter_t    filter_cmd_roll;
 static low_pass_filter_t    filter_cmd_pitch;
 static low_pass_filter_t    filter_cmd_z;
 static median_filter_t      filter_battery;
+static kalman_filter_t      filter_dx;
+static kalman_filter_t      filter_dy;
 static kalman_filter_t      filter_dz;
 
 /* sensor and input data */
@@ -130,8 +142,8 @@ static double cos_pitch = 0;
 static double sin_yaw   = 0;
 static double cos_yaw   = 0;
 #ifdef ENABLE_POSITION_CONTROLLERS
-static double desired_x = 0;
-static double desired_y = 0;
+static double offset_x  = 0;
+static double offset_y  = 0;
 #endif
 /* function pointer */
 static void signal_handler( int num );
@@ -212,17 +224,21 @@ int control_loop_setup( int period, int control_z )
     controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD,     ms_period );
     controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD,     ms_period );
     controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, ms_period );
-    controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     ms_period );
 #ifdef ENABLE_POSITION_CONTROLLERS
     controller_init( &ctrl_x,     "X",     CTRL_PIDD,     ms_period );
     controller_init( &ctrl_y,     "Y",     CTRL_PIDD,     ms_period );
 #endif
-    low_pass_filter_init( &filter_sonar,     FILTER_GAIN_SONAR );
+    controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     ms_period );
+
+    low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
+    low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
     low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
     median_filter_init  ( &filter_battery,   FILTER_SIZE_BATTERY );
+    kalman_filter_init  ( &filter_dx,        ms_period );
+    kalman_filter_init  ( &filter_dy,        ms_period );
     kalman_filter_init  ( &filter_dz,        ms_period );
 
     memset( &command_data,  0, sizeof( command_data ) );
@@ -309,6 +325,70 @@ static void get_control_params( void )
     }
 }
 
+static inline int get_corrected_x( void )
+{
+    double converted_x = atoi( (const char *) javiator_data.x_pos );
+    double vector_x =
+          (X_LASER_POS_ROLL  + converted_x) * cos_pitch * cos_yaw
+        +  X_LASER_POS_PITCH * (cos_yaw * sin_pitch * sin_roll - cos_roll * sin_yaw)
+        +  X_LASER_POS_YAW   * (cos_roll * cos_yaw * sin_pitch + sin_roll * sin_yaw);
+
+    return( (int) vector_x );
+}
+
+static inline int get_corrected_y( void )
+{
+    double converted_y = atoi( (const char *) javiator_data.y_pos );
+    double vector_y =
+           Y_LASER_POS_ROLL  * cos_pitch * sin_yaw
+        + (Y_LASER_POS_PITCH + converted_y) * (sin_pitch * sin_roll * sin_yaw + cos_roll * cos_yaw)
+        +  Y_LASER_POS_YAW   * (cos_roll * sin_pitch * sin_yaw - cos_yaw * sin_roll);
+
+    return( (int) vector_y );
+}
+
+static inline int get_corrected_z( void )
+{
+    double converted_z = FACTOR_SONAR * javiator_data.sonar;
+    double vector_z =
+        -  SONAR_POS_ROLL  * sin_pitch
+        +  SONAR_POS_PITCH * cos_pitch * sin_roll
+        + (SONAR_POS_YAW   + converted_z) * cos_pitch * cos_roll;
+
+    return( (int) vector_z );
+}
+
+static inline double get_filtered_ddx( void )
+{
+    double vector_ddx =
+          sensor_data.ddx * cos_pitch * cos_yaw
+        + sensor_data.ddy * (cos_yaw * sin_pitch * sin_roll - cos_roll * sin_yaw)
+        + sensor_data.ddz * (cos_roll * cos_yaw * sin_pitch + sin_roll * sin_yaw);
+
+    return low_pass_filter_apply( &filter_ddx, vector_ddx );
+}
+
+static inline double get_filtered_ddy( void )
+{
+    double vector_ddy =
+          sensor_data.ddx * cos_pitch * sin_yaw
+        + sensor_data.ddy * (sin_pitch * sin_roll * sin_yaw + cos_roll * cos_yaw)
+        + sensor_data.ddz * (cos_roll * sin_pitch * sin_yaw - cos_yaw * sin_roll);
+
+    return low_pass_filter_apply( &filter_ddy, vector_ddy );
+}
+
+static inline double get_filtered_ddz( void )
+{
+    double vector_ddz =
+        - sensor_data.ddx * sin_pitch
+        + sensor_data.ddy * cos_pitch * sin_roll
+        + sensor_data.ddz * cos_pitch * cos_roll
+        + EARTH_GRAVITY;
+
+    return low_pass_filter_apply( &filter_ddz, vector_ddz );
+}
+
 static void adjust_yaw_and_z( void )
 {
     static int16_t offset_yaw = 0;
@@ -318,6 +398,10 @@ static void adjust_yaw_and_z( void )
         motor_signals.rear  == 0 && motor_signals.left  == 0 )
     {
         offset_yaw      = sensor_data.yaw;
+#ifdef ENABLE_POSITION_CONTROLLERS
+        offset_x        = sensor_data.x;
+        offset_y        = sensor_data.y;
+#endif
         offset_z        = sensor_data.z;
         sensor_data.yaw = 0;
         sensor_data.z   = 0;
@@ -334,9 +418,7 @@ static int get_javiator_data( void )
     static uint16_t last_id = 0;
     static int16_t  old_z   = 13;
     static int      count   = 2;
-    int             res;
-
-    res = javiator_port_get_data( &javiator_data );
+    int             res     = javiator_port_get_data( &javiator_data );
 
     if( res )
     {
@@ -366,34 +448,21 @@ static int get_javiator_data( void )
 
     old_z = javiator_data.sonar;
 
-    /* save old positions */
-    sensor_data.dx = sensor_data.x;
-    sensor_data.dy = sensor_data.y;
-    sensor_data.dz = sensor_data.z;
-
-    /* copy and scale positions */
-    sensor_data.x = (int)( atoi( (const char *) javiator_data.x_pos ) * cos_yaw * cos_roll );
-    sensor_data.y = (int)( atoi( (const char *) javiator_data.y_pos ) * cos_yaw * cos_pitch );
-    sensor_data.z = (int)( javiator_data.sonar * FACTOR_SONAR );
-
-    /* compute linear rates */
-    sensor_data.dx = sensor_data.x - sensor_data.dx;
-    sensor_data.dy = sensor_data.y - sensor_data.dy;
-    sensor_data.dz = sensor_data.z - sensor_data.dz;
+    /* copy corrected positions */
+    sensor_data.x = get_corrected_x( );
+    sensor_data.y = get_corrected_y( );
+    sensor_data.z = get_corrected_z( );
 
     /* scale and filter battery level */
     sensor_data.battery = (int) median_filter_apply( &filter_battery,
-        javiator_data.battery * FACTOR_BATTERY );
+        FACTOR_BATTERY * javiator_data.battery );
 
     return( 0 );
 }
 
 static int get_inertial_data( void )
 {
-    static int16_t   last_ticks = 0;
-    int              res;
-
-    res = inertial_port_get_data( &inertial_data );
+    int res = inertial_port_get_data( &inertial_data );
 
     if( res == -1 )
     {
@@ -406,12 +475,10 @@ static int get_inertial_data( void )
         return( res );
     }
 
-    last_ticks = inertial_data.ticks;
-
     /* copy and scale Euler angles */
-    sensor_data.roll    = (int16_t)( inertial_data.roll  * FACTOR_EULER_ANGLE );
-    sensor_data.pitch   = (int16_t)( inertial_data.pitch * FACTOR_EULER_ANGLE );
-    sensor_data.yaw     = (int16_t)( inertial_data.yaw   * FACTOR_EULER_ANGLE );
+    sensor_data.roll    = (int16_t)( FACTOR_EULER_ANGLE * inertial_data.roll );
+    sensor_data.pitch   = (int16_t)( FACTOR_EULER_ANGLE * inertial_data.pitch );
+    sensor_data.yaw     = (int16_t)( FACTOR_EULER_ANGLE * inertial_data.yaw );
 
     /* save old angular rates */
     sensor_data.ddroll  = sensor_data.droll;
@@ -419,19 +486,19 @@ static int get_inertial_data( void )
     sensor_data.ddyaw   = sensor_data.dyaw;
 
     /* copy and scale angular rates */
-    sensor_data.droll   = (int16_t)( inertial_data.droll  * FACTOR_ANGULAR_RATE );
-    sensor_data.dpitch  = (int16_t)( inertial_data.dpitch * FACTOR_ANGULAR_RATE );
-    sensor_data.dyaw    = (int16_t)( inertial_data.dyaw   * FACTOR_ANGULAR_RATE );
+    sensor_data.droll   = (int16_t)( FACTOR_ANGULAR_RATE * inertial_data.droll );
+    sensor_data.dpitch  = (int16_t)( FACTOR_ANGULAR_RATE * inertial_data.dpitch );
+    sensor_data.dyaw    = (int16_t)( FACTOR_ANGULAR_RATE * inertial_data.dyaw );
 
     /* compute angular accelerations */
-    sensor_data.ddroll  = (int16_t)( (sensor_data.droll  - sensor_data.ddroll)  * FACTOR_ANGULAR_ACCEL );
-    sensor_data.ddpitch = (int16_t)( (sensor_data.dpitch - sensor_data.ddpitch) * FACTOR_ANGULAR_ACCEL );
-    sensor_data.ddyaw   = (int16_t)( (sensor_data.dyaw   - sensor_data.ddyaw)   * FACTOR_ANGULAR_ACCEL );
+    sensor_data.ddroll  = (int16_t)( FACTOR_ANGULAR_ACCEL * (sensor_data.droll  - sensor_data.ddroll) );
+    sensor_data.ddpitch = (int16_t)( FACTOR_ANGULAR_ACCEL * (sensor_data.dpitch - sensor_data.ddpitch) );
+    sensor_data.ddyaw   = (int16_t)( FACTOR_ANGULAR_ACCEL * (sensor_data.dyaw   - sensor_data.ddyaw) );
 
     /* copy and scale linear accelerations */
-    sensor_data.ddx     = (int16_t)( inertial_data.ddx * FACTOR_LINEAR_ACCEL );
-    sensor_data.ddy     = (int16_t)( inertial_data.ddy * FACTOR_LINEAR_ACCEL );
-    sensor_data.ddz     = (int16_t)( inertial_data.ddz * FACTOR_LINEAR_ACCEL );
+    sensor_data.ddx     = (int16_t)( FACTOR_LINEAR_ACCEL * inertial_data.ddx );
+    sensor_data.ddy     = (int16_t)( FACTOR_LINEAR_ACCEL * inertial_data.ddy );
+    sensor_data.ddz     = (int16_t)( FACTOR_LINEAR_ACCEL * inertial_data.ddz );
 
     return( 0 );
 }
@@ -439,12 +506,23 @@ static int get_inertial_data( void )
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
+    double filtered_ddx = get_filtered_ddx( );
+    double filtered_ddy = get_filtered_ddy( );
+    double estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
+    double estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
+    double estimated_x  = filter_dx.s;
+    double estimated_y  = filter_dy.s;
     double yaw_rotated_roll;
     double yaw_rotated_pitch;
-#ifdef ENABLE_POSITION_CONTROLLERS
-    int16_t x_controlled_roll;
-    int16_t y_controlled_pitch;
-#endif
+
+    /* save values for logging */
+    sensor_data.x   = (int) estimated_x;
+    sensor_data.y   = (int) estimated_y;
+    sensor_data.dx  = (int) estimated_dx;
+    sensor_data.dy  = (int) estimated_dy;
+    sensor_data.ddx = (int) filtered_ddx;
+    sensor_data.ddy = (int) filtered_ddy;
+
     if( terminal_port_is_shut_down( ) )
     {
         altitude_mode = ALT_MODE_SHUTDOWN;
@@ -496,12 +574,15 @@ static int get_command_data( void )
     {
         terminal_port_get_command_data( &command_data );
     }
+
 #ifdef ENABLE_POSITION_CONTROLLERS
-#if 0
     if( terminal_port_is_test_mode( ) )
     {
-        command_data.roll  = (int16_t) -do_control( &ctrl_x, sensor_data.x, desired_x, sensor_data.dx, 0 );
-        command_data.pitch = (int16_t)  do_control( &ctrl_y, sensor_data.y, desired_y, sensor_data.dy, 0 );
+        command_data.roll  = (int16_t) -do_control( &ctrl_x,
+            estimated_x, offset_x + command_data.roll, estimated_dx, filtered_ddx );
+
+        command_data.pitch = (int16_t)  do_control( &ctrl_y,
+            estimated_y, offset_y + command_data.pitch, estimated_dy, filtered_ddy );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -523,46 +604,8 @@ static int get_command_data( void )
             command_data.pitch = -MAX_ROLL_PITCH;
         }
     }
-    else
-    {
-        desired_x = sensor_data.x;
-        desired_y = sensor_data.y;
-    }
 #endif
-    if( terminal_port_is_test_mode( ) )
-    {
-        x_controlled_roll  = (int16_t) -do_control( &ctrl_x, sensor_data.x, desired_x, sensor_data.dx, 0 );
-        y_controlled_pitch = (int16_t)  do_control( &ctrl_y, sensor_data.y, desired_y, sensor_data.dy, 0 );
 
-        if( x_controlled_roll > MAX_ROLL_PITCH )
-        {
-            x_controlled_roll = MAX_ROLL_PITCH;
-        }
-        else
-        if( x_controlled_roll < -MAX_ROLL_PITCH )
-        {
-            x_controlled_roll = -MAX_ROLL_PITCH;
-        }
-
-        if( y_controlled_pitch > MAX_ROLL_PITCH )
-        {
-            y_controlled_pitch = MAX_ROLL_PITCH;
-        }
-        else
-        if( y_controlled_pitch < -MAX_ROLL_PITCH )
-        {
-            y_controlled_pitch = -MAX_ROLL_PITCH;
-        }
-
-        command_data.roll  += x_controlled_roll;
-        command_data.pitch += y_controlled_pitch;
-    }
-    else
-    {
-        desired_x = sensor_data.x;
-        desired_y = sensor_data.y;
-    }
-#endif
     /* apply low-pass filtering to roll, pitch, and z commands */
     command_data.roll  = (int16_t) low_pass_filter_apply( &filter_cmd_roll,  command_data.roll );
     command_data.pitch = (int16_t) low_pass_filter_apply( &filter_cmd_pitch, command_data.pitch );
@@ -587,17 +630,19 @@ static void reset_controllers( void )
     ctrl_roll  .reset_zero( &ctrl_roll );
     ctrl_pitch .reset_zero( &ctrl_pitch );
     ctrl_yaw   .reset_zero( &ctrl_yaw );
-    ctrl_z     .reset_zero( &ctrl_z );
 #ifdef ENABLE_POSITION_CONTROLLERS
     ctrl_x     .reset_zero( &ctrl_x );
     ctrl_y     .reset_zero( &ctrl_y );
 #endif
+    ctrl_z     .reset_zero( &ctrl_z );
+
     uz_old = 0;
 }
 
 static inline void reset_filters( void )
 {
-    low_pass_filter_reset( &filter_sonar );
+    low_pass_filter_reset( &filter_ddx );
+    low_pass_filter_reset( &filter_ddy );
     low_pass_filter_reset( &filter_ddz );
     low_pass_filter_reset( &filter_cmd_roll );
     low_pass_filter_reset( &filter_cmd_pitch );
@@ -652,38 +697,21 @@ static int perform_ground_actions( void )
     return( 1 );
 }
 
-static inline double get_filtered_sonar( void )
-{
-    double vector_sonar =
-          SONAR_POS_ROLL  * sin_pitch *   -1
-        + SONAR_POS_PITCH * cos_pitch * sin_roll
-        + sensor_data.z   * cos_pitch * cos_roll;
-
-    return low_pass_filter_apply( &filter_sonar, vector_sonar );
-}
-
-static inline double get_filtered_ddz( void )
-{
-    double vector_ddz =
-          sensor_data.ddx * sin_pitch *   -1
-        + sensor_data.ddy * cos_pitch * sin_roll
-        + sensor_data.ddz * cos_pitch * cos_roll
-        + EARTH_GRAVITY;
-
-    return low_pass_filter_apply( &filter_ddz, vector_ddz );
-}
-
 static int compute_motor_signals( void )
 {
-    double filtered_z   = get_filtered_sonar( );
     double filtered_ddz = get_filtered_ddz( );
-    double estimated_dz = kalman_filter_apply( &filter_dz, filtered_z, -filtered_ddz );
-    double estimated_z  = filter_dz.z;
+    double estimated_dz = kalman_filter_apply( &filter_dz, sensor_data.z, -filtered_ddz );
+    double estimated_z  = filter_dz.s;
     double uroll        = 0;
     double upitch       = 0;
     double uyaw         = 0;
     double uz_new       = 0;
     int i, signals[4];
+
+    /* save values for logging */
+    sensor_data.z   = (int) estimated_z;
+    sensor_data.dz  = (int) estimated_dz;
+    sensor_data.ddz = (int) filtered_ddz;
 
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
@@ -744,9 +772,9 @@ static int compute_motor_signals( void )
     motor_offsets.pitch     = (int16_t)( upitch );
     motor_offsets.yaw       = (int16_t)( uyaw );
     motor_offsets.z         = (int16_t)( uz_new );
-
+#if 0
     trace_data.z            = (int16_t)( sensor_data.z );
-    trace_data.z_filtered   = (int16_t)( filtered_z * 1000.0 );
+    trace_data.z_filtered   = (int16_t)( sensor_data.z * 1000.0 );
     trace_data.z_estimated  = (int16_t)( estimated_z * 1000.0 );
     trace_data.dz_estimated = (int16_t)( estimated_dz * 1000.0 );
     trace_data.ddz          = (int16_t)( sensor_data.ddz );
@@ -758,7 +786,7 @@ static int compute_motor_signals( void )
     trace_data.uz           = (int16_t)( uz_new );
     trace_data.z_cmd        = (int16_t)( command_data.z );
 	trace_data.id           = javiator_data.id ;
-
+#endif
     uz_old                  = uz_new;
 
     return( 0 );
@@ -791,12 +819,12 @@ static int send_report_to_terminal( void )
         controller_state,
         altitude_mode );
 }
-
+#if 0
 static int send_trace_data_to_terminal( void )
 {
     return terminal_port_send_trace_data( &trace_data );
 }
-
+#endif
 static int wait_for_next_period( void )
 {
     if( sleep_until( next_period ) )
@@ -875,7 +903,7 @@ static int read_sensors( void )
     calc_stats( end - start, STAT_IMU );
 
 	/* IMPORTANT: yaw angle must be adjusted BEFORE
-	   computation of sine/cosine values */
+	   computation of sine and cosine values */
 	adjust_yaw_and_z( );
 
 	/* compute sine/cosine values */
@@ -967,7 +995,7 @@ int control_loop_run( void )
         start = get_utime( );
 
         send_report_to_terminal( );
-        send_trace_data_to_terminal( );
+        //send_trace_data_to_terminal( );
 
         end = get_utime( );
         calc_stats( end - start, STAT_TO_TERM );
@@ -992,11 +1020,12 @@ int control_loop_run( void )
     controller_destroy( &ctrl_roll );
     controller_destroy( &ctrl_pitch );
     controller_destroy( &ctrl_yaw );
-    controller_destroy( &ctrl_z );
 #ifdef ENABLE_POSITION_CONTROLLERS
     controller_destroy( &ctrl_x );
     controller_destroy( &ctrl_y );
 #endif
+    controller_destroy( &ctrl_z );
+
     median_filter_destroy( &filter_battery );
 
     print_stats( );

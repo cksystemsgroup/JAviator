@@ -76,13 +76,9 @@ static inline int set_idle_limit( const comm_packet_t *packet )
     return( 0 );
 }
 
-static inline int set_test_mode( const comm_packet_t *packet )
+static inline int set_test_mode( void )
 {
-    char *p = (char *) packet->payload;
-    test_mode = (int) p[0];
-
-    fprintf( stdout, "\nTEST MODE %s\n\n", test_mode ? "ON" : "OFF" );
-
+    test_mode = !test_mode;
     return( 0 );
 }
 
@@ -166,7 +162,7 @@ static int process_data_packet( const comm_packet_t *packet )
 			break;
 
         case COMM_TEST_MODE:
-            retval = set_test_mode( packet );
+            retval = set_test_mode( );
 			break;
 
         case COMM_SWITCH_MODE:
@@ -426,7 +422,7 @@ int terminal_port_send_motor_offsets( const command_data_t *offsets )
 
 int terminal_port_send_state_and_mode( const int state, const int mode )
 {
-    char buf[2] = { (char) state, (char) mode };
+    char buf[2] = { (char)( state | test_mode ), (char)( mode ) };
     comm_packet_t packet;
 
     packet.type     = COMM_STATE_MODE;
@@ -462,8 +458,8 @@ int terminal_port_send_report(
         command_data_to_stream( offsets, &buf[i], COMMAND_DATA_SIZE );
         i += COMMAND_DATA_SIZE;
 
-        buf[i++] = (char) state;
-        buf[i++] = (char) mode;
+        buf[i++] = (char)( state | test_mode )
+        buf[i++] = (char)( mode );
 
         packet.type     = COMM_GROUND_REPORT;
         packet.size     = i;

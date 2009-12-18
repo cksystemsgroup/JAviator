@@ -67,7 +67,7 @@ public class InfoDialog extends Dialog
     /*************************************************************************/
 
     private static final String NOT_USED  = "(not used)";
-    private static final String ACTIVATE_ = "Activate ";
+    private static final String RELEASE_  = "Release ";
 
     private static final String[] KEYBOARD_LIST =
     {
@@ -79,30 +79,32 @@ public class InfoDialog extends Dialog
         ControlTerminal.YAW + " right",                                          "D",
         "Ascend",                                                                "W",
         "Descend",                                                               "S",
+        ControlTerminal.TOGGLE_ + "Test" + ControlTerminal._MODE,                "T",
         ControlTerminal.KEY_ASSISTANCE,                                          "F1",
         ControlTerminal.ABOUT_TERMINAL,                                          "F2",
-        NOT_USED,                                                                "F3",
-        "Log" + ControlTerminal._DATA,                                           "F4",
+        ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,                      "F3",
+        ControlTerminal.TOGGLE_ + ControlTerminal.LOGGING,                       "F4",
         ControlTerminal.JOYSTICK + ControlTerminal._MODE,                        "F5",
         ControlTerminal.UDP_ + ControlTerminal.CONNECTION,                       "F6",
         ControlTerminal.CONNECT_TO + ControlTerminal._HELI,                      "F7",
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "F8",
         ControlTerminal.SHUT_DOWN + ControlTerminal._HELI,                       "F9",
         ControlTerminal.PORT_SETTINGS,                                           "F10",
-        ControlTerminal.SET_PARAMETERS,                                          "F12"
+        ControlTerminal.SET_PARAMETERS,                                          "F11",
+        ControlTerminal.RESET_NEEDLES,                                           "F12"
     };
 
     private static final String[] JOYSTICK_LIST =
     {
-    	ACTIVATE_ + "Throttle",                                                  "1",
-    	ACTIVATE_ + ControlTerminal.YAW,                                         "2",
+    	RELEASE_ + "Throttle",                                                   "1",
+    	RELEASE_ + ControlTerminal.YAW,                                          "2",
         NOT_USED,                                                                "3",
         NOT_USED,                                                                "4",
         NOT_USED,                                                                "5",
         NOT_USED,                                                                "6",
-        ControlTerminal.SHUT_DOWN + ControlTerminal._HELI,                       "7",
+        ControlTerminal.TOGGLE_ + "Test" + ControlTerminal._MODE,                "7",
         NOT_USED,                                                                "8",
-        NOT_USED,                                                                "9",
+        ControlTerminal.RESET_NEEDLES,                                           "9",
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "10"
     };
 
