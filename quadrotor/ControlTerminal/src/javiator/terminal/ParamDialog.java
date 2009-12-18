@@ -30,8 +30,6 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Color;
-import java.awt.Point;
-import java.awt.GraphicsEnvironment;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -70,7 +68,7 @@ public class ParamDialog extends Dialog
 
     private static final String[] PARAMETERS     = { "Kp", "Ki", "Kd", "Kdd" };
     private static final int      SCALING_FACTOR = 1000;
-    private static final int      MOTION_DELAY   = 50; // ms
+    private static final int      MOTION_DELAY   = 50; /* ms */
     private static final int      PARAM_STEP     = 1;
 
     private static ParamDialog    Instance       = null;
@@ -121,9 +119,16 @@ public class ParamDialog extends Dialog
             }
         } );
 
-        Point center = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getCenterPoint( );
-        setLocation( center.x - ( getWidth( ) >> 1 ), center.y - ( getHeight( ) >> 1 ) );
-        setResizable( false );
+        if( parent.getX( ) < getWidth( ) )
+        {
+            setLocation( parent.getX( ) + parent.getWidth( ), parent.getY( ) );
+        }
+        else
+        {
+            setLocation( parent.getX( ) - getWidth( ), parent.getY( ) );
+        }
+
+        setSize( getWidth( ), parent.getHeight( ) );
         setVisible( true );
 
         motion = new MotionThread( );
@@ -345,4 +350,4 @@ public class ParamDialog extends Dialog
     }
 }
 
-// End of file.
+/* End of file */
