@@ -61,11 +61,11 @@ am_control_OBJECTS = communication.$(OBJEXT) controller.$(OBJEXT) \
 	javiator_port.$(OBJEXT) kalman_filter.$(OBJEXT) \
 	low_pass_filter.$(OBJEXT) main.$(OBJEXT) \
 	median_filter.$(OBJEXT) pid_controller.$(OBJEXT) \
-	pidd_controller.$(OBJEXT) serial_channel.$(OBJEXT) \
-	socket_channel.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
+	pidd_controller.$(OBJEXT) rotation_matrix.$(OBJEXT) \
+	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
 	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
 	terminal_port.$(OBJEXT) trace_data.$(OBJEXT) \
-	us_timer.$(OBJEXT)
+	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -206,13 +206,14 @@ control_SOURCES = \
     median_filter.c \
     pid_controller.c \
     pidd_controller.c \
+    rotation_matrix.c \
     serial_channel.c \
     socket_channel.c \
-    udp_socket_channel.c \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \
     trace_data.c \
+    udp_socket_channel.c \
     us_timer.c
 
 libcontroller_platform_a_SOURCES = 
@@ -302,6 +303,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/median_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pid_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pidd_controller.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rotation_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_channel.Po@am__quote@

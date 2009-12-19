@@ -21,13 +21,14 @@ control_SOURCES = \
     median_filter.c \
     pid_controller.c \
     pidd_controller.c \
+    rotation_matrix.c \
     serial_channel.c \
     socket_channel.c \
-    udp_socket_channel.c \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \
     trace_data.c \
+    udp_socket_channel.c \
     us_timer.c
 
 libcontroller_platform_a_SOURCES =

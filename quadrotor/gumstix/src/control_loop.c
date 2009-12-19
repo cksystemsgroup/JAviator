@@ -45,6 +45,7 @@
 #include "motor_signals.h"
 #include "ctrl_params.h"
 #include "trace_data.h"
+#include "rotation_matrix.h"
 #include "low_pass_filter.h"
 #include "median_filter.h"
 #include "kalman_filter.h"
@@ -81,90 +82,80 @@
 #define MAX_ROLL_PITCH          100                 /* [mrad] */
 
 /* scaling constants */
-#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units]  --> [mrad] (2*PI*1000 mrad/2^16) */
-#define FACTOR_ANGULAR_RATE     8500.0/32768.0      /* [units]  --> [mrad/s] */
-#define FACTOR_ANGULAR_ACCEL    8500.0/32768.0*76.3 /* [units]  --> [mrad/s^2] */
-#define FACTOR_LINEAR_ACCEL     9810.0/4681.0       /* [units]  --> [mm/s^2] (4681=32768000/7000) */
-#define FACTOR_SONAR            2000.0/1024.0       /* [0-5V]   --> [0-2000mm] */
-#define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]   --> [0-18000mV] */
-#define FACTOR_PARAMETER        0.001               /* [rad]    --> [mrad] */
+#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
+#define FACTOR_ANGULAR_RATE     8500.0/32768.0      /* [units] --> [mrad/s] */
+#define FACTOR_ANGULAR_ACCEL    8500.0/32768.0*76.3 /* [units] --> [mrad/s^2] */
+#define FACTOR_LINEAR_ACCEL     9810.0/4681.0       /* [units] --> [mm/s^2] (4681=32768000/7000) */
+#define FACTOR_SONAR            2000.0/1024.0       /* [0-5V]  --> [0-2000mm] */
+#define FACTOR_BATTERY          18000.0/1024.0      /* [0-5V]  --> [0-18000mV] */
+#define FACTOR_PARAMETER        0.001               /* [mrad]  --> [rad] */
 
 /* control loop parameters */
-static volatile int running;
-static int          ms_period;
-static int          us_period;
-static int          compute_z;
-static int          controller_state;
-static int          altitude_mode;
-static long long    next_period;
-static double       uz_old;
+static volatile int             running;
+static int                      ms_period;
+static int                      us_period;
+static int                      compute_z;
+static int                      controller_state;
+static int                      altitude_mode;
+static long long                next_period;
+#ifdef ENABLE_POSITION_CONTROLLERS
+static double                   offset_x;
+static double                   offset_y;
+#endif
+static double                   uz_old;
 
-/* motor speed up threshold */
-static int motor_revving_add = 50;
-static int base_motor_speed  = 8000;
-static int revving_step      = 0;
+/* motor speed-up parameters */
+static int                      motor_revving_add = 50;
+static int                      base_motor_speed  = 8000;
+static int                      revving_step      = 0;
 
 /* controller objects */
-static struct controller ctrl_roll;
-static struct controller ctrl_pitch;
-static struct controller ctrl_yaw;
+static struct controller        ctrl_roll;
+static struct controller        ctrl_pitch;
+static struct controller        ctrl_yaw;
 #ifdef ENABLE_POSITION_CONTROLLERS
-static struct controller ctrl_x;
-static struct controller ctrl_y;
+static struct controller        ctrl_x;
+static struct controller        ctrl_y;
 #endif
-static struct controller ctrl_z;
+static struct controller        ctrl_z;
 
 /* filter objects */
-static low_pass_filter_t    filter_ddx;
-static low_pass_filter_t    filter_ddy;
-static low_pass_filter_t    filter_ddz;
-static low_pass_filter_t    filter_cmd_roll;
-static low_pass_filter_t    filter_cmd_pitch;
-static low_pass_filter_t    filter_cmd_z;
-static median_filter_t      filter_battery;
-static kalman_filter_t      filter_dx;
-static kalman_filter_t      filter_dy;
-static kalman_filter_t      filter_dz;
+static low_pass_filter_t        filter_ddx;
+static low_pass_filter_t        filter_ddy;
+static low_pass_filter_t        filter_ddz;
+static low_pass_filter_t        filter_cmd_roll;
+static low_pass_filter_t        filter_cmd_pitch;
+static low_pass_filter_t        filter_cmd_z;
+static median_filter_t          filter_battery;
+static kalman_filter_t          filter_dx;
+static kalman_filter_t          filter_dy;
+static kalman_filter_t          filter_dz;
 
-/* sensor and input data */
-static command_data_t   command_data;
-static javiator_data_t  javiator_data;
-static inertial_data_t  inertial_data;
-static sensor_data_t    sensor_data;
-static motor_signals_t  motor_signals;
-static command_data_t   motor_offsets;
-static trace_data_t     trace_data;
+/* data structures */
+static command_data_t           command_data;
+static javiator_data_t          javiator_data;
+static inertial_data_t          inertial_data;
+static sensor_data_t            sensor_data;
+static motor_signals_t          motor_signals;
+static command_data_t           motor_offsets;
+static trace_data_t             trace_data;
 
-static double sin_roll  = 0;
-static double cos_roll  = 0;
-static double sin_pitch = 0;
-static double cos_pitch = 0;
-static double sin_yaw   = 0;
-static double cos_yaw   = 0;
-#ifdef ENABLE_POSITION_CONTROLLERS
-static double offset_x  = 0;
-static double offset_y  = 0;
-#endif
-/* function pointer */
-static void signal_handler( int num );
-static void int_handler( int num );
+/* controller statistics */
+#define NUM_STATS               9
+#define STAT_IMU                0
+#define STAT_TO_JAV             1
+#define STAT_FROM_JAV           2
+#define STAT_FROM_TERM          3
+#define STAT_TO_TERM            4
+#define STAT_CONTROL            5
+#define STAT_SLEEP              6
+#define STAT_READ               7
+#define STAT_ALL                8
 
-#define NUM_STATS        9
-#define STAT_IMU         0
-#define STAT_TO_JAV      1
-#define STAT_FROM_JAV    2
-#define STAT_FROM_TERM   3
-#define STAT_TO_TERM     4
-#define STAT_CONTROL     5
-#define STAT_SLEEP       6
-#define STAT_READ        7
-#define STAT_ALL         8
-
-
-static int loop_count = 0;
-static long long stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
-static long long max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
-static char *stats_name[ NUM_STATS ] =
+static int                      loop_count = 0;
+static long long                stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
+static long long                max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
+static char *                   stats_name[ NUM_STATS ] =
 {
     "IMU           ",
     "to javiator   ",
@@ -177,12 +168,16 @@ static char *stats_name[ NUM_STATS ] =
     "complete loop "
 };
 
-static void signal_handler( int num );
-static void print_stats( void );
+/* function pointers */
+static void                     signal_handler( int num );
+static void                     int_handler( int num );
+
+/* forward declaration */
+static void                     print_stats( void );
 
 
 /****************************************
- *    control loop code                 *
+ *          Control Loop Code           *
  ****************************************/
 
 static inline void set_ctrl_params( struct controller *ctrl,
@@ -212,6 +207,8 @@ int control_loop_setup( int period, int control_z )
     controller_state = 0;
     altitude_mode    = ALT_MODE_GROUND;
     next_period      = 0;
+    offset_x         = 0;
+    offset_y         = 0;
     uz_old           = 0;
     act.sa_handler   = signal_handler;
 	act.sa_handler   = int_handler;
@@ -325,68 +322,52 @@ static void get_control_params( void )
     }
 }
 
-static inline int get_corrected_x( void )
+static inline double get_corrected_x( void )
 {
-    double converted_x = atoi( (const char *) javiator_data.x_pos );
-    double vector_x =
-          (X_LASER_POS_ROLL  + converted_x) * cos_pitch * cos_yaw
-        +  X_LASER_POS_PITCH * (cos_yaw * sin_pitch * sin_roll - cos_roll * sin_yaw)
-        +  X_LASER_POS_YAW   * (cos_roll * cos_yaw * sin_pitch + sin_roll * sin_yaw);
-
-    return( (int) vector_x );
+    return( rotation_matrix_rotate_x(
+        X_LASER_POS_ROLL + atoi( (const char *) javiator_data.x_pos ),
+        X_LASER_POS_PITCH,
+        X_LASER_POS_YAW ) );
 }
 
-static inline int get_corrected_y( void )
+static inline double get_corrected_y( void )
 {
-    double converted_y = atoi( (const char *) javiator_data.y_pos );
-    double vector_y =
-           Y_LASER_POS_ROLL  * cos_pitch * sin_yaw
-        + (Y_LASER_POS_PITCH + converted_y) * (sin_pitch * sin_roll * sin_yaw + cos_roll * cos_yaw)
-        +  Y_LASER_POS_YAW   * (cos_roll * sin_pitch * sin_yaw - cos_yaw * sin_roll);
-
-    return( (int) vector_y );
+    return( rotation_matrix_rotate_y(
+        Y_LASER_POS_ROLL,
+        Y_LASER_POS_PITCH + atoi( (const char *) javiator_data.y_pos ),
+        Y_LASER_POS_YAW ) );
 }
 
-static inline int get_corrected_z( void )
+static inline double get_corrected_z( void )
 {
-    double converted_z = FACTOR_SONAR * javiator_data.sonar;
-    double vector_z =
-        -  SONAR_POS_ROLL  * sin_pitch
-        +  SONAR_POS_PITCH * cos_pitch * sin_roll
-        + (SONAR_POS_YAW   + converted_z) * cos_pitch * cos_roll;
-
-    return( (int) vector_z );
+    return( rotation_matrix_rotate_z(
+        SONAR_POS_ROLL,
+        SONAR_POS_PITCH,
+        SONAR_POS_YAW + FACTOR_SONAR * javiator_data.sonar ) );
 }
 
 static inline double get_filtered_ddx( void )
 {
-    double vector_ddx =
-          sensor_data.ddx * cos_pitch * cos_yaw
-        + sensor_data.ddy * (cos_yaw * sin_pitch * sin_roll - cos_roll * sin_yaw)
-        + sensor_data.ddz * (cos_roll * cos_yaw * sin_pitch + sin_roll * sin_yaw);
-
-    return low_pass_filter_apply( &filter_ddx, vector_ddx );
+    return low_pass_filter_apply( &filter_ddx, rotation_matrix_rotate_x(
+        sensor_data.ddx,
+        sensor_data.ddy,
+        sensor_data.ddz ) );
 }
 
 static inline double get_filtered_ddy( void )
 {
-    double vector_ddy =
-          sensor_data.ddx * cos_pitch * sin_yaw
-        + sensor_data.ddy * (sin_pitch * sin_roll * sin_yaw + cos_roll * cos_yaw)
-        + sensor_data.ddz * (cos_roll * sin_pitch * sin_yaw - cos_yaw * sin_roll);
-
-    return low_pass_filter_apply( &filter_ddy, vector_ddy );
+    return low_pass_filter_apply( &filter_ddy, rotation_matrix_rotate_y(
+        sensor_data.ddx,
+        sensor_data.ddy,
+        sensor_data.ddz ) );
 }
 
 static inline double get_filtered_ddz( void )
 {
-    double vector_ddz =
-        - sensor_data.ddx * sin_pitch
-        + sensor_data.ddy * cos_pitch * sin_roll
-        + sensor_data.ddz * cos_pitch * cos_roll
-        + EARTH_GRAVITY;
-
-    return low_pass_filter_apply( &filter_ddz, vector_ddz );
+    return low_pass_filter_apply( &filter_ddz, rotation_matrix_rotate_z(
+        sensor_data.ddx,
+        sensor_data.ddy,
+        sensor_data.ddz ) + EARTH_GRAVITY );
 }
 
 static void adjust_yaw_and_z( void )
@@ -449,9 +430,9 @@ static int get_javiator_data( void )
     old_z = javiator_data.sonar;
 
     /* copy corrected positions */
-    sensor_data.x = get_corrected_x( );
-    sensor_data.y = get_corrected_y( );
-    sensor_data.z = get_corrected_z( );
+    sensor_data.x = (int) get_corrected_x( );
+    sensor_data.y = (int) get_corrected_y( );
+    sensor_data.z = (int) get_corrected_z( );
 
     /* scale and filter battery level */
     sensor_data.battery = (int) median_filter_apply( &filter_battery,
@@ -512,8 +493,6 @@ static int get_command_data( void )
     double estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
     double estimated_x  = filter_dx.s;
     double estimated_y  = filter_dy.s;
-    double yaw_rotated_roll;
-    double yaw_rotated_pitch;
 
     /* save values for logging */
     sensor_data.x   = (int) estimated_x;
@@ -606,18 +585,17 @@ static int get_command_data( void )
     }
 #endif
 
-    /* apply low-pass filtering to roll, pitch, and z commands */
+    /* apply low-pass filtering to roll, pitch, and z command */
     command_data.roll  = (int16_t) low_pass_filter_apply( &filter_cmd_roll,  command_data.roll );
     command_data.pitch = (int16_t) low_pass_filter_apply( &filter_cmd_pitch, command_data.pitch );
     command_data.z     = (int16_t) low_pass_filter_apply( &filter_cmd_z,     command_data.z );
 
-    /* apply rotation matrix to roll and pitch commands */
-    yaw_rotated_roll   = command_data.roll * cos_yaw + command_data.pitch * sin_yaw;
-    yaw_rotated_pitch  = command_data.roll * sin_yaw - command_data.pitch * cos_yaw;
+    /* rotate roll and pitch command depending on yaw angle */
+    command_data.roll  = (int16_t) rotation_matrix_rotate_x(
+        command_data.roll, command_data.pitch, command_data.yaw );
 
-    /* replace original commands with rotated commands */
-    command_data.roll  = (int16_t)  yaw_rotated_roll;
-    command_data.pitch = (int16_t) -yaw_rotated_pitch;
+    command_data.pitch = (int16_t) rotation_matrix_rotate_y(
+        command_data.roll, command_data.pitch, command_data.yaw );
 
     /* check for new control parameters */
     get_control_params( );
@@ -741,7 +719,7 @@ static int compute_motor_signals( void )
 	    }
         else
         {
-            uz_new = command_data.z;
+            uz_new = command_data.z * 16;
         }
     }
 
@@ -903,16 +881,14 @@ static int read_sensors( void )
     calc_stats( end - start, STAT_IMU );
 
 	/* IMPORTANT: yaw angle must be adjusted BEFORE
-	   computation of sine and cosine values */
+	   updating the rotation matrix */
 	adjust_yaw_and_z( );
 
-	/* compute sine/cosine values */
-	sin_roll  = sin( sensor_data.roll / 1000.0 );
-	cos_roll  = cos( sensor_data.roll / 1000.0 );
-	sin_pitch = sin( sensor_data.pitch / 1000.0 );
-	cos_pitch = cos( sensor_data.pitch / 1000.0 );
-	sin_yaw   = sin( sensor_data.yaw / 1000.0 );
-	cos_yaw   = cos( sensor_data.yaw / 1000.0 );
+	/* IMPORTANT: all angles must be given in [rad] */
+    rotation_matrix_update(
+        sensor_data.roll  / 1000.0,
+        sensor_data.pitch / 1000.0,
+        sensor_data.yaw   / 1000.0 );
 
 	return( 0 );
 }
