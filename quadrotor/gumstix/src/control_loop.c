@@ -69,12 +69,12 @@
 #define SONAR_POS_ROLL         -95                  /* [mm] sonar position on roll axis */
 #define SONAR_POS_PITCH        -95                  /* [mm] sonar position on pitch axis */
 #define SONAR_POS_YAW           55                  /* [mm] sonar position on yaw axis */
-#define X_LASER_POS_ROLL        80                  /* [mm] x-laser position on roll axis */
-#define X_LASER_POS_PITCH      -30                  /* [mm] x-laser position on pitch axis */
-#define X_LASER_POS_YAW        -80                  /* [mm] x-laser position on yaw axis */
-#define Y_LASER_POS_ROLL       -75                  /* [mm] y-laser position on roll axis */
-#define Y_LASER_POS_PITCH       60                  /* [mm] y-laser position on pitch axis */
-#define Y_LASER_POS_YAW        -80                  /* [mm] y-laser position on yaw axis */
+#define X_LASER_POS_ROLL       -75                  /* [mm] y-laser position on roll axis */
+#define X_LASER_POS_PITCH       60                  /* [mm] y-laser position on pitch axis */
+#define X_LASER_POS_YAW        -80                  /* [mm] y-laser position on yaw axis */
+#define Y_LASER_POS_ROLL        80                  /* [mm] x-laser position on roll axis */
+#define Y_LASER_POS_PITCH      -30                  /* [mm] x-laser position on pitch axis */
+#define Y_LASER_POS_YAW        -80                  /* [mm] x-laser position on yaw axis */
 #define EARTH_GRAVITY           9810                /* [mm/s^2] gravitational acceleration */
 
 /* controller parameters */
@@ -563,11 +563,11 @@ static int get_command_data( void )
 #ifdef ENABLE_POSITION_CONTROLLERS
     if( terminal_port_is_test_mode( ) )
     {
-        command_data.roll  = (int16_t) -do_control( &ctrl_x,
-            estimated_x, offset_x /*+ command_data.roll*/, estimated_dx, filtered_ddx );
+        command_data.roll  = (int16_t) -do_control( &ctrl_y,
+            estimated_y, offset_y /*+ command_data.roll*/, estimated_dy, filtered_ddy );
 
-        command_data.pitch = (int16_t)  do_control( &ctrl_y,
-            estimated_y, offset_y /*+ command_data.pitch*/, estimated_dy, filtered_ddy );
+        command_data.pitch = (int16_t)  do_control( &ctrl_x,
+            estimated_x, offset_x /*+ command_data.pitch*/, estimated_dx, filtered_ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
