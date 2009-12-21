@@ -600,16 +600,16 @@ static int get_command_data( void )
     }
 #endif
 
-    command_data.z     = (int16_t) low_pass_filter_apply(
+    command_data.z = (int16_t) low_pass_filter_apply(
         &filter_cmd_z, command_data.z );
-
+#if 0
     /* rotate roll and pitch command depending on yaw angle */
     command_data.roll  = (int16_t) rotation_matrix_rotate_x(
         command_data.roll, command_data.pitch, command_data.yaw );
 
     command_data.pitch = (int16_t) rotation_matrix_rotate_y(
         command_data.roll, command_data.pitch, command_data.yaw );
-
+#endif
     /* check for new control parameters */
     get_control_params( );
 
