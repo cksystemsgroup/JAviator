@@ -62,7 +62,7 @@
 #define FILTER_GAIN_DDX         0.1
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
-#define FILTER_GAIN_CMD         0.1
+#define FILTER_GAIN_CMD         0.2
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
@@ -79,7 +79,7 @@
 
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
-#define MAX_ROLL_PITCH          100                 /* [mrad] */
+#define MAX_ROLL_PITCH          500                 /* [mrad] */
 
 /* scaling constants */
 #define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
@@ -207,8 +207,10 @@ int control_loop_setup( int period, int control_z )
     controller_state = 0;
     altitude_mode    = ALT_MODE_GROUND;
     next_period      = 0;
+#ifdef ENABLE_POSITION_CONTROLLERS
     offset_x         = 0;
     offset_y         = 0;
+#endif
     uz_old           = 0;
     act.sa_handler   = signal_handler;
 	act.sa_handler   = int_handler;
@@ -487,6 +489,7 @@ static int get_inertial_data( void )
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
+#ifdef ENABLE_POSITION_CONTROLLERS
     double filtered_ddx = get_filtered_ddx( );
     double filtered_ddy = get_filtered_ddy( );
     double estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
@@ -501,6 +504,7 @@ static int get_command_data( void )
     sensor_data.dy  = (int) estimated_dy;
     sensor_data.ddx = (int) filtered_ddx;
     sensor_data.ddy = (int) filtered_ddy;
+#endif
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -558,10 +562,10 @@ static int get_command_data( void )
     if( terminal_port_is_test_mode( ) )
     {
         command_data.roll  = (int16_t) -do_control( &ctrl_x,
-            estimated_x, offset_x + command_data.roll, estimated_dx, filtered_ddx );
+            estimated_x, offset_x /*+ command_data.roll*/, estimated_dx, filtered_ddx );
 
         command_data.pitch = (int16_t)  do_control( &ctrl_y,
-            estimated_y, offset_y + command_data.pitch, estimated_dy, filtered_ddy );
+            estimated_y, offset_y /*+ command_data.pitch*/, estimated_dy, filtered_ddy );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -583,12 +587,21 @@ static int get_command_data( void )
             command_data.pitch = -MAX_ROLL_PITCH;
         }
     }
+    else
+    {
+#endif
+    /* apply low-pass filtering to roll, pitch, and z command */
+    command_data.roll  = (int16_t) low_pass_filter_apply(
+        &filter_cmd_roll, command_data.roll );
+
+    command_data.pitch = (int16_t) low_pass_filter_apply(
+        &filter_cmd_pitch, command_data.pitch );
+#ifdef ENABLE_POSITION_CONTROLLERS
+    }
 #endif
 
-    /* apply low-pass filtering to roll, pitch, and z command */
-    command_data.roll  = (int16_t) low_pass_filter_apply( &filter_cmd_roll,  command_data.roll );
-    command_data.pitch = (int16_t) low_pass_filter_apply( &filter_cmd_pitch, command_data.pitch );
-    command_data.z     = (int16_t) low_pass_filter_apply( &filter_cmd_z,     command_data.z );
+    command_data.z     = (int16_t) low_pass_filter_apply(
+        &filter_cmd_z, command_data.z );
 
     /* rotate roll and pitch command depending on yaw angle */
     command_data.roll  = (int16_t) rotation_matrix_rotate_x(
