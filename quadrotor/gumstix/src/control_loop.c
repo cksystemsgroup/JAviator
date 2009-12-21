@@ -496,7 +496,11 @@ static int get_command_data( void )
     double estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
     double estimated_x  = filter_dx.s;
     double estimated_y  = filter_dy.s;
+#endif
+    double rotated_roll;
+    double rotated_pitch;
 
+#ifdef ENABLE_POSITION_CONTROLLERS
     /* save values for logging */
     sensor_data.x   = (int) estimated_x;
     sensor_data.y   = (int) estimated_y;
@@ -514,7 +518,6 @@ static int get_command_data( void )
         if( sensors_enabled )
         {
             javiator_port_send_enable_sensors( 0 );
-			inertial_port_send_stop( );
             sensors_enabled = 0;
         }
     }
@@ -543,7 +546,6 @@ static int get_command_data( void )
                 if( !sensors_enabled )
                 {
                     javiator_port_send_enable_sensors( 1 );
-					inertial_port_send_start( );
                     sensors_enabled = 1;
                 }
                 break;
@@ -599,17 +601,20 @@ static int get_command_data( void )
 #ifdef ENABLE_POSITION_CONTROLLERS
     }
 #endif
-
     command_data.z = (int16_t) low_pass_filter_apply(
         &filter_cmd_z, command_data.z );
-#if 0
-    /* rotate roll and pitch command depending on yaw angle */
-    command_data.roll  = (int16_t) rotation_matrix_rotate_x(
-        command_data.roll, command_data.pitch, command_data.yaw );
 
-    command_data.pitch = (int16_t) rotation_matrix_rotate_y(
-        command_data.roll, command_data.pitch, command_data.yaw );
-#endif
+    /* rotate roll and pitch command depending on yaw angle */
+    rotated_roll  = rotation_matrix_rotate_x( command_data.roll,
+        command_data.pitch, command_data.yaw );
+
+    rotated_pitch = rotation_matrix_rotate_y( command_data.roll,
+        command_data.pitch, command_data.yaw );
+
+    /* replace original commands with rotated commands */
+    command_data.roll  = (int16_t) rotated_roll;
+    command_data.pitch = (int16_t) rotated_pitch;
+
     /* check for new control parameters */
     get_control_params( );
 
