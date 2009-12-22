@@ -78,29 +78,19 @@ public class ControlTerminal extends Frame
 
     public static final String  LOG_FILE_NAME = "traces/laser_test_.csv";
 
-    public static final String  DATA_STRING   = "roll,pitch,yaw," +
-    											"droll,dpitch,dyaw," +
-    											"ddroll,ddpitch,ddyaw," +
-    											"ddx,ddy,ddz," +
-    											"x,y,z," +
-    											"dx,dy,dz," +
-    											"front,right,rear,left," +
-    											"croll,cpitch,cyaw,cz";
-/*
-    public static final String  DATA_STRING   = "z," +
-                                                "z fil," +
-                                                "z est," +
-                                                "dz est," +
-                                                "ddz," +
-                                                "ddz fil," +
-                                                "p-term," +
-                                                "i-term," +
-                                                "d-term," +
-                                                "dd-term," +
-                                                "uz," +
-                                                "z cmd," +
-                                                "ID";
-*/
+    public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
+											    "roll,pitch,yaw," +
+											    "droll,dpitch,dyaw," +
+											    "ddroll,ddpitch,ddyaw," +
+											    "ddx,ddy,ddz," +
+											    "front,right,rear,left," +
+											    "u-roll,u-pitch,u-yaw,u-z," +
+											    "f-roll,f-pitch," +
+											    "y-roll,x-pitch," +
+											    "p(uy),i(uy),d(uy),dd(uy)," +
+											    "p(ux),i(ux),d(ux),dd(ux)," +
+											    "--,--,--,--";
+
     public ControlTerminal( )
     {
     	initWindow( );
@@ -362,64 +352,73 @@ public class ControlTerminal extends Frame
         
         positionX.setText( NIL + data.x );
         positionY.setText( NIL + data.y );
-
-        if( logData && logFile != null )
-        {
-        	MotorSignals sig = digitalMeter.getMotorSignals( );
-            CommandData  cmd = getCommandData( );
-	        String       csv = NIL +
-	            (short) data.roll   + ',' + (short) data.pitch   + ',' + (short) data.yaw   + ',' +
-	            (short) data.droll  + ',' + (short) data.dpitch  + ',' + (short) data.dyaw  + ',' +
-	            (short) data.ddroll + ',' + (short) data.ddpitch + ',' + (short) data.ddyaw + ',' +
-	            (short) data.ddx    + ',' + (short) data.ddy     + ',' + (short) data.ddz   + ',' +
-	            (short) data.x      + ',' + (short) data.y       + ',' + (short) data.z     + ',' +
-	            (short) data.dx     + ',' + (short) data.dy      + ',' + (short) data.dz    + ',' +
-	            (short) sig.front   + ',' + (short) sig.right    + ',' +
-	            (short) sig.rear    + ',' + (short) sig.left     + ',' +
-	            (short) cmd.roll    + ',' + (short) cmd.pitch    + ',' +
-	            (short) cmd.yaw     + ',' + (short) cmd.z        + '\n';
-
-	        try
-	        {
-	            logFile.write( csv );
-	        }
-	        catch( Exception e )
-	        {
-	            System.err.println( "ControlTerminal.setSensorData: " + e.getMessage( ) );
-	        }
-        }
     }
 
-    public void setTraceData( TraceData data )
+    public void writeLogData( CommandData  commandData,
+                              SensorData   sensorData,
+                              MotorSignals motorSignals,
+                              CommandData motorOffsets,
+                              TraceData    traceData )
     {
-/*
         if( logData && logFile != null )
         {
-	        String csv = NIL +
-	            (short) data.z            + ',' +
-	            (short) data.z_filtered   + ',' +
-	            (short) data.z_estimated  + ',' +
-	            (short) data.dz_estimated + ',' +
-	            (short) data.ddz          + ',' +
-	            (short) data.ddz_filtered + ',' +
-	            (short) data.p_term       + ',' +
-	            (short) data.i_term       + ',' +
-	            (short) data.d_term       + ',' +
-	            (short) data.dd_term      + ',' +
-	            (short) data.uz           + ',' +
-	            (short) data.z_cmd        + ',' + 
-	            (short) data.id           + '\n';
+            String csv
+			/* Command Data */
+			= NIL + (short) commandData.roll
+			+ ',' + (short) commandData.pitch
+			+ ',' + (short) commandData.yaw
+			+ ',' + (short) commandData.z
+			/* Sensor Data */
+			+ ',' + (short) sensorData.roll
+			+ ',' + (short) sensorData.pitch
+			+ ',' + (short) sensorData.yaw
+			+ ',' + (short) sensorData.droll
+			+ ',' + (short) sensorData.dpitch
+			+ ',' + (short) sensorData.dyaw
+			+ ',' + (short) sensorData.ddroll
+			+ ',' + (short) sensorData.ddpitch
+			+ ',' + (short) sensorData.ddyaw
+			+ ',' + (short) sensorData.ddx
+			+ ',' + (short) sensorData.ddy
+			+ ',' + (short) sensorData.ddz
+			/* Motor Signals */
+			+ ',' + (short) motorSignals.front
+			+ ',' + (short) motorSignals.right
+			+ ',' + (short) motorSignals.rear
+			+ ',' + (short) motorSignals.left
+			/* Motor Offsets */
+			+ ',' + (short) motorOffsets.roll
+			+ ',' + (short) motorOffsets.pitch
+			+ ',' + (short) motorOffsets.yaw
+			+ ',' + (short) motorOffsets.z
+			/* Trace Data */
+			+ ',' + (short) traceData.value_1
+			+ ',' + (short) traceData.value_2
+			+ ',' + (short) traceData.value_3
+			+ ',' + (short) traceData.value_4
+			+ ',' + (short) traceData.value_5
+			+ ',' + (short) traceData.value_6
+			+ ',' + (short) traceData.value_7
+			+ ',' + (short) traceData.value_8
+			+ ',' + (short) traceData.value_9
+			+ ',' + (short) traceData.value_10
+			+ ',' + (short) traceData.value_11
+			+ ',' + (short) traceData.value_12
+			+ ',' + (short) traceData.value_13
+			+ ',' + (short) traceData.value_14
+			+ ',' + (short) traceData.value_15
+			+ ',' + (short) traceData.value_16
+			+ '\n';
 
-	        try
-	        {
-	            logFile.write( csv );
-	        }
-	        catch( Exception e )
-	        {
-	            System.err.println( "ControlTerminal.setTraceData: " + e.getMessage( ) );
-	        }
+			try
+			{
+				logFile.write( csv );
+			}
+			catch( Exception e )
+			{
+				System.err.println( "ControlTerminal.writeLogData: " + e.getMessage( ) );
+			}
         }
-*/
     }
 
     public void resetMeterNeedles( )
@@ -1324,7 +1323,7 @@ public class ControlTerminal extends Frame
 	        try
 	        {
 	            logFile = new FileWriter( LOG_FILE_NAME, true );
-	            logFile.write( DATA_STRING + "\n" );
+	            logFile.write( LOG_TITLE_STR + "\n" );
 	            logDataLabel.setForeground( Color.RED );
 	        }
 	        catch( Exception e )

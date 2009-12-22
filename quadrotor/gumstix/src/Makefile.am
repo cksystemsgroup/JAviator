@@ -27,7 +27,6 @@ control_SOURCES = \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \
-    trace_data.c \
     udp_socket_channel.c \
     us_timer.c
 

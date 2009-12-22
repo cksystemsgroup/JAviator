@@ -138,7 +138,7 @@ static inertial_data_t          inertial_data;
 static sensor_data_t            sensor_data;
 static motor_signals_t          motor_signals;
 static command_data_t           motor_offsets;
-static trace_data_t             trace_data;
+static trace_data_t         trace_data;
 
 /* controller statistics */
 #define NUM_STATS               9
@@ -611,12 +611,30 @@ static int get_command_data( void )
     rotated_pitch = rotation_matrix_rotate_y( command_data.roll,
         command_data.pitch, command_data.yaw );
 
+    trace_data.value_1 = command_data.roll;
+    trace_data.value_2 = command_data.pitch;
+
     /* replace original commands with rotated commands */
     command_data.roll  = (int16_t) rotated_roll;
     command_data.pitch = (int16_t) rotated_pitch;
 
     /* check for new control parameters */
     get_control_params( );
+
+    trace_data.value_3  = (int16_t) -do_control( &ctrl_y, estimated_y, offset_y, estimated_dy, filtered_ddy );
+    trace_data.value_4  = (int16_t)  do_control( &ctrl_x, estimated_x, offset_x, estimated_dx, filtered_ddx );
+    trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
+    trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
+    trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
+    trace_data.value_8  = (int16_t)( controller_get_dd_term( &ctrl_y ) );
+    trace_data.value_9  = (int16_t)( controller_get_p_term( &ctrl_x ) );
+    trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) );
+    trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) );
+    trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) );
+    trace_data.value_13 = 0;
+    trace_data.value_14 = 0;
+    trace_data.value_15 = 0;
+    trace_data.value_16 = 0;
 
     return( 0 );
 }
@@ -768,21 +786,7 @@ static int compute_motor_signals( void )
     motor_offsets.pitch     = (int16_t)( upitch );
     motor_offsets.yaw       = (int16_t)( uyaw );
     motor_offsets.z         = (int16_t)( uz_new );
-#if 0
-    trace_data.z            = (int16_t)( sensor_data.z );
-    trace_data.z_filtered   = (int16_t)( sensor_data.z * 1000.0 );
-    trace_data.z_estimated  = (int16_t)( estimated_z * 1000.0 );
-    trace_data.dz_estimated = (int16_t)( estimated_dz * 1000.0 );
-    trace_data.ddz          = (int16_t)( sensor_data.ddz );
-    trace_data.ddz_filtered = (int16_t)( filtered_ddz * 1000.0 );
-    trace_data.p_term       = (int16_t)( controller_get_p_term( &ctrl_z ) * 1000 );
-    trace_data.i_term       = (int16_t)( controller_get_i_term( &ctrl_z ) * 1000);
-    trace_data.d_term       = (int16_t)( controller_get_d_term( &ctrl_z ) * 1000);
-    trace_data.dd_term      = (int16_t)( controller_get_dd_term( &ctrl_z ) * 1000);
-    trace_data.uz           = (int16_t)( uz_new );
-    trace_data.z_cmd        = (int16_t)( command_data.z );
-	trace_data.id           = javiator_data.id ;
-#endif
+
     uz_old                  = uz_new;
 
     return( 0 );
@@ -815,12 +819,12 @@ static int send_report_to_terminal( void )
         controller_state,
         altitude_mode );
 }
-#if 0
+
 static int send_trace_data_to_terminal( void )
 {
     return terminal_port_send_trace_data( &trace_data );
 }
-#endif
+
 static int wait_for_next_period( void )
 {
     if( sleep_until( next_period ) )
@@ -989,7 +993,7 @@ int control_loop_run( void )
         start = get_utime( );
 
         send_report_to_terminal( );
-        //send_trace_data_to_terminal( );
+        send_trace_data_to_terminal( );
 
         end = get_utime( );
         calc_stats( end - start, STAT_TO_TERM );

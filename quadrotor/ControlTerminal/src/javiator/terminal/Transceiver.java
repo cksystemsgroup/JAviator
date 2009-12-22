@@ -89,6 +89,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
     /*************************************************************************/
 
     protected ControlTerminal parent       = null;
+    protected CommandData     commandData  = null;
     protected SensorData      sensorData   = null;
     protected MotorSignals    motorSignals = null;
     protected CommandData     motorOffsets = null;
@@ -99,6 +100,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
         super( parent.getClass( ).getSimpleName( ) );
 
         this.parent  = parent;
+        commandData  = new CommandData( );
         sensorData   = new SensorData( );
         motorSignals = new MotorSignals( );
         motorOffsets = new CommandData( );
@@ -143,12 +145,12 @@ public abstract class Transceiver extends javiator.util.Transceiver
 
     protected void processPacket( Packet packet )
     {
-    //	 System.out.println("got packet " + packet.type);
         switch( packet.type )
         {
        
 	        case PacketType.COMM_SENSOR_DATA:
-                sendPacket( parent.getCommandData( ).toPacket( PacketType.COMM_COMMAND_DATA ) );
+	        	parent.getCommandData( ).copyTo( commandData );
+                sendPacket( commandData.toPacket( PacketType.COMM_COMMAND_DATA ) );
                 if( parent.isNewIdlingSpeed( ) )
                 {
                 	byte[] maxIdlingSpeed = { (byte)( parent.idlingSpeed >> 8 ), (byte)( parent.idlingSpeed ) };
@@ -230,7 +232,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
 
             case PacketType.COMM_TRACE_DATA:
                 traceData.fromPacket( packet );
-	            parent.setTraceData( traceData );
+	            parent.writeLogData( commandData, sensorData, motorSignals, motorOffsets, traceData );
                 break;
 
             default:
