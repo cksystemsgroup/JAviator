@@ -59,6 +59,8 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* filter parameters */
+#define FILTER_GAIN_X           0.1
+#define FILTER_GAIN_Y           0.1
 #define FILTER_GAIN_DDX         0.1
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
@@ -79,7 +81,7 @@
 
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
-#define MAX_ROLL_PITCH          500                 /* [mrad] */
+#define MAX_ROLL_PITCH          300                 /* [mrad] */
 
 /* scaling constants */
 #define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
@@ -120,6 +122,8 @@ static struct controller        ctrl_y;
 static struct controller        ctrl_z;
 
 /* filter objects */
+static low_pass_filter_t        filter_x;
+static low_pass_filter_t        filter_y;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
@@ -138,7 +142,7 @@ static inertial_data_t          inertial_data;
 static sensor_data_t            sensor_data;
 static motor_signals_t          motor_signals;
 static command_data_t           motor_offsets;
-static trace_data_t         trace_data;
+static trace_data_t             trace_data;
 
 /* controller statistics */
 #define NUM_STATS               9
@@ -229,6 +233,8 @@ int control_loop_setup( int period, int control_z )
 #endif
     controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     ms_period );
 
+    low_pass_filter_init( &filter_x,         FILTER_GAIN_X );
+    low_pass_filter_init( &filter_y,         FILTER_GAIN_Y );
     low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
     low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
     low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
@@ -276,6 +282,12 @@ static void set_control_params( ctrl_params_t *params,
     double kd  = params->kd  * FACTOR_PARAMETER;
     double kdd = params->kdd * FACTOR_PARAMETER;
 
+    if( ctrl_1->name[0] == 'X' )
+    {
+        kd  *= 0.01;
+        kdd *= 0.001;
+    }
+
     if( ctrl_1 != NULL )
     {
         set_ctrl_params( ctrl_1, kp, ki, kd, kdd );
@@ -309,12 +321,6 @@ static void get_control_params( void )
         set_control_params( &params, &ctrl_yaw, NULL );
     }
 
-    if( terminal_port_is_new_alt_params( ) )
-    {
-        terminal_port_get_alt_params( &params );
-        set_control_params( &params, &ctrl_z, NULL );
-    }
-
     if( terminal_port_is_new_x_y_params( ) )
     {
         terminal_port_get_x_y_params( &params );
@@ -322,11 +328,17 @@ static void get_control_params( void )
         set_control_params( &params, &ctrl_x, &ctrl_y );
 #endif
     }
+
+    if( terminal_port_is_new_alt_params( ) )
+    {
+        terminal_port_get_alt_params( &params );
+        set_control_params( &params, &ctrl_z, NULL );
+    }
 }
 
 static inline double get_corrected_x( void )
 {
-    return( rotation_matrix_rotate_x(
+    return low_pass_filter_apply( &filter_x, rotation_matrix_rotate_x(
         X_LASER_POS_ROLL + atoi( (const char *) javiator_data.x_pos ),
         X_LASER_POS_PITCH,
         X_LASER_POS_YAW ) );
@@ -334,7 +346,7 @@ static inline double get_corrected_x( void )
 
 static inline double get_corrected_y( void )
 {
-    return( rotation_matrix_rotate_y(
+    return low_pass_filter_apply( &filter_y, rotation_matrix_rotate_y(
         Y_LASER_POS_ROLL,
         Y_LASER_POS_PITCH + atoi( (const char *) javiator_data.y_pos ),
         Y_LASER_POS_YAW ) );
@@ -398,25 +410,15 @@ static void adjust_yaw_and_z( void )
 
 static int get_javiator_data( void )
 {
-    static uint16_t last_id = 0;
-    static int16_t  old_z   = 13;
-    static int      count   = 2;
-    int             res     = javiator_port_get_data( &javiator_data );
+    static int     count = 2;
+    static int16_t old_z = 13;
+    int            res   = javiator_port_get_data( &javiator_data );
 
     if( res )
     {
         fprintf( stderr, "ERROR: data from JAviator not available\n" );
         return( res );
     }
-
-    /* check for lost JAviator packets */
-    if( javiator_data.id != (uint16_t)( last_id + 1 ) )
-    {
-        fprintf( stderr, "WARNING: lost %d JAviator packet(s): last ID %u != received ID %u\n",
-            javiator_data.id - (uint16_t)( last_id + 1 ), last_id, javiator_data.id );
-    }
-
-    last_id = javiator_data.id;
 
     /* reject possible sonar outliers */
     if( abs( old_z - javiator_data.sonar ) > 20 && count < 2 )
@@ -500,16 +502,6 @@ static int get_command_data( void )
     double rotated_roll;
     double rotated_pitch;
 
-#ifdef ENABLE_POSITION_CONTROLLERS
-    /* save values for logging */
-    sensor_data.x   = (int) estimated_x;
-    sensor_data.y   = (int) estimated_y;
-    sensor_data.dx  = (int) estimated_dx;
-    sensor_data.dy  = (int) estimated_dy;
-    sensor_data.ddx = (int) filtered_ddx;
-    sensor_data.ddy = (int) filtered_ddy;
-#endif
-
     if( terminal_port_is_shut_down( ) )
     {
         altitude_mode = ALT_MODE_SHUTDOWN;
@@ -564,10 +556,10 @@ static int get_command_data( void )
     if( terminal_port_is_test_mode( ) )
     {
         command_data.roll  = (int16_t) -do_control( &ctrl_y,
-            estimated_y, offset_y /*+ command_data.roll*/, estimated_dy, filtered_ddy );
+            estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
 
         command_data.pitch = (int16_t)  do_control( &ctrl_x,
-            estimated_x, offset_x /*+ command_data.pitch*/, estimated_dx, filtered_ddx );
+            estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -598,9 +590,13 @@ static int get_command_data( void )
 
     command_data.pitch = (int16_t) low_pass_filter_apply(
         &filter_cmd_pitch, command_data.pitch );
+
 #ifdef ENABLE_POSITION_CONTROLLERS
+        offset_x = sensor_data.x;
+        offset_y = sensor_data.y;
     }
 #endif
+
     command_data.z = (int16_t) low_pass_filter_apply(
         &filter_cmd_z, command_data.z );
 
@@ -611,9 +607,6 @@ static int get_command_data( void )
     rotated_pitch = rotation_matrix_rotate_y( command_data.roll,
         command_data.pitch, command_data.yaw );
 
-    trace_data.value_1 = command_data.roll;
-    trace_data.value_2 = command_data.pitch;
-
     /* replace original commands with rotated commands */
     command_data.roll  = (int16_t) rotated_roll;
     command_data.pitch = (int16_t) rotated_pitch;
@@ -621,8 +614,20 @@ static int get_command_data( void )
     /* check for new control parameters */
     get_control_params( );
 
-    trace_data.value_3  = (int16_t) -do_control( &ctrl_y, estimated_y, offset_y, estimated_dy, filtered_ddy );
-    trace_data.value_4  = (int16_t)  do_control( &ctrl_x, estimated_x, offset_x, estimated_dx, filtered_ddx );
+#ifdef ENABLE_POSITION_CONTROLLERS
+    /* save values for logging */
+    sensor_data.x       = (int) estimated_x;
+    sensor_data.y       = (int) estimated_y;
+    sensor_data.dx      = (int) estimated_dx;
+    sensor_data.dy      = (int) estimated_dy;
+    sensor_data.ddx     = (int) filtered_ddx;
+    sensor_data.ddy     = (int) filtered_ddy;
+#endif
+
+    trace_data.value_1  = 0;
+    trace_data.value_2  = 0;
+    trace_data.value_3  = (int16_t)( command_data.roll );
+    trace_data.value_4  = (int16_t)( command_data.pitch );
     trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
     trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
     trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
@@ -631,10 +636,6 @@ static int get_command_data( void )
     trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) );
     trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) );
     trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) );
-    trace_data.value_13 = 0;
-    trace_data.value_14 = 0;
-    trace_data.value_15 = 0;
-    trace_data.value_16 = 0;
 
     return( 0 );
 }
@@ -722,11 +723,6 @@ static int compute_motor_signals( void )
     double uz_new       = 0;
     int i, signals[4];
 
-    /* save values for logging */
-    sensor_data.z   = (int) estimated_z;
-    sensor_data.dz  = (int) estimated_dz;
-    sensor_data.ddz = (int) filtered_ddz;
-
     if( revving_step < (base_motor_speed / motor_revving_add) )
     {
         uz_new = uz_old + motor_revving_add;
@@ -777,17 +773,27 @@ static int compute_motor_signals( void )
         }
     }
 
-    motor_signals.front     = (int16_t)( signals[0] );
-    motor_signals.right     = (int16_t)( signals[1] );
-    motor_signals.rear      = (int16_t)( signals[2] );
-    motor_signals.left      = (int16_t)( signals[3] );
+    /* save values for logging */
+    sensor_data.z       = (int) estimated_z;
+    sensor_data.dz      = (int) estimated_dz;
+    sensor_data.ddz     = (int) filtered_ddz;
 
-    motor_offsets.roll      = (int16_t)( uroll );
-    motor_offsets.pitch     = (int16_t)( upitch );
-    motor_offsets.yaw       = (int16_t)( uyaw );
-    motor_offsets.z         = (int16_t)( uz_new );
+    motor_signals.front = (int16_t)( signals[0] );
+    motor_signals.right = (int16_t)( signals[1] );
+    motor_signals.rear  = (int16_t)( signals[2] );
+    motor_signals.left  = (int16_t)( signals[3] );
 
-    uz_old                  = uz_new;
+    motor_offsets.roll  = (int16_t)( uroll );
+    motor_offsets.pitch = (int16_t)( upitch );
+    motor_offsets.yaw   = (int16_t)( uyaw );
+    motor_offsets.z     = (int16_t)( uz_new );
+
+    trace_data.value_13 = (int16_t)( controller_get_p_term( &ctrl_z ) );
+    trace_data.value_14 = (int16_t)( controller_get_i_term( &ctrl_z ) );
+    trace_data.value_15 = (int16_t)( controller_get_d_term( &ctrl_z ) );
+    trace_data.value_16 = (int16_t)( controller_get_dd_term( &ctrl_z ) );
+
+    uz_old              = uz_new;
 
     return( 0 );
 }
@@ -882,8 +888,13 @@ static int read_sensors( void )
 
 	if( get_javiator_data( ) )
     {
-        fprintf( stderr, "ERROR: connection to JAviator broken\n" );
-		return( -1 );
+        send_motor_signals( );
+
+	    if( get_javiator_data( ) )
+        {
+            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
+		    return( -1 );
+        }
 	}
 
 	end = get_utime( );

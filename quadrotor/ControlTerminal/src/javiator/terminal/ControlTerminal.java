@@ -76,20 +76,22 @@ public class ControlTerminal extends Frame
     private static final boolean SHOW_3DWINDOW = false;
     private boolean show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/laser_test_.csv";
+    public static final String  LOG_FILE_NAME = "traces/xy_control_test_.csv";
 
     public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
 											    "roll,pitch,yaw," +
 											    "droll,dpitch,dyaw," +
 											    "ddroll,ddpitch,ddyaw," +
+											    "x,y,z," +
+											    "dx,dy,dz," +
 											    "ddx,ddy,ddz," +
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
-											    "f-roll,f-pitch," +
-											    "y-roll,x-pitch," +
-											    "p(uy),i(uy),d(uy),dd(uy)," +
-											    "p(ux),i(ux),d(ux),dd(ux)," +
-											    "--,--,--,--";
+											    "--,--," +
+											    "roll,pitch," +
+											    "p(y),i(y),d(y),dd(y)," +
+											    "p(x),i(x),d(x),dd(x)," +
+											    "p(z),i(z),d(z),dd(z)";
 
     public ControlTerminal( )
     {
@@ -378,6 +380,12 @@ public class ControlTerminal extends Frame
 			+ ',' + (short) sensorData.ddroll
 			+ ',' + (short) sensorData.ddpitch
 			+ ',' + (short) sensorData.ddyaw
+			+ ',' + (short) sensorData.x
+			+ ',' + (short) sensorData.y
+			+ ',' + (short) sensorData.z
+			+ ',' + (short) sensorData.dx
+			+ ',' + (short) sensorData.dy
+			+ ',' + (short) sensorData.dz
 			+ ',' + (short) sensorData.ddx
 			+ ',' + (short) sensorData.ddy
 			+ ',' + (short) sensorData.ddz

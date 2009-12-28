@@ -24,7 +24,7 @@
 #include <avr/interrupt.h>
 #include <string.h>
 
-#include "../shared/protocol.h"
+#include "protocol.h"
 #include "config.h"
 #include "serial.h"
 
@@ -134,7 +134,9 @@ void serial_init( void )
 */
 uint8_t serial_is_new_packet( void )
 {
-	if (UCSRnA & (1<<RXC)) {
+    /* check for interrupt */
+	if( (UCSRnA & (1 << RXC)) )
+    {
 		rx_buf[ rx_index ] = UDRn;
 
 		if( rx_index == 0 )
@@ -146,28 +148,28 @@ uint8_t serial_is_new_packet( void )
 			}
 		}
 		else
-			if( rx_index == 1 )
+        if( rx_index == 1 )
+		{
+			/* check for second packet mark */
+			if( rx_buf[1] != COMM_PACKET_MARK )
 			{
-				/* check for second packet mark */
-				if( rx_buf[1] != COMM_PACKET_MARK )
-				{
-					rx_items = 0;
-					rx_index = 0;
-				}
+				rx_items = 0;
+				rx_index = 0;
 			}
-			else
-				if( rx_index == 3 )
-				{
-					/* second header byte contains payload size */
-					rx_items += rx_buf[3];
+		}
+		else
+		if( rx_index == 3 )
+		{
+			/* second header byte contains payload size */
+			rx_items += rx_buf[3];
 
-					/* check for valid packet size */
-					if( rx_items > COMM_BUF_SIZE )
-					{
-						rx_items = 0;
-						rx_index = 0;
-					}
-				}
+			/* check for valid packet size */
+			if( rx_items > COMM_BUF_SIZE )
+			{
+				rx_items = 0;
+				rx_index = 0;
+			}
+		}
 
 		/* check for end of RX data stream */
 		if( rx_items && ++rx_index == rx_items )

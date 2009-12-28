@@ -26,7 +26,6 @@
 
 #include "config.h"
 #include "dm3gx1.h"
-#include "leds.h"
 
 
 /*****************************************************************************/
@@ -178,8 +177,9 @@ void dm3gx1_stop( void )
 */
 uint8_t dm3gx1_is_new_data( void )
 {
-	if (UCSRnA & (1<<RXC)) {
-		/* indicate that the receive buffer is being updated
+    if( (UCSRnA & (1<<RXC)) )
+    {
+        /* indicate that the receive buffer is being updated
 		   and thus data are no longer secure to be copied */
 		new_data = 0;
 
@@ -200,15 +200,14 @@ uint8_t dm3gx1_is_new_data( void )
 				rx_index = 0;
 			}
 		}
-
 	}
+
     return( new_data );
 }
 
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-//int8_t dm3gx1_get_data( dm3gx1_data_t *buf )
 int8_t dm3gx1_get_data( javiator_data_t *buf )
 {
     /* check that we're not receiving data currently */

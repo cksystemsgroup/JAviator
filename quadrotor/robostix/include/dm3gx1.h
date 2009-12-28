@@ -30,42 +30,6 @@
 
 /*****************************************************************************/
 /*                                                                           */
-/*   Public Definitions                                                      */
-/*                                                                           */
-/*****************************************************************************/
-
-/* Structure for representing IMU data */
-typedef struct
-{
-    /* Euler angles
-    */
-    int16_t     roll;       /*                        | roll    |                       */
-    int16_t     pitch;      /* [units] --> [mrad]   = | pitch   | * 2000 * PI / 65536   */
-    int16_t     yaw;        /*                        | yaw     |                       */
-
-    /* angular rates
-    */
-    int16_t     droll;      /*                        | droll   |                       */
-    int16_t     dpitch;     /* [units] --> [mrad/s] = | dpitch  | * 8500 / 32768        */
-    int16_t     dyaw;       /*                        | dyaw    |                       */
-
-    /* linear accelerations
-    */
-    int16_t     ddx;        /*                        | ddx     |                       */
-    int16_t     ddy;        /* [units] --> [mm/s^2] = | ddy     | * 9810 * 7 / 32768    */
-    int16_t     ddz;        /*                        | ddz     |                       */
-
-    /* timer ticks
-    */
-    int16_t     ticks;      /* [units] --> [s]      = | ticks   | * 65536 / 10000000    */
-
-} dm3gx1_data_t;
-
-#define DM3_GX1_DATA_SIZE   20  /* byte size of dm3gx1_data_t */
-
-
-/*****************************************************************************/
-/*                                                                           */
 /*   Public Functions                                                        */
 /*                                                                           */
 /*****************************************************************************/
@@ -93,7 +57,6 @@ uint8_t dm3gx1_is_new_data( void );
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-//int8_t  dm3gx1_get_data( dm3gx1_data_t *buf );
 int8_t  dm3gx1_get_data( javiator_data_t *buf );
 
 /* Sets the baudrate to 115200bps

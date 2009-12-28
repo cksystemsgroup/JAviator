@@ -39,24 +39,25 @@
 #include "terminal_port.h"
 #include "us_timer.h"
 
-static javiator_data_t  javiator_data;
-static comm_channel_t * comm_channel;
-static comm_packet_t    comm_packet;
-static char             comm_packet_buf[ COMM_BUF_SIZE ];
-static volatile int     new_data;
-static uint16_t local_id = 0;
+static javiator_data_t      javiator_data;
+static comm_channel_t *     comm_channel;
+static comm_packet_t        comm_packet;
+static char                 comm_packet_buf[ COMM_BUF_SIZE ];
+static volatile int         new_data;
+static volatile uint16_t    local_id;
 
 
 static inline int parse_javiator_data( const comm_packet_t *packet )
 {
     int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
-#if 0
-    if( (uint16_t)( local_id - 1 ) != javiator_data.id )
+
+    /* check for lost JAviator packets */
+    if( ++javiator_data.id != local_id )
     {
-        fprintf( stderr, "WARNING: local ID %u != received ID %u\n",
-            local_id, javiator_data.id );
+        fprintf( stderr, "WARNING: lost %u JAviator packet(s): received ID %u != local ID %u\n",
+            (uint16_t)( local_id - javiator_data.id ), javiator_data.id, local_id );
     }
-#endif
+
     new_data = 1;
 
     return( res );
@@ -109,7 +110,7 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    uint8_t buf[MOTOR_SIGNALS_SIZE];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     *(uint16_t *) &signals->id = ++local_id;
@@ -134,6 +135,7 @@ int javiator_port_init( comm_channel_t *channel )
     comm_packet.buf_size = COMM_BUF_SIZE;
     comm_packet.payload  = comm_packet_buf;
     new_data             = 0;
+    local_id             = 0;
 
     javiator_port_send_motor_signals( &signals );
 
@@ -185,7 +187,8 @@ int javiator_port_get_data( javiator_data_t *data )
         {
             return( -1 );
         }
-    } while( !new_data );
+    }
+    while( !new_data );
 
     memcpy( data, &javiator_data, sizeof( *data ) );
     new_data = 0;
