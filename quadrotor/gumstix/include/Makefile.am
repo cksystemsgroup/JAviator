@@ -22,5 +22,6 @@ nobase_noinst_HEADERS = \
     spi_channel.h \
     terminal_port.h \
     trace_data.h \
+    ubisense_port.h \
     us_timer.h
 

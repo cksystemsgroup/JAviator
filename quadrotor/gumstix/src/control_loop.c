@@ -36,8 +36,9 @@
 #include "comm_channel.h"
 #include "communication.h"
 #include "javiator_port.h"
-#include "terminal_port.h"
 #include "inertial_port.h"
+#include "terminal_port.h"
+#include "ubisense_port.h"
 #include "command_data.h"
 #include "javiator_data.h"
 #include "inertial_data.h"
@@ -124,6 +125,8 @@ static struct controller        ctrl_z;
 /* filter objects */
 static low_pass_filter_t        filter_x;
 static low_pass_filter_t        filter_y;
+static low_pass_filter_t        filter_ubi_x;
+static low_pass_filter_t        filter_ubi_y;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
@@ -139,6 +142,7 @@ static kalman_filter_t          filter_dz;
 static command_data_t           command_data;
 static javiator_data_t          javiator_data;
 static inertial_data_t          inertial_data;
+static position_data_t          position_data;
 static sensor_data_t            sensor_data;
 static motor_signals_t          motor_signals;
 static command_data_t           motor_offsets;
@@ -235,6 +239,8 @@ int control_loop_setup( int period, int control_z )
 
     low_pass_filter_init( &filter_x,         FILTER_GAIN_X );
     low_pass_filter_init( &filter_y,         FILTER_GAIN_Y );
+    low_pass_filter_init( &filter_ubi_x,     FILTER_GAIN_X );
+    low_pass_filter_init( &filter_ubi_y,     FILTER_GAIN_Y );
     low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
     low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
     low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
@@ -249,6 +255,7 @@ int control_loop_setup( int period, int control_z )
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
     memset( &inertial_data, 0, sizeof( inertial_data ) );
+    memset( &position_data, 0, sizeof( position_data ) );
     memset( &sensor_data,   0, sizeof( sensor_data ) );
     memset( &motor_signals, 0, sizeof( motor_signals ) );
     memset( &motor_offsets, 0, sizeof( motor_offsets ) );
@@ -394,8 +401,8 @@ static void adjust_yaw_and_z( void )
     {
         offset_yaw      = sensor_data.yaw;
 #ifdef ENABLE_POSITION_CONTROLLERS
-        offset_x        = sensor_data.x;
-        offset_y        = sensor_data.y;
+        offset_x        = position_data.x;//sensor_data.x;
+        offset_y        = position_data.y;//sensor_data.y;
 #endif
         offset_z        = sensor_data.z;
         sensor_data.yaw = 0;
@@ -488,14 +495,36 @@ static int get_inertial_data( void )
     return( 0 );
 }
 
+static int get_ubisense_data( void )
+{
+    int res = ubisense_port_get_data( &position_data );
+
+    if( res == -1 )
+    {
+        return( 0 );
+    }
+
+    if( res )
+    {
+        fprintf( stderr, "ERROR: data from Ubisense not available\n" );
+        return( res );
+    }
+
+    /* filter position data */
+    position_data.x = low_pass_filter_apply( &filter_ubi_x, position_data.x );
+    position_data.y = low_pass_filter_apply( &filter_ubi_y, position_data.y );
+
+    return( 0 );
+}
+
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
 #ifdef ENABLE_POSITION_CONTROLLERS
     double filtered_ddx = get_filtered_ddx( );
     double filtered_ddy = get_filtered_ddy( );
-    double estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
-    double estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
+    double estimated_dx = kalman_filter_apply( &filter_dx, position_data.x/*sensor_data.x*/, filtered_ddx );
+    double estimated_dy = kalman_filter_apply( &filter_dy, position_data.y/*sensor_data.y*/, filtered_ddy );
     double estimated_x  = filter_dx.s;
     double estimated_y  = filter_dy.s;
 #endif
@@ -592,8 +621,8 @@ static int get_command_data( void )
         &filter_cmd_pitch, command_data.pitch );
 
 #ifdef ENABLE_POSITION_CONTROLLERS
-        offset_x = sensor_data.x;
-        offset_y = sensor_data.y;
+        offset_x = position_data.x;//sensor_data.x;
+        offset_y = position_data.y;//sensor_data.y;
     }
 #endif
 
@@ -624,10 +653,10 @@ static int get_command_data( void )
     sensor_data.ddy     = (int) filtered_ddy;
 #endif
 
-    trace_data.value_1  = 0;
-    trace_data.value_2  = 0;
-    trace_data.value_3  = (int16_t)( command_data.roll );
-    trace_data.value_4  = (int16_t)( command_data.pitch );
+    trace_data.value_1  = (int16_t)( command_data.roll );
+    trace_data.value_2  = (int16_t)( command_data.pitch );
+    trace_data.value_3  = (int16_t)( position_data.y );
+    trace_data.value_4  = (int16_t)( position_data.x );
     trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
     trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
     trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
@@ -888,13 +917,8 @@ static int read_sensors( void )
 
 	if( get_javiator_data( ) )
     {
-        send_motor_signals( );
-
-	    if( get_javiator_data( ) )
-        {
-            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
-		    return( -1 );
-        }
+        fprintf( stderr, "ERROR: connection to JAviator broken\n" );
+		return( -1 );
 	}
 
 	end = get_utime( );
@@ -912,6 +936,12 @@ static int read_sensors( void )
 
     end = get_utime( );
     calc_stats( end - start, STAT_IMU );
+
+	if( get_ubisense_data( ) )
+    {
+        fprintf( stderr, "ERROR: connection to Ubisense broken\n" );
+		return( -1 );
+	}
 
 	/* IMPORTANT: yaw angle must be adjusted BEFORE
 	   updating the rotation matrix */

@@ -64,8 +64,8 @@ am_control_OBJECTS = communication.$(OBJEXT) controller.$(OBJEXT) \
 	pidd_controller.$(OBJEXT) rotation_matrix.$(OBJEXT) \
 	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
 	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
-	terminal_port.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
-	us_timer.$(OBJEXT)
+	terminal_port.$(OBJEXT) ubisense_port.$(OBJEXT) \
+	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -212,6 +212,7 @@ control_SOURCES = \
     spi_channel.c \
     spi_dev_channel.c \
     terminal_port.c \
+    ubisense_port.c \
     udp_socket_channel.c \
     us_timer.c
 
@@ -308,6 +309,7 @@ include ./$(DEPDIR)/socket_channel.Po
 include ./$(DEPDIR)/spi_channel.Po
 include ./$(DEPDIR)/spi_dev_channel.Po
 include ./$(DEPDIR)/terminal_port.Po
+include ./$(DEPDIR)/ubisense_port.Po
 include ./$(DEPDIR)/udp_socket_channel.Po
 include ./$(DEPDIR)/us_timer.Po
 
