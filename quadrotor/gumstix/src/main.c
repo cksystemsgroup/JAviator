@@ -225,6 +225,7 @@ static void usage( char *binary )
             "OPTIONS are:\n"
             "\t -a      ... if IMU is connected directly use it in automatic mode\n"
             "\t -c      ... disable control loop\n"
+            "\t -e      ... enable Ubisense localization\n"
             "\t -h      ... print this message\n"
             "\t -i      ... use IMU connected directly to serial device %s\n"
 			"\t               only possible if an SPI device is used\n"
