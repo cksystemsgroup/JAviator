@@ -534,14 +534,12 @@ static int get_ubisense_data( void )
 static int get_command_data( void )
 {
     static int sensors_enabled = 0;
-#ifdef ENABLE_POSITION_CONTROLLERS
     double filtered_ddx  = 0;
     double filtered_ddy  = 0;
     double estimated_dx  = 0;
     double estimated_dy  = 0;
     double estimated_x   = 0;
     double estimated_y   = 0;
-#endif
     double rotated_roll  = 0;
     double rotated_pitch = 0;
 
@@ -605,18 +603,28 @@ static int get_command_data( void )
     command_data.z = (int16_t) low_pass_filter_apply(
         &filter_cmd_z, command_data.z );
 
+    filtered_ddx = get_filtered_ddx( );
+    filtered_ddy = get_filtered_ddy( );
+
+    if( enable_ubisense )
+    {
+        estimated_dx = kalman_filter_apply( &filter_dx, position_data.x, filtered_ddx );
+        estimated_dy = kalman_filter_apply( &filter_dy, position_data.y, filtered_ddy );
+    }
+    else
+    {
+        estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
+        estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
+    }
+
+    estimated_x = filter_dx.s;
+    estimated_y = filter_dy.s;
+
 #ifdef ENABLE_POSITION_CONTROLLERS
     if( terminal_port_is_test_mode( ) )
     {
         if( enable_ubisense )
         {
-            filtered_ddx = get_filtered_ddx( );
-            filtered_ddy = get_filtered_ddy( );
-            estimated_dx = kalman_filter_apply( &filter_dx, position_data.x, filtered_ddx );
-            estimated_dy = kalman_filter_apply( &filter_dy, position_data.y, filtered_ddy );
-            estimated_x  = filter_dx.s;
-            estimated_y  = filter_dy.s;
-
             command_data.roll  = (int16_t)  do_control( &ctrl_y,
                 estimated_y, offset_y + command_data.roll, estimated_dy, filtered_ddy );
 
@@ -625,13 +633,6 @@ static int get_command_data( void )
         }
         else
         {
-            filtered_ddx = get_filtered_ddx( );
-            filtered_ddy = get_filtered_ddy( );
-            estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
-            estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
-            estimated_x  = filter_dx.s;
-            estimated_y  = filter_dy.s;
-
             command_data.roll  = (int16_t) -do_control( &ctrl_y,
                 estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
 
