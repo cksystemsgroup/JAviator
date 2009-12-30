@@ -247,11 +247,12 @@ int main( int argc, char **argv )
     int exec_loop  = EXEC_CONTROL_LOOP;
 	int setup_imu = 0;
 	int automatic_imu = 0;
+    int enable_ubisense = 0;
 	int opt;
 	int conn_type = SOCK_UDP;
 	channel_type_t type = CH_SERIAL;
 
-	while((opt = getopt(argc, argv, "achij:m:t:uz")) != -1)
+	while((opt = getopt(argc, argv, "acehij:m:t:uz")) != -1)
     {
 		switch(opt)
 		{
@@ -260,6 +261,9 @@ int main( int argc, char **argv )
 				break;
 			case 'c':
 				exec_loop = 0;
+				break;
+			case 'e':
+				enable_ubisense = 1;
 				break;
 			case 'i':
 				setup_imu = 1;
@@ -325,20 +329,23 @@ int main( int argc, char **argv )
     }
     printf( "ok\n" );
 
-	printf( "setting up Ubisense port ... " );
-    if( setup_ubisense_port( SOCK_CLIENT,
-        UBISENSE_ADDR, UBISENSE_PORT, UBISENSE_TAG ) )
+    if( enable_ubisense )
     {
-        printf( "failed\n" );
-        fprintf( stderr, "ERROR: could not setup the Ubisense port\n" );
-        exit( 1 );
+	    printf( "setting up Ubisense port ... " );
+        if( setup_ubisense_port( SOCK_CLIENT,
+            UBISENSE_ADDR, UBISENSE_PORT, UBISENSE_TAG ) )
+        {
+            printf( "failed\n" );
+            fprintf( stderr, "ERROR: could not setup the Ubisense port\n" );
+            exit( 1 );
+        }
+        printf( "ok\n" );
     }
-    printf( "ok\n" );
 
     if( exec_loop )
     {
         printf( "setting up control loop\n" );
-        control_loop_setup( period, control_z );
+        control_loop_setup( period, control_z, enable_ubisense );
         printf( "starting control loop\n" );
         control_loop_run( );
     }

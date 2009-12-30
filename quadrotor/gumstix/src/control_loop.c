@@ -67,8 +67,8 @@
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
 #define FILTER_GAIN_CMD         0.2
-#define FILTER_SIZE_X           16
-#define FILTER_SIZE_Y           16
+#define FILTER_SIZE_X           8
+#define FILTER_SIZE_Y           8
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
@@ -101,6 +101,7 @@ static volatile int             running;
 static int                      ms_period;
 static int                      us_period;
 static int                      compute_z;
+static int                      enable_ubisense;
 static int                      controller_state;
 static int                      altitude_mode;
 static long long                next_period;
@@ -207,7 +208,7 @@ static inline double do_control( struct controller *ctrl,
         angular_velocity, angular_acceleration );
 }
 
-int control_loop_setup( int period, int control_z )
+int control_loop_setup( int period, int control_z, int ubisense )
 {
     struct sigaction act;
 
@@ -215,6 +216,7 @@ int control_loop_setup( int period, int control_z )
     ms_period        = period;
     us_period        = period * 1000;
     compute_z        = control_z;
+    enable_ubisense  = ubisense;
     controller_state = 0;
     altitude_mode    = ALT_MODE_GROUND;
     next_period      = 0;
@@ -294,7 +296,8 @@ static void set_control_params( ctrl_params_t *params,
 
     if( ctrl_1->name[0] == 'X' )
     {
-        kd  *= 0.001;
+        ki  *= 0.1;
+        kd  *= 0.01;
         kdd *= 0.001;
     }
 
@@ -403,13 +406,21 @@ static void adjust_yaw_and_z( void )
         motor_signals.rear  == 0 && motor_signals.left  == 0 )
     {
         offset_yaw      = sensor_data.yaw;
-#ifdef ENABLE_POSITION_CONTROLLERS
-        offset_x        = position_data.x;//sensor_data.x;
-        offset_y        = position_data.y;//sensor_data.y;
-#endif
         offset_z        = sensor_data.z;
         sensor_data.yaw = 0;
         sensor_data.z   = 0;
+#ifdef ENABLE_POSITION_CONTROLLERS
+        if( enable_ubisense )
+        {
+            offset_x = position_data.x;
+            offset_y = position_data.y;
+        }
+        else
+        {
+            offset_x = sensor_data.x;
+            offset_y = sensor_data.y;
+        }
+#endif
     }
     else
     {
@@ -524,15 +535,15 @@ static int get_command_data( void )
 {
     static int sensors_enabled = 0;
 #ifdef ENABLE_POSITION_CONTROLLERS
-    double filtered_ddx = get_filtered_ddx( );
-    double filtered_ddy = get_filtered_ddy( );
-    double estimated_dx = kalman_filter_apply( &filter_dx, position_data.x/*sensor_data.x*/, filtered_ddx );
-    double estimated_dy = kalman_filter_apply( &filter_dy, position_data.y/*sensor_data.y*/, filtered_ddy );
-    double estimated_x  = filter_dx.s;
-    double estimated_y  = filter_dy.s;
+    double filtered_ddx  = 0;
+    double filtered_ddy  = 0;
+    double estimated_dx  = 0;
+    double estimated_dy  = 0;
+    double estimated_x   = 0;
+    double estimated_y   = 0;
 #endif
-    double rotated_roll;
-    double rotated_pitch;
+    double rotated_roll  = 0;
+    double rotated_pitch = 0;
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -597,20 +608,36 @@ static int get_command_data( void )
 #ifdef ENABLE_POSITION_CONTROLLERS
     if( terminal_port_is_test_mode( ) )
     {
-#if 0
-        /* Laser commands */
-        command_data.roll  = (int16_t) -do_control( &ctrl_y,
-            estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
+        if( enable_ubisense )
+        {
+            filtered_ddx = get_filtered_ddx( );
+            filtered_ddy = get_filtered_ddy( );
+            estimated_dx = kalman_filter_apply( &filter_dx, position_data.x, filtered_ddx );
+            estimated_dy = kalman_filter_apply( &filter_dy, position_data.y, filtered_ddy );
+            estimated_x  = filter_dx.s;
+            estimated_y  = filter_dy.s;
 
-        command_data.pitch = (int16_t)  do_control( &ctrl_x,
-            estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
-#endif
-        /* Ubisense commands */
-        command_data.roll  = (int16_t)  do_control( &ctrl_y,
-            estimated_y, offset_y + command_data.roll, estimated_dy, filtered_ddy );
+            command_data.roll  = (int16_t)  do_control( &ctrl_y,
+                estimated_y, offset_y + command_data.roll, estimated_dy, filtered_ddy );
 
-        command_data.pitch = (int16_t) -do_control( &ctrl_x,
-            estimated_x, offset_x - command_data.pitch, estimated_dx, filtered_ddx );
+            command_data.pitch = (int16_t) -do_control( &ctrl_x,
+                estimated_x, offset_x - command_data.pitch, estimated_dx, filtered_ddx );
+        }
+        else
+        {
+            filtered_ddx = get_filtered_ddx( );
+            filtered_ddy = get_filtered_ddy( );
+            estimated_dx = kalman_filter_apply( &filter_dx, sensor_data.x, filtered_ddx );
+            estimated_dy = kalman_filter_apply( &filter_dy, sensor_data.y, filtered_ddy );
+            estimated_x  = filter_dx.s;
+            estimated_y  = filter_dy.s;
+
+            command_data.roll  = (int16_t) -do_control( &ctrl_y,
+                estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
+
+            command_data.pitch = (int16_t)  do_control( &ctrl_x,
+                estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
+        }
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -633,22 +660,18 @@ static int get_command_data( void )
         }
     }
     else
+    if( enable_ubisense )
     {
-        offset_x = position_data.x;//sensor_data.x;
-        offset_y = position_data.y;//sensor_data.y;
+        offset_x = position_data.x;
+        offset_y = position_data.y;
+    }
+    else
+    {
+        offset_x = sensor_data.x;
+        offset_y = sensor_data.y;
     }
 #endif
-#if 0
-    /* apply low-pass filtering to roll, pitch, and z command */
-    command_data.roll  = (int16_t) low_pass_filter_apply(
-        &filter_cmd_roll, command_data.roll );
 
-    command_data.pitch = (int16_t) low_pass_filter_apply(
-        &filter_cmd_pitch, command_data.pitch );
-
-    command_data.z = (int16_t) low_pass_filter_apply(
-        &filter_cmd_z, command_data.z );
-#endif
     /* rotate roll and pitch command depending on yaw angle */
     rotated_roll  = rotation_matrix_rotate_x( command_data.roll,
         command_data.pitch, command_data.yaw );
@@ -677,6 +700,7 @@ static int get_command_data( void )
     trace_data.value_2  = (int16_t)( command_data.pitch );
     trace_data.value_3  = (int16_t)( position_data.y );
     trace_data.value_4  = (int16_t)( position_data.x );
+#ifdef ENABLE_POSITION_CONTROLLERS
     trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
     trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
     trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
@@ -685,6 +709,7 @@ static int get_command_data( void )
     trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) );
     trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) );
     trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) );
+#endif
 
     return( 0 );
 }
@@ -957,7 +982,7 @@ static int read_sensors( void )
     end = get_utime( );
     calc_stats( end - start, STAT_IMU );
 
-	if( get_ubisense_data( ) )
+	if( enable_ubisense && get_ubisense_data( ) )
     {
         fprintf( stderr, "ERROR: connection to Ubisense broken\n" );
 		return( -1 );

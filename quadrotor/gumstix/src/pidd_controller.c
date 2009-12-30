@@ -160,9 +160,9 @@ static double pidd_x_y_control( struct controller *controller,
     /* Local definition to avoid double indirection in use */
     struct controller_state *state = controller->state;
     double s_error = get_s_error( current, desired );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
+    double v_error = (velocity - state->last_desired) / state->dtime;//get_v_error( desired, state->last_desired, velocity, state->dtime );
 
-    state->last_desired = desired;
+    state->last_desired = velocity;
 
     return pidd_compute( state, s_error, v_error, acceleration );
 }
