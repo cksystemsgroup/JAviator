@@ -67,8 +67,8 @@
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
 #define FILTER_GAIN_CMD         0.2
-#define FILTER_SIZE_X           8
-#define FILTER_SIZE_Y           8
+#define FILTER_SIZE_X           16
+#define FILTER_SIZE_Y           16
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
