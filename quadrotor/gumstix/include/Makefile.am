@@ -1,6 +1,6 @@
 
 nobase_noinst_HEADERS = \
-    ccontrol.h \
+    average_filter.h \
     command_data.h \
     comm_channel.h \
     communication.h \

@@ -23,22 +23,41 @@
  *
  */
 
-#ifndef CCONTROL_H
-#define CCONTROL_H
-
-#include "command_data.h"
-#include "javiator_data.h"
-#include "inertial_data.h"
-#include "motor_signals.h"
+#ifndef AVERAGE_FILTER
+#define AVERAGE_FILTER
 
 
-int compute_motor_signals(
-        const command_data_t  *cmd_data,
-        const javiator_data_t *jav_data,
-        const inertial_data_t *imu_data,
-              motor_signals_t *signals );
+/* Structure for representing average-filter parameters */
+typedef struct
+{
+    int     size;
+    double *array;
+    int     index;
+
+} average_filter_t;
 
 
-#endif /* !CCONTROL_H */
+/* Initializes the average filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    average_filter_init( average_filter_t *filter, int size );
+
+/* Resets the average filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    average_filter_reset( average_filter_t *filter );
+
+/* Destroys the average filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    average_filter_destroy( average_filter_t *filter );
+
+/* Applies the average filter to the given update value.
+   Returns the filtered value.
+*/
+double average_filter_apply( average_filter_t *filter, double update );
+
+
+#endif /* !AVERAGE_FILTER */
 
 /* End of file */

@@ -26,54 +26,44 @@
 #include "controller.h"
 
 #ifndef NULL
-#define NULL  0
+#define NULL 0
 #endif
 
-extern int pid_controller_init(struct controller *, int);
-extern int pid_controller_destroy(struct controller *);
-extern int pidd_controller_init(struct controller *, int);
-extern int pidd_controller_destroy(struct controller *);
-extern int pidd_yaw_controller_init(struct controller *, int);
+extern int pidd_def_controller_init( struct controller *, int );
+extern int pidd_yaw_controller_init( struct controller *, int );
+extern int pidd_x_y_controller_init( struct controller *, int );
+extern int pidd_all_controller_destroy( struct controller * );
 
 
-/* only PID controllers supported */
-
-int controller_init(struct controller *controller, 
-    char * name, controller_type type, int period)
+int controller_init( struct controller *controller,
+    char *name, controller_type type, int period )
 {
-    int retval = -1;;
+    int res = -1;
+
     controller->name = name;
-    switch (type) {
-    case CTRL_PID:
-        retval = pid_controller_init(controller, period);
-        break;
-    case CTRL_PID_YAW:
-        break;
-    case CTRL_PIDD:
-        retval = pidd_controller_init(controller, period);
-        break;
-    case CTRL_PIDD_YAW:
-        retval = pidd_yaw_controller_init(controller, period);
-        break;
+
+    switch( type )
+    {
+        case CTRL_PIDD_DEF:
+            res = pidd_def_controller_init( controller, period );
+            break;
+
+        case CTRL_PIDD_YAW:
+            res = pidd_yaw_controller_init( controller, period );
+            break;
+
+        case CTRL_PIDD_X_Y:
+            res = pidd_x_y_controller_init( controller, period );
+            break;
     }
-    return retval;
+
+    return( res );
 }
 
-int controller_destroy(struct controller *controller)
+int controller_destroy( struct controller *controller )
 {
-    int retval = -1;;
     controller->name = NULL;
-    switch (controller->type) {
-    case CTRL_PID:
-    case CTRL_PID_YAW:
-        retval = pid_controller_destroy(controller);
-        break;
-    case CTRL_PIDD:
-    case CTRL_PIDD_YAW:
-        retval = pidd_controller_destroy(controller);
-        break;
-    }
-    return retval;
+    return pidd_all_controller_destroy( controller );
 }
 
 /* End of file */

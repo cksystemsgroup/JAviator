@@ -27,7 +27,7 @@
 #define LOW_PASS_FILTER
 
 
-/* Structure for representing low-pass filter parameters */
+/* Structure for representing low-pass-filter parameters */
 typedef struct
 {
     double gain;

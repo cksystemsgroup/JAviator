@@ -50,7 +50,7 @@
 #define TERMINAL_PORT       7000
 #define UBISENSE_ADDR       "192.168.1.3"
 #define UBISENSE_PORT       9001
-#define UBISENSE_TAG        335549794
+#define UBISENSE_TAG        20235 /* 21098 */
 
 static comm_channel_t       javiator_channel;
 static comm_channel_t       inertial_channel;

@@ -27,93 +27,73 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "median_filter.h"
+#include "average_filter.h"
 
 
-/* Initializes the median filter.
+/* Initializes the average filter.
    Returns 0 if successful, -1 otherwise.
 */
-int median_filter_init( median_filter_t *filter, int size )
+int average_filter_init( average_filter_t *filter, int size )
 {
     if( size < 1 )
     {
-        fprintf( stderr, "ERROR: invalid median-filter size\n" );
+        fprintf( stderr, "ERROR: invalid average-filter size\n" );
         return( -1 );
     }
 
     filter->size  = size;
     filter->array = malloc( sizeof( *filter->array ) * filter->size );
+    filter->index = 0;
 
-    return median_filter_reset( filter );
+    return average_filter_reset( filter );
 }
 
-/* Resets the median filter.
+/* Resets the average filter.
    Returns 0 if successful, -1 otherwise.
 */
-int median_filter_reset( median_filter_t *filter )
+int average_filter_reset( average_filter_t *filter )
 {
     if( filter->array == NULL )
     {
-        fprintf( stderr, "ERROR: median filter not initialized\n" );
+        fprintf( stderr, "ERROR: average filter not initialized\n" );
         return( -1 );
     }
 
     memset( filter->array, 0, sizeof( *filter->array ) * filter->size );
+    filter->index = 0;
     return( 0 );
 }
 
-/* Destroys the median filter.
+/* Destroys the average filter.
    Returns 0 if successful, -1 otherwise.
 */
-int median_filter_destroy( median_filter_t *filter )
+int average_filter_destroy( average_filter_t *filter )
 {
     free( filter->array );
     filter->array = NULL;
     return( 0 );
 }
 
-/* Applies the median filter to the given update value.
+/* Applies the average filter to the given update value.
    Returns the filtered value.
 */
-double median_filter_apply( median_filter_t *filter, double update )
+double average_filter_apply( average_filter_t *filter, double update )
 {
-    int i, j;
+    int i;
 
-    for( i = 0; i < filter->size; ++i )
+    filter->array[ filter->index ] = update;
+
+    if( ++filter->index == filter->size )
     {
-        if( update < filter->array[i] )
-        {
-            break;
-        }
+        filter->index = 0;
     }
 
-    if( i < filter->size )
+    for( update = 0, i = 0; i < filter->size; ++i )
     {
-        j = filter->size - 1;
-
-        while( j > i )
-        {
-            filter->array[j] = filter->array[j-1];
-            --j;
-        }
-
-        filter->array[j] = update;
-    }
-    else
-    {
-        i = filter->size - 1;
-        j = 0;
-
-        while( j < i )
-        {
-            filter->array[j] = filter->array[j+1];
-            ++j;
-        }
-
-        filter->array[j] = update;
+        update += filter->array[i];
     }
 
-    return( filter->array[ filter->size >> 1 ] );
+    return( update / filter->size );
 }
 
 /* End of file */

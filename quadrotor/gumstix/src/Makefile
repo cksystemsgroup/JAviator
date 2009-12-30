@@ -55,12 +55,12 @@ libcontroller_platform_a_OBJECTS =  \
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_control_OBJECTS = communication.$(OBJEXT) controller.$(OBJEXT) \
-	control_loop.$(OBJEXT) ctrl_params.$(OBJEXT) \
-	inertial_data.$(OBJEXT) inertial_port.$(OBJEXT) \
-	javiator_port.$(OBJEXT) kalman_filter.$(OBJEXT) \
-	low_pass_filter.$(OBJEXT) main.$(OBJEXT) \
-	median_filter.$(OBJEXT) pid_controller.$(OBJEXT) \
+am_control_OBJECTS = average_filter.$(OBJEXT) communication.$(OBJEXT) \
+	controller.$(OBJEXT) control_loop.$(OBJEXT) \
+	ctrl_params.$(OBJEXT) inertial_data.$(OBJEXT) \
+	inertial_port.$(OBJEXT) javiator_port.$(OBJEXT) \
+	kalman_filter.$(OBJEXT) low_pass_filter.$(OBJEXT) \
+	main.$(OBJEXT) median_filter.$(OBJEXT) \
 	pidd_controller.$(OBJEXT) rotation_matrix.$(OBJEXT) \
 	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
 	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
@@ -193,6 +193,7 @@ noinst_LIBRARIES = libcontroller-platform.a
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
+    average_filter.c \
     communication.c \
     controller.c \
     control_loop.c \
@@ -204,7 +205,6 @@ control_SOURCES = \
     low_pass_filter.c \
     main.c \
     median_filter.c \
-    pid_controller.c \
     pidd_controller.c \
     rotation_matrix.c \
     serial_channel.c \
@@ -290,6 +290,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/average_filter.Po
 include ./$(DEPDIR)/communication.Po
 include ./$(DEPDIR)/control_loop.Po
 include ./$(DEPDIR)/controller.Po
@@ -301,7 +302,6 @@ include ./$(DEPDIR)/kalman_filter.Po
 include ./$(DEPDIR)/low_pass_filter.Po
 include ./$(DEPDIR)/main.Po
 include ./$(DEPDIR)/median_filter.Po
-include ./$(DEPDIR)/pid_controller.Po
 include ./$(DEPDIR)/pidd_controller.Po
 include ./$(DEPDIR)/rotation_matrix.Po
 include ./$(DEPDIR)/serial_channel.Po

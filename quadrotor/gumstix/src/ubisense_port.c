@@ -28,16 +28,15 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include "protocol.h"
 #include "communication.h"
 #include "ubisense_port.h"
 
-#define DATA_BUF_SIZE   256
-
 static position_data_t  position_data;
 static comm_channel_t * comm_channel;
+static char             comm_buf[ COMM_BUF_SIZE ];
 static int              ubisense_tag;
-static char             data_buf[ DATA_BUF_SIZE ];
-static volatile int     new_data;
+static int              new_data;
 static int              running;
 static pthread_t        thread;
 static pthread_mutex_t  ubisense_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -55,48 +54,48 @@ static inline void unlock( void )
 
 static inline int parse_data_packet( const char *buf, int len )
 {
-    char *p = strchr( buf, ',' );
-    int   i = 0;
-
-    while( p )
+    /* Data format: "------tttttt,x1...xn,y1...yn\0", where
+       the first 6 digits <------> can be ignored, the next
+       6 digits <tttttt> represent the tag ID, and the last
+       digits <x1...xn> and <y1...yn> indicate variable
+       numbers of digits representing the x and y values.
+    */
+    if( len < 12 || atoi( buf + 6 ) != ubisense_tag )
     {
-        if( ++i == 2 && atoi( p + 1 ) != ubisense_tag )
-        {
-            break; /* different Ubisense tag */
-        }
-        else
-        if( i == 6 )
-        {
-            position_data.y = atof( p + 1 ) * 1000.0; /* [m] --> [mm] */
-            fprintf( stdout, "y: %5.3f   ", position_data.y );
-        }
-        else
-        if( i == 7 )
-        {
-            position_data.x = atof( p + 1 ) * 1000.0; /* [m] --> [mm] */
-            fprintf( stdout, "x: %5.3f\n\n", position_data.x );
-            new_data = 1;
-            break;
-        }
-
-        p = strchr( p + 1, ',' );
+        return( -1 );
     }
+
+    if( !(buf = strchr( buf, ',' )) )
+    {
+        return( -1 );
+    }
+
+    position_data.y = atoi( ++buf );
+
+    if( !(buf = strchr( buf, ',' )) )
+    {
+        return( -1 );
+    }
+
+    position_data.x = atoi( ++buf );
+
+    new_data = 1;
 
     return( 0 );
 }
 
 int ubisense_port_tick( void )
 {
-    int res = comm_channel->receive( comm_channel, data_buf, DATA_BUF_SIZE );
+    int res = comm_channel->receive( comm_channel, comm_buf, COMM_BUF_SIZE );
 
     if( res > 0 )
     {
-        if( res < DATA_BUF_SIZE )
+        if( res < COMM_BUF_SIZE )
         {
-            data_buf[ res ] = 0;
+            comm_buf[ res ] = 0;
         }
 
-        parse_data_packet( data_buf, res );
+        parse_data_packet( comm_buf, res );
     }
     else
     if( res == EAGAIN )

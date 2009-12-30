@@ -27,7 +27,7 @@
 #define MEDIAN_FILTER
 
 
-/* Structure for representing median filter parameters */
+/* Structure for representing median-filter parameters */
 typedef struct
 {
     int     size;

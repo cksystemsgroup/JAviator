@@ -152,7 +152,7 @@ target_vendor = @target_vendor@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 nobase_noinst_HEADERS = \
-    ccontrol.h \
+    average_filter.h \
     command_data.h \
     comm_channel.h \
     communication.h \

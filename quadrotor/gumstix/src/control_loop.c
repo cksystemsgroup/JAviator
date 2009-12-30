@@ -48,6 +48,7 @@
 #include "trace_data.h"
 #include "rotation_matrix.h"
 #include "low_pass_filter.h"
+#include "average_filter.h"
 #include "median_filter.h"
 #include "kalman_filter.h"
 #include "us_timer.h"
@@ -66,6 +67,8 @@
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
 #define FILTER_GAIN_CMD         0.2
+#define FILTER_SIZE_X           8
+#define FILTER_SIZE_Y           8
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
@@ -125,14 +128,14 @@ static struct controller        ctrl_z;
 /* filter objects */
 static low_pass_filter_t        filter_x;
 static low_pass_filter_t        filter_y;
-static low_pass_filter_t        filter_ubi_x;
-static low_pass_filter_t        filter_ubi_y;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
 static low_pass_filter_t        filter_cmd_roll;
 static low_pass_filter_t        filter_cmd_pitch;
 static low_pass_filter_t        filter_cmd_z;
+static average_filter_t         filter_ubi_x;
+static average_filter_t         filter_ubi_y;
 static median_filter_t          filter_battery;
 static kalman_filter_t          filter_dx;
 static kalman_filter_t          filter_dy;
@@ -228,25 +231,25 @@ int control_loop_setup( int period, int control_z )
         perror( "sigaction" );
     }
 
-    controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD,     ms_period );
-    controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD,     ms_period );
+    controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD_DEF, ms_period );
+    controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD_DEF, ms_period );
     controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, ms_period );
 #ifdef ENABLE_POSITION_CONTROLLERS
-    controller_init( &ctrl_x,     "X",     CTRL_PIDD,     ms_period );
-    controller_init( &ctrl_y,     "Y",     CTRL_PIDD,     ms_period );
+    controller_init( &ctrl_x,     "X",     CTRL_PIDD_X_Y, ms_period );
+    controller_init( &ctrl_y,     "Y",     CTRL_PIDD_X_Y, ms_period );
 #endif
-    controller_init( &ctrl_z,     "Z",     CTRL_PIDD,     ms_period );
+    controller_init( &ctrl_z,     "Z",     CTRL_PIDD_DEF, ms_period );
 
     low_pass_filter_init( &filter_x,         FILTER_GAIN_X );
     low_pass_filter_init( &filter_y,         FILTER_GAIN_Y );
-    low_pass_filter_init( &filter_ubi_x,     FILTER_GAIN_X );
-    low_pass_filter_init( &filter_ubi_y,     FILTER_GAIN_Y );
     low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
     low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
     low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
+    average_filter_init ( &filter_ubi_x,     FILTER_SIZE_X );
+    average_filter_init ( &filter_ubi_y,     FILTER_SIZE_Y );
     median_filter_init  ( &filter_battery,   FILTER_SIZE_BATTERY );
     kalman_filter_init  ( &filter_dx,        ms_period );
     kalman_filter_init  ( &filter_dy,        ms_period );
@@ -291,7 +294,7 @@ static void set_control_params( ctrl_params_t *params,
 
     if( ctrl_1->name[0] == 'X' )
     {
-        kd  *= 0.01;
+        kd  *= 0.001;
         kdd *= 0.001;
     }
 
@@ -511,8 +514,8 @@ static int get_ubisense_data( void )
     }
 
     /* filter position data */
-    position_data.x = low_pass_filter_apply( &filter_ubi_x, position_data.x );
-    position_data.y = low_pass_filter_apply( &filter_ubi_y, position_data.y );
+    position_data.x = average_filter_apply( &filter_ubi_x, position_data.x );
+    position_data.y = average_filter_apply( &filter_ubi_y, position_data.y );
 
     return( 0 );
 }
@@ -581,14 +584,33 @@ static int get_command_data( void )
         terminal_port_get_command_data( &command_data );
     }
 
+    /* apply low-pass filtering to roll, pitch, and z command */
+    command_data.roll  = (int16_t) low_pass_filter_apply(
+        &filter_cmd_roll, command_data.roll );
+
+    command_data.pitch = (int16_t) low_pass_filter_apply(
+        &filter_cmd_pitch, command_data.pitch );
+
+    command_data.z = (int16_t) low_pass_filter_apply(
+        &filter_cmd_z, command_data.z );
+
 #ifdef ENABLE_POSITION_CONTROLLERS
     if( terminal_port_is_test_mode( ) )
     {
+#if 0
+        /* Laser commands */
         command_data.roll  = (int16_t) -do_control( &ctrl_y,
             estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
 
         command_data.pitch = (int16_t)  do_control( &ctrl_x,
             estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
+#endif
+        /* Ubisense commands */
+        command_data.roll  = (int16_t)  do_control( &ctrl_y,
+            estimated_y, offset_y + command_data.roll, estimated_dy, filtered_ddy );
+
+        command_data.pitch = (int16_t) -do_control( &ctrl_x,
+            estimated_x, offset_x - command_data.pitch, estimated_dx, filtered_ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -612,7 +634,11 @@ static int get_command_data( void )
     }
     else
     {
+        offset_x = position_data.x;//sensor_data.x;
+        offset_y = position_data.y;//sensor_data.y;
+    }
 #endif
+#if 0
     /* apply low-pass filtering to roll, pitch, and z command */
     command_data.roll  = (int16_t) low_pass_filter_apply(
         &filter_cmd_roll, command_data.roll );
@@ -620,15 +646,9 @@ static int get_command_data( void )
     command_data.pitch = (int16_t) low_pass_filter_apply(
         &filter_cmd_pitch, command_data.pitch );
 
-#ifdef ENABLE_POSITION_CONTROLLERS
-        offset_x = position_data.x;//sensor_data.x;
-        offset_y = position_data.y;//sensor_data.y;
-    }
-#endif
-
     command_data.z = (int16_t) low_pass_filter_apply(
         &filter_cmd_z, command_data.z );
-
+#endif
     /* rotate roll and pitch command depending on yaw angle */
     rotated_roll  = rotation_matrix_rotate_x( command_data.roll,
         command_data.pitch, command_data.yaw );
@@ -1065,6 +1085,8 @@ int control_loop_run( void )
 #endif
     controller_destroy( &ctrl_z );
 
+    average_filter_destroy( &filter_ubi_x );
+    average_filter_destroy( &filter_ubi_y );
     median_filter_destroy( &filter_battery );
 
     print_stats( );

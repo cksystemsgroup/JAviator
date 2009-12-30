@@ -8,6 +8,7 @@ bin_PROGRAMS = control
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
+    average_filter.c \
     communication.c \
     controller.c \
     control_loop.c \
@@ -19,7 +20,6 @@ control_SOURCES = \
     low_pass_filter.c \
     main.c \
     median_filter.c \
-    pid_controller.c \
     pidd_controller.c \
     rotation_matrix.c \
     serial_channel.c \

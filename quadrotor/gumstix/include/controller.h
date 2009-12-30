@@ -33,36 +33,43 @@ extern int errno;
 struct controller;
 struct controller_state;
 
-typedef double (*control)(struct controller *controller,
-        double current, double desired, double velocity, double acceleration);
-typedef int (*reset_zero)(struct controller *controller);
-typedef int (*set_params)(struct controller *controller,
-        double p, double i, double d, double dd);
+typedef double (*control)( struct controller *controller,
+                           double current, double desired,
+                           double velocity, double acceleration );
+typedef int (*reset_zero)( struct controller *controller );
+typedef int (*set_params)( struct controller *controller,
+                           double p, double i, double d, double dd );
 
-typedef enum {
-    CTRL_PID = 1,
-    CTRL_PID_YAW,
-    CTRL_PIDD,
+typedef enum
+{
+    CTRL_PIDD_DEF = 1,
     CTRL_PIDD_YAW,
+    CTRL_PIDD_X_Y,
+
 } controller_type;
 
-struct controller {
-    controller_type type;
-    control control;
-    reset_zero reset_zero;
-    set_params set_params;
-    char *name;
-    struct controller_state *state;
+struct controller
+{
+    controller_type             type;
+    control                     control;
+    reset_zero                  reset_zero;
+    set_params                  set_params;
+    char *                      name;
+    struct controller_state *   state;
 };
 
-int controller_init(struct controller *controller, char *name, controller_type type, int period);
-int controller_destroy(struct controller *controller);
-double controller_get_p_term( struct controller *controller );
-double controller_get_i_term( struct controller *controller );
-double controller_get_d_term( struct controller *controller );
-double controller_get_dd_term( struct controller *controller );
-double controller_get_integral( struct controller *controller );
-void   controller_set_integral( struct controller *controller, double value );
+
+int    controller_init         ( struct controller *controller, char *name,
+                                 controller_type type, int period );
+int    controller_destroy      ( struct controller *controller );
+double controller_get_p_term   ( struct controller *controller );
+double controller_get_i_term   ( struct controller *controller );
+double controller_get_d_term   ( struct controller *controller );
+double controller_get_dd_term  ( struct controller *controller );
+double controller_get_integral ( struct controller *controller );
+void   controller_set_integral ( struct controller *controller,
+                                 double value );
+
 
 #endif /* CONTROLLER_H */
 

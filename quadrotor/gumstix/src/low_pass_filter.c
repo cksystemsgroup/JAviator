@@ -34,7 +34,7 @@ int low_pass_filter_init( low_pass_filter_t *filter, double gain )
 {
     if( gain < 0 )
     {
-        fprintf( stderr, "ERROR: invalid low-pass filter gain\n" );
+        fprintf( stderr, "ERROR: invalid low-pass-filter gain\n" );
         return( -1 );
     }
 
