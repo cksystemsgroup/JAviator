@@ -135,7 +135,7 @@ void process_data_packet( void )
         checksum -= packet[ size ];
     }
 
-    /* check for non-zero checksum*/
+    /* check for non-zero checksum */
     if( checksum )
     {
         valid_packets = 0;
@@ -226,6 +226,9 @@ void process_en_sensors( uint8_t enable )
     {
         lsm215_stop( );
         minia_stop( );
+
+        memset( &javiator_data.x_pos, 0, sizeof( javiator_data.x_pos ) );
+        memset( &javiator_data.y_pos, 0, sizeof( javiator_data.y_pos ) );
 
         /* Sensors will be disabled either by the Gumstix after the helicopter
            has settled or due to a loss of connectivity between Robostix and

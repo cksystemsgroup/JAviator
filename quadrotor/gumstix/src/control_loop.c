@@ -61,8 +61,8 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* filter parameters */
-#define FILTER_GAIN_X           0.1
-#define FILTER_GAIN_Y           0.1
+#define FILTER_GAIN_X           1.5
+#define FILTER_GAIN_Y           1.5
 #define FILTER_GAIN_DDX         0.1
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
@@ -286,6 +286,10 @@ static int check_terminal_connection( void )
     return( 0 );
 }
 
+#define FACTOR_KI       1000.0
+#define FACTOR_KD       1000.0
+#define FACTOR_KDD      1000000.0
+
 static void set_control_params( ctrl_params_t *params,
     struct controller *ctrl_1, struct controller *ctrl_2 )
 {
@@ -296,9 +300,9 @@ static void set_control_params( ctrl_params_t *params,
 
     if( ctrl_1->name[0] == 'X' )
     {
-        ki  *= 0.1;
-        kd  *= 0.01;
-        kdd *= 0.001;
+        ki  /= FACTOR_KI;
+        kd  /= FACTOR_KD;
+        kdd /= FACTOR_KDD;
     }
 
     if( ctrl_1 != NULL )
@@ -629,7 +633,7 @@ static int get_command_data( void )
                 estimated_y, offset_y + command_data.roll, estimated_dy, filtered_ddy );
 
             command_data.pitch = (int16_t) -do_control( &ctrl_x,
-                estimated_x, offset_x - command_data.pitch, estimated_dx, filtered_ddx );
+                estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
         }
         else
         {
@@ -703,13 +707,13 @@ static int get_command_data( void )
     trace_data.value_4  = (int16_t)( position_data.x );
 #ifdef ENABLE_POSITION_CONTROLLERS
     trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
-    trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
-    trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
-    trace_data.value_8  = (int16_t)( controller_get_dd_term( &ctrl_y ) );
+    trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) * FACTOR_KI );
+    trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) * FACTOR_KD );
+    trace_data.value_8  = (int16_t)( controller_get_dd_term( &ctrl_y ) * FACTOR_KDD );
     trace_data.value_9  = (int16_t)( controller_get_p_term( &ctrl_x ) );
-    trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) );
-    trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) );
-    trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) );
+    trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) * FACTOR_KI );
+    trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) * FACTOR_KD );
+    trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) * FACTOR_KDD );
 #endif
 
     return( 0 );
@@ -729,7 +733,7 @@ static void reset_controllers( void )
     uz_old = 0;
 }
 
-static inline void reset_filters( void )
+static inline void reset_def_filters( void )
 {
     low_pass_filter_reset( &filter_ddx );
     low_pass_filter_reset( &filter_ddy );
@@ -738,6 +742,14 @@ static inline void reset_filters( void )
     low_pass_filter_reset( &filter_cmd_pitch );
     low_pass_filter_reset( &filter_cmd_z );
     kalman_filter_reset  ( &filter_dz );
+}
+
+static inline void reset_pos_filters( void )
+{
+    low_pass_filter_reset( &filter_x );
+    low_pass_filter_reset( &filter_y );;
+    kalman_filter_reset  ( &filter_dx );
+    kalman_filter_reset  ( &filter_dy );
 }
 
 static inline void reset_motor_signals( void )
@@ -755,7 +767,8 @@ static int perform_shut_down( void )
     base_motor_speed = terminal_port_get_base_motor_speed( );
 
     reset_controllers( );
-    reset_filters( );
+    reset_def_filters( );
+    reset_pos_filters( );
     reset_motor_signals( );
 
     return( 1 );
@@ -781,7 +794,13 @@ static int perform_ground_actions( void )
     }
     else
     {
-         perform_shut_down( );
+        controller_state = 0;
+        revving_step     = 0;
+        base_motor_speed = terminal_port_get_base_motor_speed( );
+
+        reset_controllers( );
+        reset_def_filters( );
+        reset_motor_signals( );
     }
 
     return( 1 );
