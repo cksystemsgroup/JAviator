@@ -31,8 +31,8 @@
 /* Structure for representing position data */
 typedef struct
 {
-    double x;
-    double y;
+    int x;
+    int y;
 
 } position_data_t;
 

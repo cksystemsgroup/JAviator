@@ -42,28 +42,26 @@ struct controller_state
     double Kd;           /* Gain for derivative of tracking error [PWM/(mrad/s)] */
     double Kdd;          /* Gain for second derivative of tracking error */
     double integral;     /* Running integral of the tracking error [mrad*s] */
-    double iMax;         /* Maximum integral value [mrad*s] */
-    double iMin;         /* Minimum integral value [mrad*s] */
+    double int_limit;    /* Integral limit [mrad*s] */
     double last_desired; /* Stores command to use for finite differencing [mrad] */
     double pTerm;
     double iTerm;
     double dTerm;
     double ddTerm;
-    double dd_integral;
 };
 
 
 static void saturate_integral( struct controller_state *state )
 {
     /* Saturate the integral (anti-windup) */
-    if( state->integral > state->iMax )
+    if( state->integral > state->int_limit )
     {
-        state->integral = state->iMax;
+        state->integral = state->int_limit;
     }
     else
-    if( state->integral < state->iMin )
+    if( state->integral < -state->int_limit )
     {
-        state->integral = state->iMin;
+        state->integral = -state->int_limit;
     }
 }
 
@@ -162,18 +160,16 @@ static double pidd_x_y_control( struct controller *controller,
     struct controller_state *state = controller->state;
     double s_error = get_s_error( current, desired );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
-    //double a_error = (desired - state->last_desired) / state->dtime;
+    double a_error = (desired - state->last_desired) / state->dtime;
 
-    state->dd_integral += acceleration * state->dtime;
-    state->last_desired  = desired;
+    state->last_desired = desired;
 
-    return pidd_compute( state, s_error, v_error, state->dd_integral );//a_error );
+    return pidd_compute( state, s_error, v_error, a_error );
 }
 
 static int pidd_reset_zero( struct controller *controller )
 {
     controller->state->integral = 0;
-    controller->state->dd_integral = 0;
 
     return( 0 );
 }
@@ -210,8 +206,7 @@ int pidd_def_controller_init( struct controller *controller, int period )
     memset( state, 0, sizeof( struct controller_state ) );
 
     state->dtime           = period / 1000.0; /* controller uses period in seconds */
-    state->iMax            = MOTOR_MAX;
-    state->iMin            = -MOTOR_MAX;
+    state->int_limit       = MOTOR_MAX;
     state->last_desired    = 0;
 
     controller->control    = pidd_control;
