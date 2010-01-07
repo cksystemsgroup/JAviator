@@ -43,6 +43,7 @@ struct controller_state
     double Kdd;          /* Gain for second derivative of tracking error */
     double integral;     /* Running integral of the tracking error [mrad*s] */
     double int_limit;    /* Integral limit [mrad*s] */
+    double last_current; /* Stores command to use for finite differencing [mrad] */
     double last_desired; /* Stores command to use for finite differencing [mrad] */
     double pTerm;
     double iTerm;
@@ -160,8 +161,9 @@ static double pidd_x_y_control( struct controller *controller,
     struct controller_state *state = controller->state;
     double s_error = get_s_error( current, desired );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
-    double a_error = (desired - state->last_desired) / state->dtime;
+    double a_error = get_v_error( current, state->last_current, velocity, state->dtime );
 
+    state->last_current = current;
     state->last_desired = desired;
 
     return pidd_compute( state, s_error, v_error, a_error );

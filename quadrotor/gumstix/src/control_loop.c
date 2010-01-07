@@ -61,8 +61,6 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* filter parameters */
-#define FILTER_GAIN_X           0.5
-#define FILTER_GAIN_Y           0.5
 #define FILTER_GAIN_DDX         0.1
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
@@ -85,7 +83,7 @@
 
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
-#define MAX_ROLL_PITCH          300                 /* [mrad] */
+#define MAX_ROLL_PITCH          500                 /* [mrad] */
 
 /* scaling constants */
 #define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
@@ -106,6 +104,10 @@ static int                      controller_state;
 static int                      altitude_mode;
 static long long                next_period;
 static double                   uz_old;
+#ifdef ENABLE_POSITION_CONTROLLERS
+static int                      offset_x;
+static int                      offset_y;
+#endif
 
 /* motor speed-up parameters */
 static int                      motor_revving_add = 50;
@@ -123,16 +125,14 @@ static struct controller        ctrl_y;
 static struct controller        ctrl_z;
 
 /* filter objects */
-static low_pass_filter_t        filter_x;
-static low_pass_filter_t        filter_y;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
 static low_pass_filter_t        filter_cmd_roll;
 static low_pass_filter_t        filter_cmd_pitch;
 static low_pass_filter_t        filter_cmd_z;
-static average_filter_t         filter_ubi_x;
-static average_filter_t         filter_ubi_y;
+static average_filter_t         filter_x;
+static average_filter_t         filter_y;
 static median_filter_t          filter_battery;
 static kalman_filter_t          filter_dx;
 static kalman_filter_t          filter_dy;
@@ -217,6 +217,10 @@ int control_loop_setup( int period, int control_z, int ubisense )
     altitude_mode    = ALT_MODE_GROUND;
     next_period      = 0;
     uz_old           = 0;
+#ifdef ENABLE_POSITION_CONTROLLERS
+    offset_x         = 0;
+    offset_y         = 0;
+#endif
     act.sa_handler   = signal_handler;
 	act.sa_handler   = int_handler;
 
@@ -234,16 +238,14 @@ int control_loop_setup( int period, int control_z, int ubisense )
 #endif
     controller_init( &ctrl_z,     "Z",     CTRL_PIDD_DEF, ms_period );
 
-    low_pass_filter_init( &filter_x,         FILTER_GAIN_X );
-    low_pass_filter_init( &filter_y,         FILTER_GAIN_Y );
     low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
     low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
     low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
-    average_filter_init ( &filter_ubi_x,     FILTER_SIZE_X );
-    average_filter_init ( &filter_ubi_y,     FILTER_SIZE_Y );
+    average_filter_init ( &filter_x,         FILTER_SIZE_X );
+    average_filter_init ( &filter_y,         FILTER_SIZE_Y );
     median_filter_init  ( &filter_battery,   FILTER_SIZE_BATTERY );
     kalman_filter_init  ( &filter_dx,        ms_period );
     kalman_filter_init  ( &filter_dy,        ms_period );
@@ -278,7 +280,7 @@ static int check_terminal_connection( void )
     return( 0 );
 }
 
-#define FACTOR_KI       10000.0
+#define FACTOR_KI       1000.0
 #define FACTOR_KD       1000.0
 #define FACTOR_KDD      1000.0
 
@@ -347,26 +349,26 @@ static void get_control_params( void )
 
 static inline double get_corrected_x( void )
 {
-    return low_pass_filter_apply( &filter_x, rotation_matrix_rotate_x(
+    return rotation_matrix_rotate_x(
         X_LASER_POS_ROLL + atoi( (const char *) javiator_data.x_pos ),
         X_LASER_POS_PITCH,
-        X_LASER_POS_YAW ) );
+        X_LASER_POS_YAW );
 }
 
 static inline double get_corrected_y( void )
 {
-    return low_pass_filter_apply( &filter_y, rotation_matrix_rotate_y(
+    return rotation_matrix_rotate_y(
         Y_LASER_POS_ROLL,
         Y_LASER_POS_PITCH + atoi( (const char *) javiator_data.y_pos ),
-        Y_LASER_POS_YAW ) );
+        Y_LASER_POS_YAW );
 }
 
 static inline double get_corrected_z( void )
 {
-    return( rotation_matrix_rotate_z(
+    return rotation_matrix_rotate_z(
         SONAR_POS_ROLL,
         SONAR_POS_PITCH,
-        SONAR_POS_YAW + FACTOR_SONAR * javiator_data.sonar ) );
+        SONAR_POS_YAW + FACTOR_SONAR * javiator_data.sonar );
 }
 
 static inline double get_filtered_ddx( void )
@@ -397,10 +399,6 @@ static void adjust_sensor_data( void )
 {
     static int offset_yaw = 0;
     static int offset_z   = 0;
-#ifdef ENABLE_POSITION_CONTROLLERS
-    static int offset_x   = 0;
-    static int offset_y   = 0;
-#endif
 
     if( motor_signals.front == 0 && motor_signals.right == 0 &&
         motor_signals.rear  == 0 && motor_signals.left  == 0 )
@@ -412,17 +410,13 @@ static void adjust_sensor_data( void )
 #ifdef ENABLE_POSITION_CONTROLLERS
         if( enable_ubisense )
         {
-            offset_x        = position_data.x;
-            offset_y        = position_data.y;
-            position_data.x = 0;
-            position_data.y = 0;
+            offset_x = position_data.x;
+            offset_y = position_data.y;
         }
         else
         {
-            offset_x      = sensor_data.x;
-            offset_y      = sensor_data.y;
-            sensor_data.x = 0;
-            sensor_data.y = 0;
+            offset_x = sensor_data.x;
+            offset_y = sensor_data.y;
         }
 #endif
     }
@@ -430,18 +424,6 @@ static void adjust_sensor_data( void )
     {
         sensor_data.yaw -= offset_yaw;
         sensor_data.z   -= offset_z;
-#ifdef ENABLE_POSITION_CONTROLLERS
-        if( enable_ubisense )
-        {
-            position_data.x -= offset_x;
-            position_data.y -= offset_y;
-        }
-        else
-        {
-            sensor_data.x -= offset_x;
-            sensor_data.y -= offset_y;
-        }
-#endif
     }
 }
 
@@ -541,8 +523,8 @@ static int get_ubisense_data( void )
     }
 
     /* filter position data */
-    position_data.x = (int) average_filter_apply( &filter_ubi_x, position_data.x );
-    position_data.y = (int) average_filter_apply( &filter_ubi_y, position_data.y );
+    position_data.x = (int) average_filter_apply( &filter_x, position_data.x );
+    position_data.y = (int) average_filter_apply( &filter_y, position_data.y );
 
     return( 0 );
 }
@@ -558,7 +540,6 @@ static int get_command_data( void )
     double estimated_y   = 0;
     double rotated_roll  = 0;
     double rotated_pitch = 0;
-    //double rotated_yaw   = 0;
 
     if( terminal_port_is_shut_down( ) )
     {
@@ -641,10 +622,10 @@ static int get_command_data( void )
     if( terminal_port_is_test_mode( ) )
     {
         command_data.roll  = (int16_t) -do_control( &ctrl_y,
-            estimated_y, -command_data.roll, estimated_dy, filtered_ddy );
+            estimated_y, offset_y - command_data.roll, estimated_dy, filtered_ddy );
 
         command_data.pitch = (int16_t)  do_control( &ctrl_x,
-            estimated_x, command_data.pitch, estimated_dx, filtered_ddx );
+            estimated_x, offset_x + command_data.pitch, estimated_dx, filtered_ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -666,6 +647,17 @@ static int get_command_data( void )
             command_data.pitch = -MAX_ROLL_PITCH;
         }
     }
+    else
+    if( enable_ubisense )
+    {
+        offset_x = position_data.x;
+        offset_y = position_data.y;
+    }
+    else
+    {
+        offset_x = sensor_data.x;
+        offset_y = sensor_data.y;
+    }
 #endif
 
     /* rotate roll and pitch command depending on yaw angle */
@@ -675,13 +667,9 @@ static int get_command_data( void )
     rotated_pitch = rotation_matrix_rotate_y( command_data.roll,
         command_data.pitch, command_data.yaw );
 
-    //rotated_yaw   = rotation_matrix_rotate_z( command_data.roll,
-    //    command_data.pitch, command_data.yaw );
-
     /* replace original commands with rotated commands */
     command_data.roll  = (int16_t) rotated_roll;
     command_data.pitch = (int16_t) rotated_pitch;
-    //command_data.yaw   = (int16_t) rotated_yaw;
 
 #ifdef ENABLE_POSITION_CONTROLLERS
     /* save values for logging */
@@ -738,10 +726,8 @@ static inline void reset_def_filters( void )
 
 static inline void reset_pos_filters( void )
 {
-    low_pass_filter_reset( &filter_x );
-    low_pass_filter_reset( &filter_y );;
-    kalman_filter_reset  ( &filter_dx );
-    kalman_filter_reset  ( &filter_dy );
+    kalman_filter_reset( &filter_dx );
+    kalman_filter_reset( &filter_dy );
 }
 
 static inline void reset_motor_signals( void )
@@ -1133,8 +1119,8 @@ int control_loop_run( void )
 #endif
     controller_destroy( &ctrl_z );
 
-    average_filter_destroy( &filter_ubi_x );
-    average_filter_destroy( &filter_ubi_y );
+    average_filter_destroy( &filter_x );
+    average_filter_destroy( &filter_y );
     median_filter_destroy( &filter_battery );
 
     print_stats( );
