@@ -227,9 +227,6 @@ void process_en_sensors( uint8_t enable )
         lsm215_stop( );
         minia_stop( );
 
-        memset( &javiator_data.x_pos, 0, sizeof( javiator_data.x_pos ) );
-        memset( &javiator_data.y_pos, 0, sizeof( javiator_data.y_pos ) );
-
         /* Sensors will be disabled either by the Gumstix after the helicopter
            has settled or due to a loss of connectivity between Robostix and
            Gumstix.  Thus, in case a shut-down was issued, the shut-down flag

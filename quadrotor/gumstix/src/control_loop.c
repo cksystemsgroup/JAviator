@@ -65,8 +65,6 @@
 #define FILTER_GAIN_DDY         0.1
 #define FILTER_GAIN_DDZ         0.1
 #define FILTER_GAIN_CMD         0.1
-#define FILTER_SIZE_X           8
-#define FILTER_SIZE_Y           8
 #define FILTER_SIZE_BATTERY     15
 
 /* plant parameters */
@@ -77,7 +75,7 @@
 #define X_LASER_POS_PITCH      0// 60                  /* [mm] y-laser position on pitch axis */
 #define X_LASER_POS_YAW        0//-80                  /* [mm] y-laser position on yaw axis */
 #define Y_LASER_POS_ROLL       0// 80                  /* [mm] x-laser position on roll axis */
-#define Y_LASER_POS_PITCH      0//-30                  /* [mm] x-laser position on pitch axis */
+#define Y_LASER_POS_PITCH      0// 55                  /* [mm] x-laser position on pitch axis */
 #define Y_LASER_POS_YAW        0//-80                  /* [mm] x-laser position on yaw axis */
 #define EARTH_GRAVITY           9810                /* [mm/s^2] gravitational acceleration */
 
@@ -125,14 +123,13 @@ static struct controller        ctrl_y;
 static struct controller        ctrl_z;
 
 /* filter objects */
+static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
 static low_pass_filter_t        filter_cmd_roll;
 static low_pass_filter_t        filter_cmd_pitch;
 static low_pass_filter_t        filter_cmd_z;
-static average_filter_t         filter_x;
-static average_filter_t         filter_y;
 static median_filter_t          filter_battery;
 static kalman_filter_t          filter_dx;
 static kalman_filter_t          filter_dy;
@@ -244,8 +241,6 @@ int control_loop_setup( int period, int control_z, int ubisense )
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
-    average_filter_init ( &filter_x,         FILTER_SIZE_X );
-    average_filter_init ( &filter_y,         FILTER_SIZE_Y );
     median_filter_init  ( &filter_battery,   FILTER_SIZE_BATTERY );
     kalman_filter_init  ( &filter_dx,        ms_period );
     kalman_filter_init  ( &filter_dy,        ms_period );
@@ -280,10 +275,6 @@ static int check_terminal_connection( void )
     return( 0 );
 }
 
-#define FACTOR_KI       1000.0
-#define FACTOR_KD       1000.0
-#define FACTOR_KDD      1000.0
-
 static void set_control_params( ctrl_params_t *params,
     struct controller *ctrl_1, struct controller *ctrl_2 )
 {
@@ -291,13 +282,6 @@ static void set_control_params( ctrl_params_t *params,
     double ki  = params->ki  * FACTOR_PARAMETER;
     double kd  = params->kd  * FACTOR_PARAMETER;
     double kdd = params->kdd * FACTOR_PARAMETER;
-
-    if( ctrl_1->name[0] == 'X' )
-    {
-        ki  /= FACTOR_KI;
-        kd  /= FACTOR_KD;
-        kdd /= FACTOR_KDD;
-    }
 
     if( ctrl_1 != NULL )
     {
@@ -522,10 +506,6 @@ static int get_ubisense_data( void )
         return( res );
     }
 
-    /* filter position data */
-    position_data.x = (int) average_filter_apply( &filter_x, position_data.x );
-    position_data.y = (int) average_filter_apply( &filter_y, position_data.y );
-
     return( 0 );
 }
 
@@ -658,6 +638,29 @@ static int get_command_data( void )
         offset_x = sensor_data.x;
         offset_y = sensor_data.y;
     }
+
+    /* save values for logging */
+    sensor_data.x       = (int) estimated_x;
+    sensor_data.y       = (int) estimated_y;
+    sensor_data.dx      = (int) estimated_dx;
+    sensor_data.dy      = (int) estimated_dy;
+    sensor_data.ddx     = (int) filtered_ddx;
+    sensor_data.ddy     = (int) filtered_ddy;
+#endif
+
+    trace_data.value_1  = (int16_t)( -command_data.roll );
+    trace_data.value_2  = (int16_t)( command_data.pitch );
+    trace_data.value_3  = (int16_t)( position_data.y );
+    trace_data.value_4  = (int16_t)( position_data.x );
+#ifdef ENABLE_POSITION_CONTROLLERS
+    trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
+    trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) );
+    trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) );
+    trace_data.value_8  = (int16_t)( controller_get_dd_term( &ctrl_y ) );
+    trace_data.value_9  = (int16_t)( controller_get_p_term( &ctrl_x ) );
+    trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) );
+    trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) );
+    trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) );
 #endif
 
     /* rotate roll and pitch command depending on yaw angle */
@@ -671,32 +674,15 @@ static int get_command_data( void )
     command_data.roll  = (int16_t) rotated_roll;
     command_data.pitch = (int16_t) rotated_pitch;
 
-#ifdef ENABLE_POSITION_CONTROLLERS
-    /* save values for logging */
-    sensor_data.x       = (int) estimated_x;
-    sensor_data.y       = (int) estimated_y;
-    sensor_data.dx      = (int) estimated_dx;
-    sensor_data.dy      = (int) estimated_dy;
-    sensor_data.ddx     = (int) filtered_ddx;
-    sensor_data.ddy     = (int) filtered_ddy;
-#endif
-
-    trace_data.value_1  = (int16_t)( command_data.roll );
-    trace_data.value_2  = (int16_t)( command_data.pitch );
-    trace_data.value_3  = (int16_t)( position_data.y );
-    trace_data.value_4  = (int16_t)( position_data.x );
-#ifdef ENABLE_POSITION_CONTROLLERS
-    trace_data.value_5  = (int16_t)( controller_get_p_term( &ctrl_y ) );
-    trace_data.value_6  = (int16_t)( controller_get_i_term( &ctrl_y ) * FACTOR_KI );
-    trace_data.value_7  = (int16_t)( controller_get_d_term( &ctrl_y ) * FACTOR_KD );
-    trace_data.value_8  = (int16_t)( controller_get_dd_term( &ctrl_y ) * FACTOR_KDD );
-    trace_data.value_9  = (int16_t)( controller_get_p_term( &ctrl_x ) );
-    trace_data.value_10 = (int16_t)( controller_get_i_term( &ctrl_x ) * FACTOR_KI );
-    trace_data.value_11 = (int16_t)( controller_get_d_term( &ctrl_x ) * FACTOR_KD );
-    trace_data.value_12 = (int16_t)( controller_get_dd_term( &ctrl_x ) * FACTOR_KDD );
-#endif
-
     return( 0 );
+}
+
+static inline void reset_motor_signals( void )
+{
+    motor_signals.front = 0;
+    motor_signals.right = 0;
+    motor_signals.rear  = 0;
+    motor_signals.left  = 0;
 }
 
 static void reset_controllers( void )
@@ -713,7 +699,7 @@ static void reset_controllers( void )
     uz_old = 0;
 }
 
-static inline void reset_def_filters( void )
+static inline void reset_filters( void )
 {
     low_pass_filter_reset( &filter_ddx );
     low_pass_filter_reset( &filter_ddy );
@@ -724,30 +710,15 @@ static inline void reset_def_filters( void )
     kalman_filter_reset  ( &filter_dz );
 }
 
-static inline void reset_pos_filters( void )
-{
-    kalman_filter_reset( &filter_dx );
-    kalman_filter_reset( &filter_dy );
-}
-
-static inline void reset_motor_signals( void )
-{
-    motor_signals.front = 0;
-    motor_signals.right = 0;
-    motor_signals.rear  = 0;
-    motor_signals.left  = 0;
-}
-
 static int perform_shut_down( void )
 {
     controller_state = 0;
     revving_step     = 0;
     base_motor_speed = terminal_port_get_base_motor_speed( );
 
-    reset_controllers( );
-    reset_def_filters( );
-    reset_pos_filters( );
     reset_motor_signals( );
+    reset_controllers( );
+    reset_filters( );
 
     return( 1 );
 }
@@ -780,13 +751,7 @@ static int perform_ground_actions( void )
     }
     else
     {
-        controller_state = 0;
-        revving_step     = 0;
-        base_motor_speed = terminal_port_get_base_motor_speed( );
-
-        reset_controllers( );
-        reset_def_filters( );
-        reset_motor_signals( );
+        perform_shut_down( );
     }
 
     return( 1 );
@@ -1119,8 +1084,6 @@ int control_loop_run( void )
 #endif
     controller_destroy( &ctrl_z );
 
-    average_filter_destroy( &filter_x );
-    average_filter_destroy( &filter_y );
     median_filter_destroy( &filter_battery );
 
     print_stats( );
