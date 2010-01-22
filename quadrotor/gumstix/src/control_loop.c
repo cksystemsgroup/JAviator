@@ -36,12 +36,10 @@
 #include "comm_channel.h"
 #include "communication.h"
 #include "javiator_port.h"
-#include "inertial_port.h"
 #include "terminal_port.h"
 #include "ubisense_port.h"
 #include "command_data.h"
 #include "javiator_data.h"
-#include "inertial_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "ctrl_params.h"
@@ -61,11 +59,9 @@
 #define ALT_MODE_SHUTDOWN       0x02
 
 /* filter parameters */
-#define FILTER_GAIN_DDX         0.1
-#define FILTER_GAIN_DDY         0.1
-#define FILTER_GAIN_DDZ         0.1
+#define FILTER_GAIN_DD          0.1
 #define FILTER_GAIN_CMD         0.1
-#define FILTER_SIZE_BATTERY     15
+#define FILTER_SIZE_BAT         15
 
 /* plant parameters */
 #define SONAR_POS_ROLL         0//-95                  /* [mm] sonar position on roll axis */
@@ -137,8 +133,7 @@ static kalman_filter_t          filter_dz;
 
 /* data structures */
 static command_data_t           command_data;
-static javiator_data_t          javiator_data;
-static inertial_data_t          inertial_data;
+static javiator_ldat_t          javiator_data;
 static position_data_t          position_data;
 static sensor_data_t            sensor_data;
 static motor_signals_t          motor_signals;
@@ -147,7 +142,7 @@ static trace_data_t             trace_data;
 
 /* controller statistics */
 #define NUM_STATS               9
-#define STAT_IMU                0
+#define STAT_FROM_UBI           0
 #define STAT_TO_JAV             1
 #define STAT_FROM_JAV           2
 #define STAT_FROM_TERM          3
@@ -162,11 +157,11 @@ static long long                stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
 static long long                max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
 static char *                   stats_name[ NUM_STATS ] =
 {
-    "IMU           ",
-    "to javiator   ",
-    "from javiator ",
-    "from terminal ",
-    "to terminal   ",
+    "from Ubisense ",
+    "to JAviator   ",
+    "from JAviator ",
+    "from Terminal ",
+    "to Terminal   ",
     "control       ",
     "sleep time    ",
     "read time     ",
@@ -235,20 +230,19 @@ int control_loop_setup( int period, int control_z, int ubisense )
 #endif
     controller_init( &ctrl_z,     "Z",     CTRL_PIDD_DEF, ms_period );
 
-    low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DDX );
-    low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DDY );
-    low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DDZ );
+    low_pass_filter_init( &filter_ddx,       FILTER_GAIN_DD );
+    low_pass_filter_init( &filter_ddy,       FILTER_GAIN_DD );
+    low_pass_filter_init( &filter_ddz,       FILTER_GAIN_DD );
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
-    median_filter_init  ( &filter_battery,   FILTER_SIZE_BATTERY );
+    median_filter_init  ( &filter_battery,   FILTER_SIZE_BAT );
     kalman_filter_init  ( &filter_dx,        ms_period );
     kalman_filter_init  ( &filter_dy,        ms_period );
     kalman_filter_init  ( &filter_dz,        ms_period );
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
-    memset( &inertial_data, 0, sizeof( inertial_data ) );
     memset( &position_data, 0, sizeof( position_data ) );
     memset( &sensor_data,   0, sizeof( sensor_data ) );
     memset( &motor_signals, 0, sizeof( motor_signals ) );
@@ -423,6 +417,31 @@ static int get_javiator_data( void )
         return( res );
     }
 
+    /* copy and scale Euler angles */
+    sensor_data.roll    = (int)( FACTOR_EULER_ANGLE * javiator_data.roll );
+    sensor_data.pitch   = (int)( FACTOR_EULER_ANGLE * javiator_data.pitch );
+    sensor_data.yaw     = (int)( FACTOR_EULER_ANGLE * javiator_data.yaw );
+
+    /* save old angular rates */
+    sensor_data.ddroll  = sensor_data.droll;
+    sensor_data.ddpitch = sensor_data.dpitch;
+    sensor_data.ddyaw   = sensor_data.dyaw;
+
+    /* copy and scale angular rates */
+    sensor_data.droll   = (int)( FACTOR_ANGULAR_RATE * javiator_data.droll );
+    sensor_data.dpitch  = (int)( FACTOR_ANGULAR_RATE * javiator_data.dpitch );
+    sensor_data.dyaw    = (int)( FACTOR_ANGULAR_RATE * javiator_data.dyaw );
+
+    /* compute angular accelerations */
+    sensor_data.ddroll  = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.droll  - sensor_data.ddroll) );
+    sensor_data.ddpitch = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.dpitch - sensor_data.ddpitch) );
+    sensor_data.ddyaw   = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.dyaw   - sensor_data.ddyaw) );
+
+    /* copy and scale linear accelerations */
+    sensor_data.ddx     = (int)( FACTOR_LINEAR_ACCEL * javiator_data.ddx );
+    sensor_data.ddy     = (int)( FACTOR_LINEAR_ACCEL * javiator_data.ddy );
+    sensor_data.ddz     = (int)( FACTOR_LINEAR_ACCEL * javiator_data.ddz );
+
     /* reject possible sonar outliers */
     if( abs( old_z - javiator_data.sonar ) > 20 && count < 2 )
     {
@@ -443,50 +462,7 @@ static int get_javiator_data( void )
 
     /* scale and filter battery level */
     sensor_data.battery = (int) median_filter_apply( &filter_battery,
-        FACTOR_BATTERY * javiator_data.battery );
-
-    return( 0 );
-}
-
-static int get_inertial_data( void )
-{
-    int res = inertial_port_get_data( &inertial_data );
-
-    if( res == -1 )
-    {
-        return( 0 );
-    }
-
-    if( res )
-    {
-        fprintf( stderr, "ERROR: data from IMU not available\n" );
-        return( res );
-    }
-
-    /* copy and scale Euler angles */
-    sensor_data.roll    = (int)( FACTOR_EULER_ANGLE * inertial_data.roll );
-    sensor_data.pitch   = (int)( FACTOR_EULER_ANGLE * inertial_data.pitch );
-    sensor_data.yaw     = (int)( FACTOR_EULER_ANGLE * inertial_data.yaw );
-
-    /* save old angular rates */
-    sensor_data.ddroll  = sensor_data.droll;
-    sensor_data.ddpitch = sensor_data.dpitch;
-    sensor_data.ddyaw   = sensor_data.dyaw;
-
-    /* copy and scale angular rates */
-    sensor_data.droll   = (int)( FACTOR_ANGULAR_RATE * inertial_data.droll );
-    sensor_data.dpitch  = (int)( FACTOR_ANGULAR_RATE * inertial_data.dpitch );
-    sensor_data.dyaw    = (int)( FACTOR_ANGULAR_RATE * inertial_data.dyaw );
-
-    /* compute angular accelerations */
-    sensor_data.ddroll  = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.droll  - sensor_data.ddroll) );
-    sensor_data.ddpitch = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.dpitch - sensor_data.ddpitch) );
-    sensor_data.ddyaw   = (int)( FACTOR_ANGULAR_ACCEL * (sensor_data.dyaw   - sensor_data.ddyaw) );
-
-    /* copy and scale linear accelerations */
-    sensor_data.ddx     = (int)( FACTOR_LINEAR_ACCEL * inertial_data.ddx );
-    sensor_data.ddy     = (int)( FACTOR_LINEAR_ACCEL * inertial_data.ddy );
-    sensor_data.ddz     = (int)( FACTOR_LINEAR_ACCEL * inertial_data.ddz );
+        FACTOR_BATTERY * javiator_data.batt );
 
     return( 0 );
 }
@@ -528,15 +504,16 @@ static int get_command_data( void )
 
         if( sensors_enabled )
         {
-            javiator_port_send_enable_sensors( 0 );
             sensors_enabled = 0;
+            javiator_port_send_enable_sensors( 0 );
         }
     }
     else
     if( terminal_port_is_mode_switch( ) )
     {
-		printf( "Mode Switch...\n" );
+		printf( "Mode Switch ...\n" );
 		print_stats( );
+
 		loop_count = 0;
 		memset( stats, 0, sizeof( stats ) );
 		memset( max_stats, 0, sizeof( max_stats ) );
@@ -556,8 +533,8 @@ static int get_command_data( void )
 
                 if( !sensors_enabled )
                 {
-                    javiator_port_send_enable_sensors( 1 );
                     sensors_enabled = 1;
+                    javiator_port_send_enable_sensors( 1 );
                 }
                 break;
 
@@ -942,22 +919,14 @@ static int read_sensors( void )
 
 	start = get_utime( );
 
-    if( get_inertial_data( ) )
-    {
-        fprintf( stderr, "ERROR: connection to IMU broken\n" );
-        return( -1 );
-    }
-
-    inertial_port_send_request( );
-
-    end = get_utime( );
-    calc_stats( end - start, STAT_IMU );
-
 	if( enable_ubisense && get_ubisense_data( ) )
     {
         fprintf( stderr, "ERROR: connection to Ubisense broken\n" );
 		return( -1 );
 	}
+
+    end = get_utime( );
+    calc_stats( end - start, STAT_FROM_UBI );
 
 	/* IMPORTANT: yaw angle must be adjusted BEFORE
 	   updating the rotation matrix */
@@ -981,8 +950,6 @@ int control_loop_run( void )
 
     altitude_mode = ALT_MODE_GROUND;
     next_period   = get_utime( ) + us_period;
-
-	inertial_port_send_request( );
 
     while( running )
     {

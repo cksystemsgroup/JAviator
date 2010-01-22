@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   spi.c      SPI interface used for communication with the Gumstix.       */
+/*   parallel.c     Parallel interface used for communication.               */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -25,7 +25,8 @@
 #include <string.h>
 
 #include "protocol.h"
-#include "spi.h"
+#include "config.h"
+#include "parallel.h"
 
 
 /*****************************************************************************/
@@ -35,19 +36,20 @@
 /*****************************************************************************/
 
 /* Global variables */
-static          uint8_t     rx_buf[ COMM_BUF_SIZE ];
-static          uint8_t     tx_buf[ COMM_BUF_SIZE ];
-static volatile uint8_t     rx_items;
-static volatile uint8_t     tx_items;
-static volatile uint8_t     rx_index;
-static volatile uint8_t     tx_index;
-static volatile uint8_t     new_data;
-static volatile uint8_t     spi_rx;
-static volatile uint8_t     spi_tx;
-static volatile uint8_t     spi_if;
+static          uint8_t         rx_buf[ COMM_BUF_SIZE ];
+static          uint8_t         tx_buf[ COMM_BUF_SIZE ];
+static volatile uint8_t         rx_items;
+static volatile uint8_t         tx_items;
+static volatile uint8_t         rx_index;
+static volatile uint8_t         tx_index;
+static volatile uint8_t         new_data;
+static volatile uint8_t         if_ready;
+static volatile uint8_t         sending;
 
 /* Forward declarations */
-static uint8_t  is_valid_data( const uint8_t *, uint8_t );
+static void     do_send_data    ( void );
+static void     do_recv_data    ( void );
+static uint8_t  is_valid_data   ( const uint8_t *, uint8_t );
 
 
 /*****************************************************************************/
@@ -56,15 +58,27 @@ static uint8_t  is_valid_data( const uint8_t *, uint8_t );
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the SPI interface for communication
+/* Initializes the parallel interface
 */
-void spi_init( void )
+void parallel_init( void )
 {
-    /* make MISO an output, MOSI, SCK, and SS inputs */
-    DDRB |= (1 << DDB3);
+    /* configure parallel port pins for input */
+    PP_DATA_PORT = 0x00; /* disable all pull-ups */
+    PP_DATA_DDR  = 0x00; /* make all pins inputs */
 
-    /* enable SPI interface and interrupt */
-    SPCR = (1 << SPE) | (1 << SPIE);
+    /* configure DDR for RDY command/interrupt pin */
+    PP_CTRL_DDR |=  (1 << PP_CMD_RDY); /* make RDY command an output */
+    PP_CTRL_DDR &= ~(1 << PP_INT_RDY); /* make RDY interrupt an input */
+
+    /* disable interrupts associated with RDY before changing EICRB */
+    EIMSK       &= ~(1 << PP_CMD_RDY); /* disable RDY output interrupt */
+    EIMSK       &= ~(1 << PP_INT_RDY); /* disable RDY input interrupt */
+
+    /* any logical change on the RDY input generates an interrupt */
+    EICRB       |=  (1 << PP_ISC_RDY);
+
+    /* enable RDY interrupt */
+    EIMSK       |=  (1 << PP_INT_RDY);
 
     /* initialize global variables */
     rx_items = 0;
@@ -72,107 +86,45 @@ void spi_init( void )
     rx_index = 0;
     tx_index = 0;
     new_data = 0;
-    spi_rx   = 0;
-    spi_tx   = 0;
-    spi_if   = 0;
-
+    if_ready = 0;
+    sending  = 0;
 }
 
 /* Returns 1 if new data available, 0 otherwise
 */
-uint8_t spi_is_new_data( void )
+uint8_t parallel_is_new_data( void )
 {
-	if( spi_if )
+    /* check for RDY interrupt */
+    if( if_ready )
     {
-        spi_if = 0;
+        if_ready = 0;
 
-		/* check RX data stream for packet marks and payload size */
-		if( rx_index == 0 )
-		{
-			/* check for first packet mark */
-			if( spi_rx == COMM_PACKET_MARK )
-			{
-				rx_items = COMM_OVERHEAD;
-			}
-		}
-        else
-        if( rx_index == 1 )
-		{
-			/* check for second packet mark */
-			if( spi_rx != COMM_PACKET_MARK )
-			{
-				rx_items = 0;
-				rx_index = 0;
-			}
-		}
+        if( sending )
+        {
+            do_send_data( );
+        }
         else
         {
-            /* indicate that the receive buffer is being updated
-               and thus data are no longer secure to be copied */
-            new_data = 0;
+            do_recv_data( );
+        }
 
-            /* read data from SPI port */
-			rx_buf[ rx_index ] = spi_rx;
+        return( new_data );
+    }
 
-			if( rx_index == 3 )
-			{
-				rx_buf[0] = COMM_PACKET_MARK;
-				rx_buf[1] = COMM_PACKET_MARK;
+    /* check for TX items to transmit */
+    if( !sending && tx_items )
+    {
+        sending = 1;
 
-				/* second header byte contains payload size */
-				rx_items += rx_buf[3];
+        /* make parallel port an output */
+        PP_DATA_DDR = 0xFF;
 
-				/* check for valid packet size */
-				if( rx_items > COMM_BUF_SIZE )
-				{
-					rx_items = 0;
-					rx_index = 0;
-				}
-			}
-		}
+        /* write data to parallel port */
+        PP_DATA_PORT = tx_buf[ tx_index++ ];
 
-		/* check for end of RX data stream */
-		if( rx_items && ++rx_index == rx_items )
-		{
-			/* check for valid packet content */
-			if( is_valid_data( rx_buf + 2, rx_items - 2 ) )
-			{
-				new_data = 1;
-			}
-
-			rx_items = 0;
-		}
-
-		/* check for TX items to transmit */
-		if( tx_items )
-		{
-            /* write data to SPI port */
-			spi_tx = tx_buf[ tx_index ];
-
-			/* check for end of TX data stream */
-			if( ++tx_index == tx_items )
-			{
-				tx_items = 0;
-			}
-		}
-		else
-		{
-            /* transmit null-byte */
-			spi_tx = 0;
-		}
-
-		/* check for end of RX transmission */
-		if( !rx_items )
-		{
-			rx_index = 0;
-		}
-
-		/* check for end of TX transmission */
-		if( !tx_items ) 
-		{
-			tx_index = 0;
-		}
-	}
+        /* issue RDY command */
+        PP_CTRL_PORT ^= (1 << PP_CMD_RDY);
+    }
 
     return( new_data );
 }
@@ -180,7 +132,7 @@ uint8_t spi_is_new_data( void )
 /* Copies the received data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t spi_get_data( uint8_t *buf )
+int8_t parallel_get_data( uint8_t *buf )
 {
     /* check that we're not receiving data currently */
     if( !new_data )
@@ -190,7 +142,7 @@ int8_t spi_get_data( uint8_t *buf )
 
     cli( ); /* disable interrupts */
 
-    /* copy received data packet to given buffer */
+    /* copy received data to given buffer */
     memcpy( buf, rx_buf + 2, rx_buf[3] + COMM_OVERHEAD - 2 );
 
     /* clear new-data indicator */
@@ -201,13 +153,10 @@ int8_t spi_get_data( uint8_t *buf )
     return( 0 );
 }
 
-/* Sends a data via the SPI interface.
-   Note: the interface operates in Slave Mode, hence
-   the packet will be prepared and sent with the next
-   transmission started by the SPI Master.
+/* Sends data via the parallel interface.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t spi_send_data( uint8_t id, const uint8_t *data, uint8_t size )
+int8_t parallel_send_data( uint8_t id, const uint8_t *data, uint8_t size )
 {
     uint16_t checksum = id + size;
 
@@ -237,18 +186,11 @@ int8_t spi_send_data( uint8_t id, const uint8_t *data, uint8_t size )
     return( 0 );
 }
 
-/* Resets the SPI interface
+/* Resets the parallel interface
 */
-void spi_reset( void )
+void parallel_reset( void )
 {
-    rx_items = 0;
-    tx_items = 0;
-    rx_index = 0;
-    tx_index = 0;
-    new_data = 0;
-    spi_rx   = 0;
-    spi_tx   = 0;
-    spi_if   = 0;
+    parallel_init( );
 }
 
 
@@ -257,6 +199,90 @@ void spi_reset( void )
 /*   Private Functions                                                       */
 /*                                                                           */
 /*****************************************************************************/
+
+/* Runs the sending procedure
+*/
+static void do_send_data( void )
+{
+    /* check for end of TX data stream */
+    if( tx_index == tx_items )
+    {
+        tx_items = 0;
+        tx_index = 0;
+        sending  = 0;
+
+        /* make parallel port an input */
+        PP_DATA_DDR = 0x00;
+    }
+    else
+    {
+        /* write data to parallel port */
+        PP_DATA_PORT = tx_buf[ tx_index++ ];
+
+        /* issue RDY command */
+        PP_CTRL_PORT ^= (1 << PP_CMD_RDY);
+    }
+}
+
+/* Runs the receiving procedure
+*/
+static void do_recv_data( void )
+{
+    /* indicate that the receive buffer is being updated
+       and thus data are no longer secure to be copied */
+    new_data = 0;
+
+    /* read data from parallel port */
+    rx_buf[ rx_index ] = PP_DATA_REG;
+
+    if( rx_index == 0 )
+    {
+        /* check for first packet mark */
+        if( rx_buf[0] == COMM_PACKET_MARK )
+        {
+            rx_items = COMM_OVERHEAD;
+        }
+    }
+    else
+    if( rx_index == 1 )
+    {
+		/* check for second packet mark */
+		if( rx_buf[1] != COMM_PACKET_MARK )
+		{
+			rx_items = 0;
+			rx_index = 0;
+		}
+	}
+	else
+	if( rx_index == 3 )
+	{
+		/* second header byte contains payload size */
+		rx_items += rx_buf[3];
+
+		/* check for valid packet size */
+		if( rx_items > COMM_BUF_SIZE )
+		{
+			rx_items = 0;
+			rx_index = 0;
+		}
+	}
+
+    /* issue RDY command BEFORE validating data */
+    PP_CTRL_PORT ^= (1 << PP_CMD_RDY);
+
+	/* check for end of RX data stream */
+	if( rx_items && ++rx_index == rx_items )
+	{
+		/* check for valid packet content */
+		if( is_valid_data( rx_buf + 2, rx_items - 2 ) )
+		{
+			new_data = 1;
+		}
+
+		rx_items = 0;
+		rx_index = 0;
+	}
+}
 
 /* Returns 1 if the packet contains valid data, 0 otherwise
 */
@@ -275,13 +301,11 @@ static uint8_t is_valid_data( const uint8_t *data, uint8_t size )
     return( checksum == 0 );
 }
 
-/* SPI Transmission Complete callback function
+/* RDY Interrupt callback function
 */
-SIGNAL( SIG_SPI )
+SIGNAL( PP_SIG_RDY )
 {
-	SPDR   = spi_tx;
-	spi_rx = SPDR;
-	spi_if = 1;
+    if_ready = 1;
 }
 
 /* End of file */

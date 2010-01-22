@@ -37,14 +37,12 @@
 #define CONTROLLER_PERIOD   14      /* [ms] */
 
 /* JAviator states */
-#define JS_NEW_PRESS_DATA   0x0001  /* pressure data have been updated */
-#define JS_NEW_SONAR_DATA   0x0002  /* sonar data have been updated */
-#define JS_NEW_BATT_DATA    0x0004  /* battery data have been updated */
-#define JS_NEW_X_POS_DATA   0x0008  /* x-position data have been updated */
-#define JS_NEW_Y_POS_DATA   0x0010  /* y-position data have been updated */
-
-#include "javiator_data.h"          /* definition of JAviator data structure */
-#include "motor_signals.h"          /* definition of motor signals structure */
+#define JS_NEW_MAPS_DATA    0x0001  /* pressure data have been updated */
+#define JS_NEW_BATT_DATA    0x0002  /* battery data have been updated */
+#define JS_NEW_TEMP_DATA    0x0004  /* temperature data have been updated */
+#define JS_NEW_SONAR_DATA   0x0008  /* sonar data have been updated */
+#define JS_NEW_X_POS_DATA   0x0010  /* x-position data have been updated */
+#define JS_NEW_Y_POS_DATA   0x0020  /* y-position data have been updated */
 
 
 #endif /* !TRANSFER_H */

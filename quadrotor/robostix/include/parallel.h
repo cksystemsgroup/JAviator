@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   serial.h   Serial interface used for communication with the Gumstix.    */
+/*   parallel.h     Parallel interface used for communication.               */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -21,8 +21,8 @@
 /*                                                                           */
 /*****************************************************************************/
 
-#ifndef SERIAL_H
-#define SERIAL_H
+#ifndef PARALLEL_H
+#define PARALLEL_H
 
 #include <stdint.h>
 
@@ -33,29 +33,29 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes the selected UART channel for communication
+/* Initializes the parallel interface for communication
 */
-void    serial_init( void );
+void    parallel_init( void );
 
 /* Returns 1 if new data available, 0 otherwise
 */
-uint8_t serial_is_new_data( void );
+uint8_t parallel_is_new_data( void );
 
 /* Copies the received data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  serial_get_data( uint8_t *buf );
+int8_t  parallel_get_data( uint8_t *buf );
 
-/* Sends data via the selected UART channel.
+/* Sends data via the parallel interface.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  serial_send_data( uint8_t id, const uint8_t *data, uint8_t size );
+int8_t  parallel_send_data( uint8_t id, const uint8_t *data, uint8_t size );
 
-/* Resets the selected UART channel
+/* Resets the parallel interface
 */
-void    serial_reset( void );
+void    parallel_reset( void );
 
 
-#endif /* !SERIAL_H */
+#endif /* !PARALLEL_H */
 
 /* End of file */

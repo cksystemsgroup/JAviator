@@ -57,9 +57,9 @@
 #define CMD_2_SET_ADDR      0xAA    /* 2nd command for setting new address */
 #define CMD_3_SET_ADDR      0xA5    /* 3rd command for setting new address */
 
-/* TX/RX buffer sizes */
-#define TX_DATA_SIZE        4       /* max size of transmitted data */
+/* RX/TX buffer sizes */
 #define RX_DATA_SIZE        2       /* max size of received data */
+#define TX_DATA_SIZE        4       /* max size of transmitted data */
 
 /* TWCR bit-masks */
 #define TWCR_MASK_1         ( (1 << TWINT) | (1 << TWSTA) | (1 << TWEA) )
@@ -76,12 +76,12 @@ static volatile uint8_t     srf10_period;
 static volatile uint8_t     srf10_range;
 static volatile uint8_t     srf10_gain;
 static volatile uint8_t     i2c_state;
-static          uint8_t     tx_buf[ TX_DATA_SIZE ];
 static          uint8_t     rx_buf[ RX_DATA_SIZE ];
-static volatile uint8_t     tx_items;
+static          uint8_t     tx_buf[ TX_DATA_SIZE ];
 static volatile uint8_t     rx_items;
-static volatile uint8_t     tx_index;
+static volatile uint8_t     tx_items;
 static volatile uint8_t     rx_index;
+static volatile uint8_t     tx_index;
 static volatile uint8_t     new_data;
 static volatile uint8_t     new_addr;
 static volatile uint8_t     new_range;
@@ -129,10 +129,10 @@ void srf10_init( void )
     srf10_gain   = SRF10_DEF_GAIN;
     srf10_addr   = SRF10_DEF_ADDR;
     i2c_state    = I2C_IDLE;
-    tx_items     = 0;
     rx_items     = 0;
-    tx_index     = 0;
+    tx_items     = 0;
     rx_index     = 0;
+    tx_index     = 0;
     new_data     = 0;
     new_addr     = 0;
     new_range    = 0;

@@ -25,7 +25,6 @@
 #define LSM215_H
 
 #include <stdint.h>
-#include "shared/javiator_data.h"
 
 
 /*****************************************************************************/
@@ -57,12 +56,12 @@ uint8_t lsm215_is_new_y_data( void );
 /* Copies the sampled x-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  lsm215_get_x_data( javiator_data_t *buf );
+int8_t  lsm215_get_x_data( uint8_t *buf );
 
 /* Copies the sampled y-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  lsm215_get_y_data( javiator_data_t *buf );
+int8_t  lsm215_get_y_data( uint8_t *buf );
 
 
 #endif /* !LSM215_H */

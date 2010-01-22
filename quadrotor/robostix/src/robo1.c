@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   robostix.c     ATmega128-based low-level controller.                    */
+/*   robo1.c        ATmega128-based low-level controller.                    */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -26,15 +26,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "shared/protocol.h"
-#include "shared/transfer.h"
+#include "protocol.h"
+#include "transfer.h"
+#include "javiator.h"
+#include "signals.h"
 #include "config.h"
 #include "ports.h"
-#include "adc.h"
 #include "wdog.h"
-#include "spi.h"
-#include "lsm215.h"
-#include "minia.h"
+#include "serial.h"
+#include "parallel.h"
+#include "dm3gx1.h"
 #include "pwm.h"
 #include "leds.h"
 
@@ -49,14 +50,16 @@
 static volatile uint8_t     flag_shut_down;
 static volatile uint8_t     flag_check_delay;
 static volatile uint8_t     flag_new_signals;
+static volatile uint8_t     flag_new_sensors;
 
 /* Global structures */
-static javiator_data_t      javiator_data;
+static javiator_ldat_t      javiator_data;
 static motor_signals_t      motor_signals;
 
 /* Forward declarations */
 void controller_init        ( void );
 void process_data_packet    ( void );
+void process_sensor_data    ( const uint8_t *, uint8_t );
 void process_motor_signals  ( const uint8_t *, uint8_t );
 void process_shut_down      ( void );
 void process_en_sensors     ( uint8_t );
@@ -78,6 +81,7 @@ void controller_init( void )
     flag_shut_down   = 0;
     flag_check_delay = 0;
     flag_new_signals = 0;
+    flag_new_sensors = 0;
 
     /* clear data structures */
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -85,17 +89,12 @@ void controller_init( void )
 
     /* initialize hardware */
     ports_init( );
-    adc_init( );
     wdog_init( );
-	spi_init( );
-    lsm215_init( );
-    minia_init( );
+	serial_init( );
+    parallel_init( );
+    dm3gx1_init( );
     pwm_init( );
     leds_init( );
-
-    /* register ADC channels */
-    adc_add_channel( ADC_CH_MINIA );
-    adc_add_channel( ADC_CH_BATTERY );
 
     /* register watchdog event and start timer */
     wdog_register_flag( (uint8_t *) &flag_check_delay, NOTIFY_PERIOD );
@@ -114,12 +113,11 @@ void controller_init( void )
 */
 void process_data_packet( void )
 {
-    static uint16_t valid_packets = 0;
     uint8_t  packet[ COMM_BUF_SIZE ], size;
     uint16_t checksum;
 
-    /* receive packet from communication interface */
-    if( spi_recv_packet( packet ) )
+    /* get data from serial or parallel interface */
+    if( serial_get_data( packet ) && parallel_get_data( packet ) )
     {
         return;
     }
@@ -138,19 +136,16 @@ void process_data_packet( void )
     /* check for non-zero checksum */
     if( checksum )
     {
-        valid_packets = 0;
-        LED_ON( RED );
         return;
-    }
-    else
-    if( ++valid_packets == MIN_VALID_PACKETS )
-    {
-        LED_OFF( RED );
     }
 
     /* call packet-dependent function */
     switch( packet[0] )
     {
+        case COMM_SENSOR_DATA:
+            process_sensor_data( packet + 2, packet[1] );
+            break;
+
         case COMM_MOTOR_SIGNALS:
             process_motor_signals( packet + 2, packet[1] );
             break;
@@ -168,36 +163,48 @@ void process_data_packet( void )
     }
 }
 
+/* Processes COMM_SENSOR_DATA messages
+*/
+void process_sensor_data( const uint8_t *data, uint8_t size )
+{
+    static uint8_t delay = 0;
+
+    /* notify that new sensor data have been received */
+    flag_new_sensors = 1;
+
+    /* check for correct data size before extracting */
+    javiator_sdat_from_stream( (javiator_sdat_t *) &javiator_data, data, size );
+
+    if( ++delay % 10 == 0 )
+    {
+        LED_TOGGLE( BLUE );
+    }
+}
+
 /* Processes COMM_MOTOR_SIGNALS messages
 */
 void process_motor_signals( const uint8_t *data, uint8_t size )
 {
-    /* notify that new motor signals arrived */
+    static uint8_t delay = 0;
+
+    /* notify that new motor signals have been received */
     flag_new_signals = 1;
 
-    /* ignore received motor signals if shut-down flag is set */
-    if( !flag_shut_down )
+    /* check for correct data size before setting motor signals */
+    if( !motor_signals_from_stream( &motor_signals, data, size ) &&
+        !flag_shut_down )
     {
-        /* check for correct data size before extracting */
-        if( motor_signals_from_stream( &motor_signals, data, size ) == 0 )
-        {
-            /* set new motor signals */
-            pwm_set_signals( &motor_signals );
-
-            /* get current ID to be returned to the Gumstix */
-			javiator_data.id = motor_signals.id;
-
-            /* visualize that motors have been updated */
-            LED_TOGGLE( BLUE );
-        }
-        else
-        {
-            LED_OFF( BLUE );
-        }
+        /* set new motor signals */
+        pwm_set_signals( &motor_signals );
     }
 
     /* send JAviator data to the Gumstix */
     send_javiator_data( );
+
+    if( ++delay % 10 == 0 )
+    {
+        LED_TOGGLE( YELLOW );
+    }
 }
 
 /* Processes COMM_SHUT_DOWN messages
@@ -217,38 +224,28 @@ void process_shut_down( void )
 */
 void process_en_sensors( uint8_t enable )
 {
+    /* notify Robostix 2 that sensors should be enabled/disabled */
+    parallel_send_data( COMM_EN_SENSORS, &enable, 1 );
+
     if( enable )
     {
-        lsm215_start( );
-        minia_start( );
-    }
-    else
-    {
-        lsm215_stop( );
-        minia_stop( );
-
-        /* Sensors will be disabled either by the Gumstix after the helicopter
-           has settled or due to a loss of connectivity between Robostix and
-           Gumstix.  Thus, in case a shut-down was issued, the shut-down flag
-           can be cleared safely as soon as the sensors get disabled.  In case
-           a loss of connectivity occurs, the motors are reved down to their
-           minimum.  Hence the shut-down flag can be cleared independently of
-           whether a shut-down was issued before the loss of connectivity. */
+        /* clear shut-down flag */
         flag_shut_down = 0;
         LED_OFF( RED );
     }
 }
 
-/* Checks if new motor signals arrive without delay
+/* Checks for delays in communication from the Gumstix to Robostix 1
+   as well as delays in communication from Robostix 2 to Robostix 1
 */
 void check_signals_delay( )
 {
     static uint8_t first_timeout = 1;
 
-    /* check if new signals have been received */
+    /* check if new motor signals have been received */
     if( !flag_new_signals )
     {
-        /* DO NOT modify signals in shut-down mode! */
+        /* DO NOT modify motor signals in shut-down mode! */
         if( !flag_shut_down )
         {
             if( motor_signals.front > 0 ||
@@ -257,7 +254,7 @@ void check_signals_delay( )
                 motor_signals.left  > 0 )
             {
                 /* we're possibly airborne, so reduce
-                   signals to force descending */
+                   motor signals to force descending */
                 motor_signals.front -= MOTOR_DEC;
                 motor_signals.right -= MOTOR_DEC;
                 motor_signals.rear  -= MOTOR_DEC;
@@ -266,13 +263,14 @@ void check_signals_delay( )
             else
             {
                 /* we're possibly grounded, so keep
-                   signals set to the minimum */
+                   motor signals set to the minimum */
                 motor_signals.front = 0;
                 motor_signals.right = 0;
                 motor_signals.rear  = 0;
                 motor_signals.left  = 0;
             }
 
+            /* set new motor signals */
             pwm_set_signals( &motor_signals );
         }
 
@@ -283,47 +281,72 @@ void check_signals_delay( )
 
             /* disable sensors to save power */
             process_en_sensors( 0 );
-
-            /* reset communication interface */
-            spi_reset( );
-
-            /* visualize that a timeout occurred */
-            LED_ON( YELLOW );
-            LED_OFF( BLUE );
         }
+
+        /* reset Gumstix-to-Robostix-1 interface */
+        serial_reset( );
+
+        LED_ON( YELLOW );
     }
     else
     {
         first_timeout = 1;
+    }
 
-        /* visualize that we're connected */
-        LED_TOGGLE( YELLOW );
+    /* check if new sensor data have been received */
+    if( !flag_new_sensors )
+    {
+        /* reset Robostix-2-to-Robostix-1 interface */
+        parallel_reset( );
+
+        LED_OFF( BLUE );
     }
 
     flag_check_delay = 0;
     flag_new_signals = 0;
+    flag_new_sensors = 0;
 }
 
-/* Sends the JAviator data to the controller
+/* Sends the JAviator data to the Gumstix
 */
 void send_javiator_data( void )
 {
-    uint8_t data[ JAVIATOR_DATA_SIZE ];
+    uint8_t data[ JAVIATOR_LDAT_SIZE ];
+
+    /* DO NOT send a request to Robostix 2 when the
+       shut-down flag is set, because there is no need
+       for sampling sensor data in shut-down mode */
+    if( flag_shut_down )
+    {
+        /* set JAviator data ID when motor
+           signals ID not sent on round trip */
+        javiator_data.id = motor_signals.id;
+    }
+    else
+    {
+        /* increment motor signals ID before
+           being sent on round trip */
+        ++motor_signals.id;
+
+        /* encode motor signals ID */
+        data[0] = (uint8_t)( motor_signals.id >> 8 );
+        data[1] = (uint8_t)( motor_signals.id );
+
+        /* request new sensor data */
+        parallel_send_data( COMM_SENSOR_DATA, data, 2 );
+
+        /* request new IMU data */
+        dm3gx1_request( );
+    }
 
     /* encode JAviator data */
-	javiator_data_to_stream( &javiator_data, data, JAVIATOR_DATA_SIZE );
+	javiator_ldat_to_stream( &javiator_data, data, JAVIATOR_LDAT_SIZE );
 
     /* transmit JAviator data */
-	spi_send_packet( COMM_JAVIATOR_DATA, data, JAVIATOR_DATA_SIZE );
-
-    /* reset state indicator */
-    javiator_data.state = 0;
-
-    /* start next ADC cycle */
-    adc_convert( );
+	serial_send_data( COMM_JAVIATOR_DATA, data, JAVIATOR_LDAT_SIZE );
 }
 
-/* Initializes and runs the controller
+/* Initializes and runs Robostix 1
 */
 int main( void )
 {
@@ -337,46 +360,16 @@ int main( void )
             check_signals_delay( );
         }
 
-        /* check if a new packet is available */
-        if( spi_is_new_packet( ) )
+        /* check if new serial or parallel data available */
+        if( serial_is_new_data( ) || parallel_is_new_data( ) )
         {
             process_data_packet( );
         }
 
-        /* check if new sonar data available */
-        if( adc_is_new_data( ADC_CH_MINIA ) )
+        /* check if new IMU data available */
+        if( dm3gx1_is_new_data( ) )
         {
-            if( !adc_get_data( ADC_CH_MINIA, &javiator_data.sonar ) )
-            {
-                javiator_data.state |= JS_NEW_SONAR_DATA;
-            }
-        }
-
-        /* check if new battery data available */
-        if( adc_is_new_data( ADC_CH_BATTERY ) )
-        {
-            if( !adc_get_data( ADC_CH_BATTERY, &javiator_data.battery ) )
-            {
-                javiator_data.state |= JS_NEW_BATT_DATA;
-            }
-        }
-
-        /* check if new laser x-data available */
-        if( lsm215_is_new_x_data( ) )
-        {
-            if( !lsm215_get_x_data( &javiator_data ) )
-            {
-                javiator_data.state |= JS_NEW_X_POS_DATA;
-            }
-        }
-
-        /* check if new laser y-data available */
-        if( lsm215_is_new_y_data( ) )
-        {
-            if( !lsm215_get_y_data( &javiator_data ) )
-            {
-                javiator_data.state |= JS_NEW_Y_POS_DATA;
-            }
+            dm3gx1_get_data( &javiator_data );
         }
     }
 

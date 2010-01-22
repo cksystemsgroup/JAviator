@@ -40,24 +40,24 @@
 #define CMD_CR              '\r'    /* carrige return */
 #define CMD_LF              '\n'    /* line feed */
 
-/* TX/RX buffer sizes */
-#define TX_DATA_SIZE        3       /* max size of transmitted data */
+/* RX/TX buffer sizes */
 #define RX_DATA_SIZE        33      /* max size of received data */
+#define TX_DATA_SIZE        3       /* max size of transmitted data */
 
 /* Result buffer size */
 #define NUM_DATA_DIGITS     8       /* number of data digits */
 
 /* Global variables */
-static          uint8_t     x_tx_buf[ TX_DATA_SIZE ];
-static          uint8_t     y_tx_buf[ TX_DATA_SIZE ];
 static          uint8_t     x_rx_buf[ RX_DATA_SIZE ];
 static          uint8_t     y_rx_buf[ RX_DATA_SIZE ];
+static          uint8_t     x_tx_buf[ TX_DATA_SIZE ];
+static          uint8_t     y_tx_buf[ TX_DATA_SIZE ];
 static volatile uint8_t     x_tx_items;
 static volatile uint8_t     y_tx_items;
-static volatile uint8_t     x_tx_index;
-static volatile uint8_t     y_tx_index;
 static volatile uint8_t     x_rx_index;
 static volatile uint8_t     y_rx_index;
+static volatile uint8_t     x_tx_index;
+static volatile uint8_t     y_tx_index;
 static volatile uint8_t     x_new_data;
 static volatile uint8_t     y_new_data;
 
@@ -102,10 +102,10 @@ void lsm215_init( void )
     /* initialize global variables */
     x_tx_items = 0;
     y_tx_items = 0;
-    x_tx_index = 0;
-    y_tx_index = 0;
     x_rx_index = 0;
     y_rx_index = 0;
+    x_tx_index = 0;
+    y_tx_index = 0;
     x_new_data = 0;
     y_new_data = 0;
 
@@ -152,7 +152,7 @@ void lsm215_stop( void )
 */
 uint8_t lsm215_is_new_x_data( void )
 {
-    /* check for interrupt */
+    /* check for RX interrupt */
     if( (UCSR0A & (1 << RXC)) )
     {
         /* indicate that the receive buffer is being updated
@@ -182,7 +182,7 @@ uint8_t lsm215_is_new_x_data( void )
 */
 uint8_t lsm215_is_new_y_data( void )
 {
-    /* check for interrupt */
+    /* check for RX interrupt */
     if( (UCSR1A & (1 << RXC)) )
     {
         /* indicate that the receive buffer is being updated
@@ -211,7 +211,7 @@ uint8_t lsm215_is_new_y_data( void )
 /* Copies the sampled x-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t lsm215_get_x_data( javiator_data_t *buf )
+int8_t lsm215_get_x_data( uint8_t *buf )
 {
     /* check that we're not receiving x-data currently */
     if( !x_new_data )
@@ -223,8 +223,8 @@ int8_t lsm215_get_x_data( javiator_data_t *buf )
 
     /* Data format in tracking mode: "31..06+xxxxxxxx 51....+00000000\r\n", where
        the 8-digit value 'xxxxxxxx' represents the measured distance in 1/10 mm. */
-    memcpy( buf->x_pos, x_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
-    buf->x_pos[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
+    memcpy( buf, x_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
+    buf[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
 
     /* clear new-data indicator */
     x_new_data = 0;
@@ -237,7 +237,7 @@ int8_t lsm215_get_x_data( javiator_data_t *buf )
 /* Copies the sampled y-data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t lsm215_get_y_data( javiator_data_t *buf )
+int8_t lsm215_get_y_data( uint8_t *buf )
 {
     /* check that we're not receiving y-data currently */
     if( !y_new_data )
@@ -249,8 +249,8 @@ int8_t lsm215_get_y_data( javiator_data_t *buf )
 
     /* Data format in tracking mode: "31..06+xxxxxxxx 51....+00000000\r\n", where
        the 8-digit value 'xxxxxxxx' represents the measured distance in 1/10 mm. */
-    memcpy( buf->y_pos, y_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
-    buf->y_pos[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
+    memcpy( buf, y_rx_buf + 7, NUM_DATA_DIGITS - 1 ); /* skip 1/10-mm digit */
+    buf[ NUM_DATA_DIGITS - 1 ] = 0; /* null-terminate last byte */
 
     /* clear new-data indicator */
     y_new_data = 0;

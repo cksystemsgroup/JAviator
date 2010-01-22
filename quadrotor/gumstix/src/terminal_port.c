@@ -44,9 +44,9 @@ static ctrl_params_t    x_y_params;
 static comm_channel_t * comm_channel;
 static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
-static volatile int     shut_down;
 static volatile int     test_mode;
 static volatile int     mode_switch;
+static volatile int     shut_down;
 static volatile int     base_motor_speed;
 static volatile int     multiplier = 1;
 static volatile int     new_r_p_params;
@@ -170,8 +170,9 @@ static int process_data_packet( const comm_packet_t *packet )
 			break;
 
         case COMM_SHUT_DOWN:
-            retval = set_shut_down( );
-			break;
+            set_shut_down( );
+			unlock( );
+            return javiator_port_forward( packet );
 
         default:
 			unlock( );
@@ -279,8 +280,7 @@ int terminal_port_set_multiplier( int m )
 
 int terminal_port_reset_shut_down( void )
 {
-    shut_down = 0;
-    return( 0 );
+    return( shut_down = 0 );
 }
 
 int terminal_port_is_new_command_data( void )

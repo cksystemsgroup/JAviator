@@ -37,22 +37,22 @@
 */
 void    spi_init( void );
 
-/* Returns 1 if a new packet is available, 0 otherwise
+/* Returns 1 if new data available, 0 otherwise
 */
-uint8_t spi_is_new_packet( void );
+uint8_t spi_is_new_data( void );
 
-/* Copies the received data packet to the given buffer.
+/* Copies the received data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  spi_recv_packet( uint8_t *buf );
+int8_t  spi_get_data( uint8_t *buf );
 
-/* Sends a data packet via the SPI interface.
+/* Sends a data via the SPI interface.
    Note: the interface operates in Slave Mode, hence
    the packet will be prepared and sent with the next
    transmission started by the SPI Master.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t  spi_send_packet( uint8_t id, const uint8_t *data, uint8_t size );
+int8_t  spi_send_data( uint8_t id, const uint8_t *data, uint8_t size );
 
 /* Resets the SPI interface
 */

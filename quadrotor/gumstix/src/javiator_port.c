@@ -39,7 +39,11 @@
 #include "terminal_port.h"
 #include "us_timer.h"
 
-static javiator_data_t      javiator_data;
+#ifdef SHORT_JAVIATOR_DATA
+static javiator_sdat_t      javiator_data;
+#else
+static javiator_ldat_t      javiator_data;
+#endif
 static comm_channel_t *     comm_channel;
 static comm_packet_t        comm_packet;
 static char                 comm_packet_buf[ COMM_BUF_SIZE ];
@@ -49,7 +53,11 @@ static volatile uint16_t    local_id;
 
 static inline int parse_javiator_data( const comm_packet_t *packet )
 {
-    int res = javiator_data_from_stream( &javiator_data, packet->payload, packet->size );
+#ifdef SHORT_JAVIATOR_DATA
+    int res = javiator_sdat_from_stream( &javiator_data, packet->payload, packet->size );
+#else
+    int res = javiator_ldat_from_stream( &javiator_data, packet->payload, packet->size );
+#endif
 
     /* check for lost JAviator packets */
     if( ++javiator_data.id != local_id )
@@ -97,7 +105,7 @@ int javiator_port_send_ctrl_period( int period )
 
 int javiator_port_send_enable_sensors( int enable )
 {
-    uint8_t buf[1] = { (char) enable };
+    char buf[1] = { (char) enable };
     comm_packet_t packet;
 
     packet.type     = COMM_EN_SENSORS;
@@ -110,7 +118,7 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
+    char buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     *(uint16_t *) &signals->id = ++local_id;
@@ -163,7 +171,11 @@ int javiator_port_tick( void )
     return( res );
 }
 
-int javiator_port_get_data( javiator_data_t *data )
+#ifdef SHORT_JAVIATOR_DATA
+int javiator_port_get_data( javiator_sdat_t *data )
+#else
+int javiator_port_get_data( javiator_ldat_t *data )
+#endif
 {
     motor_signals_t signals = { 0, 0, 0, 0, 0 };
     int res, attempts = 0;

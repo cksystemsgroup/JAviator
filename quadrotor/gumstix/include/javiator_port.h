@@ -26,14 +26,22 @@
 #ifndef JAVIATOR_PORT_H
 #define JAVIATOR_PORT_H
 
-#include "transfer.h"
 #include "comm_channel.h"
 #include "communication.h"
+#include "javiator_data.h"
+#include "motor_signals.h"
+
+
+//#define SHORT_JAVIATOR_DATA
 
 
 int javiator_port_init( comm_channel_t *channel );
 
-int javiator_port_get_data( javiator_data_t *data );
+#ifdef SHORT_JAVIATOR_DATA
+int javiator_port_get_data( javiator_sdat_t *data );
+#else
+int javiator_port_get_data( javiator_ldat_t *data );
+#endif
 
 int javiator_port_send_ctrl_period( int period );
 

@@ -78,12 +78,12 @@
 #endif /* UART_SERIAL */
 
 /* Global variables */
-static          uint8_t     tx_buf[ COMM_BUF_SIZE ];
 static          uint8_t     rx_buf[ COMM_BUF_SIZE ];
-static volatile uint8_t     tx_items;
+static          uint8_t     tx_buf[ COMM_BUF_SIZE ];
 static volatile uint8_t     rx_items;
-static volatile uint8_t     tx_index;
+static volatile uint8_t     tx_items;
 static volatile uint8_t     rx_index;
+static volatile uint8_t     tx_index;
 static volatile uint8_t     new_data;
 
 /* Forward declarations */
@@ -123,22 +123,28 @@ void serial_init( void )
     UCSRnC = (1 << UCSZn1) | (1 << UCSZn0);
 
     /* initialize global variables */
-    tx_items = 0;
     rx_items = 0;
-    tx_index = 0;
+    tx_items = 0;
     rx_index = 0;
+    tx_index = 0;
     new_data = 0;
 }
 
-/* Returns 1 if a new packet is available, 0 otherwise
+/* Returns 1 if new data available, 0 otherwise
 */
-uint8_t serial_is_new_packet( void )
+uint8_t serial_is_new_data( void )
 {
-    /* check for interrupt */
+    /* check for RX interrupt */
 	if( (UCSRnA & (1 << RXC)) )
     {
+        /* indicate that the receive buffer is being updated
+           and thus data are no longer secure to be copied */
+        new_data = 0;
+
+        /* read data from serial port */
 		rx_buf[ rx_index ] = UDRn;
 
+		/* check RX data stream for packet marks and payload size */
 		if( rx_index == 0 )
 		{
 			/* check for first packet mark */
@@ -188,10 +194,10 @@ uint8_t serial_is_new_packet( void )
     return( new_data );
 }
 
-/* Copies the received data packet to the given buffer.
+/* Copies the received data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t serial_recv_packet( uint8_t *buf )
+int8_t serial_get_data( uint8_t *buf )
 {
     /* check that we're not receiving data currently */
     if( !new_data )
@@ -201,7 +207,7 @@ int8_t serial_recv_packet( uint8_t *buf )
 
     cli( ); /* disable interrupts */
 
-    /* copy received data packet to given buffer */
+    /* copy received data to given buffer */
     memcpy( buf, rx_buf + 2, rx_buf[3] + COMM_OVERHEAD - 2 );
 
     /* clear new-data indicator */
@@ -212,10 +218,10 @@ int8_t serial_recv_packet( uint8_t *buf )
     return( 0 );
 }
 
-/* Sends a data packet via the selected UART channel.
+/* Sends data via the selected UART channel.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t serial_send_packet( uint8_t id, const uint8_t *data, uint8_t size )
+int8_t serial_send_data( uint8_t id, const uint8_t *data, uint8_t size )
 {
     uint16_t checksum = id + size;
 
@@ -255,10 +261,10 @@ void serial_reset( void )
     /* disable DRE interrupt */
     UCSRnB &= ~(1 << UDRIEn);
 
-    tx_items = 0;
     rx_items = 0;
-    tx_index = 0;
+    tx_items = 0;
     rx_index = 0;
+    tx_index = 0;
     new_data = 0;
 }
 
@@ -301,6 +307,7 @@ SIGNAL( SIG_UARTn_DATA )
     }
     else
     {
+        /* write data to serial port */
         UDRn = tx_buf[ tx_index++ ];
     }
 }

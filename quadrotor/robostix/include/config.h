@@ -35,16 +35,13 @@
 
 /* Analog input channels assigned to the Analog/Digital Converter
 */
-#define ADC_CH_MINIA        PF7     /* pin where the Mini-A sensor connects to */
-#define ADC_CH_BATTERY      PF6     /* pin where the battery sensor connects to */
+#define ADC_CH_TEMP         -1//PF5     /* pin where the temp. sensor connects to */
+#define ADC_CH_BATT         -1//PF6     /* pin where the battery sensor connects to */
+#define ADC_CH_SONAR        -1//PF7     /* pin where the sonar sensor connects to */
 
 /* Max number of timer events that can be added to the timer event list
 */
 #define MAX_TIMER_EVENTS    1       /* should be kept to the minimum required */
-
-/* Min number of packets that must be validated to reset valid-packets counter
-*/
-#define MIN_VALID_PACKETS   1000    /* should be adapted to chosen baudrate */
 
 /* Periods to wait before interacting when not receiving motor signals anymore
 */
@@ -60,21 +57,29 @@
 
 /* Selection of UART channel used for communication with the Gumstix
 */
-#define UART_SERIAL         -1      /* must be either 0 for UART0 or 1 for UART1 */
+#define UART_SERIAL         0       /* must be either 0 for UART0 or 1 for UART1 */
 
 /* Selection of UART channel used for the 3DM-GX1 inertial measurement unit
 */
-#define UART_DM3GX1         -1      /* must be either 0 for UART0 or 1 for UART1 */
+#define UART_DM3GX1         1       /* must be either 0 for UART0 or 1 for UART1 */
 
-/* Selection of UART channel used for the LSM2-15 laser distance sensor
+/* Definitions for establishing a parallel port between Robostix 1 and Robostix 2
 */
-#define UART_LSM215         -1      /* must be either 0 for UART0 or 1 for UART1 */
+#define PP_DATA_PORT        PORTC   /* port exploited for parallel communication */
+#define PP_DATA_DDR         DDRC    /* data direction register associated with port */
+#define PP_DATA_REG         PINC    /* data register associated with parallel port */
+#define PP_CTRL_PORT        PORTE   /* port exploited for parallel port interrupts */
+#define PP_CTRL_DDR         DDRE    /* data direction register associated with port */
+#define PP_CMD_RDY          INT6    /* port pin where the RDY command connects to */
+#define PP_INT_RDY          INT7    /* port pin where the RDY interrupt connects to */
+#define PP_ISC_RDY          ISC70   /* EICRB configuration setting for RDY interrupt */
+#define PP_SIG_RDY          SIG_INTERRUPT7  /* interrupt signal associated with RDY */
 
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
-#define MINIA_PORT          PORTC   /* port where the trigger signal is provided */
-#define MINIA_DDR           DDRC    /* data direction register associated with port */
-#define MINIA_TRIGGER       PC0     /* pin where the trigger signal connects to */
+#define MINIA_PORT          PORTA//PORTC   /* port where the trigger signal is provided */
+#define MINIA_DDR           DDRA//DDRC    /* data direction register associated with port */
+#define MINIA_TRIGGER       PA0//PC0     /* pin where the trigger signal connects to */
 
 /* Default, minimum, and maximum address settings for the SRF10 sonar sensor
 */

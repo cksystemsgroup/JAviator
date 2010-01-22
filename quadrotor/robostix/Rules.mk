@@ -7,11 +7,13 @@
 ifeq ($(AVR_MCU),)
 AVR_MCU = atmega128
 endif
-all: $(TARGET)
+all: $(TARGET1) $(TARGET2)
 
-$(TARGET) : % : %.hex
+$(TARGET1) : % : %.hex
+$(TARGET2) : % : %.hex
  
-.PHONY: all $(TARGET)
+.PHONY: all $(TARGET1)
+.PHONY: all $(TARGET2)
 
 CROSS_COMPILE = avr-
 
@@ -31,9 +33,11 @@ DEP_OUTPUT_OPTION = -MMD -MF $(@:.o=.d)
 ECHO = @echo
 RM   = rm
 
-COMMON_DEPS = $(strip $(COMMON_OBJS:.o=.d))
+COMMON_DEPS1 = $(strip $(COMMON_OBJS1:.o=.d))
+COMMON_DEPS2 = $(strip $(COMMON_OBJS2:.o=.d))
 
-DEP_FILES = $(TARGET).d $(COMMON_DEPS)
+DEP_FILES1 = $(TARGET1).d $(COMMON_DEPS1)
+DEP_FILES2 = $(TARGET2).d $(COMMON_DEPS2)
 
 #--------------------------------------------------------------------------
 #
@@ -65,7 +69,8 @@ export Q
 #	CPPFLAGS	= flags for the C preprocessor (-D, -I)
 #
 
-PREPROCESS.c = $(CC) $(CPPFLAGS) $(TARGET_ARCH) -E -Wp,-C,-dD,-dI
+PREPROCESS.c = $(CC) $(CPPFLAGS) $(TARGET1_ARCH) -E -Wp,-C,-dD,-dI
+PREPROCESS.c = $(CC) $(CPPFLAGS) $(TARGET2_ARCH) -E -Wp,-C,-dD,-dI
 
 #--------------------------------------------------------------------------
 #
@@ -100,7 +105,8 @@ svn-version.h: FORCE
 #
 # Compile C source files
 #
-#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET1_ARCH) -c
+#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET2_ARCH) -c
 #
 # Create a rule for when the dependency exists, and one for when it doesn't
 #
@@ -119,7 +125,8 @@ svn-version.h: FORCE
 #
 # Assemble gas assembly files.
 #
-#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET1_ARCH) -c
+#   COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET2_ARCH) -c
 #
 
 %.o : %.s
@@ -172,11 +179,22 @@ svn-version.h: FORCE
 
 .PRECIOUS: %.elf
 
-ifeq ($(MAIN_OBJS),)
-MAIN_OBJS = $(TARGET).o
+ifeq ($(MAIN_OBJS1),)
+MAIN_OBJS1 = $(TARGET1).o
 endif
 
-$(TARGET).elf : $(MAIN_OBJS) $(COMMON_OBJS)
+$(TARGET1).elf : $(MAIN_OBJS1) $(COMMON_OBJS1)
+	$(ECHO) "Linking $@ ..."
+	$(Q)$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
+	$(ECHO)
+	./avr-mem.sh $@ $(AVR_MCU)
+	$(ECHO)
+
+ifeq ($(MAIN_OBJS2),)
+MAIN_OBJS2 = $(TARGET2).o
+endif
+
+$(TARGET2).elf : $(MAIN_OBJS2) $(COMMON_OBJS2)
 	$(ECHO) "Linking $@ ..."
 	$(Q)$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
 	$(ECHO)
@@ -201,9 +219,15 @@ clean-hex:
 # dependency files.
 #
 
-ifneq ($(DEP_FILES),)
+ifneq ($(DEP_FILES1),)
 ifeq ($(strip $(filter clean% exec print-%, $(MAKECMDGOALS))),)
--include $(DEP_FILES)
+-include $(DEP_FILES1)
+endif
+endif
+
+ifneq ($(DEP_FILES2),)
+ifeq ($(strip $(filter clean% exec print-%, $(MAKECMDGOALS))),)
+-include $(DEP_FILES2)
 endif
 endif
 

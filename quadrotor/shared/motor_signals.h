@@ -47,7 +47,7 @@ typedef struct
 
 
 static inline
-int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int len )
+int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, uint8_t len )
 {
     if( len == MOTOR_SIGNALS_SIZE )
     {
@@ -61,6 +61,7 @@ int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int l
         buf[7] = (uint8_t)( signals->left );
         buf[8] = (uint8_t)( signals->id >> 8 );
         buf[9] = (uint8_t)( signals->id );
+
         return( 0 );
     }
 
@@ -68,7 +69,7 @@ int motor_signals_to_stream( const motor_signals_t *signals, uint8_t *buf, int l
 }
 
 static inline
-int motor_signals_from_stream( motor_signals_t *signals, const uint8_t *buf, int len )
+int motor_signals_from_stream( motor_signals_t *signals, const uint8_t *buf, uint8_t len )
 {
     if( len == MOTOR_SIGNALS_SIZE )
     {
@@ -77,6 +78,7 @@ int motor_signals_from_stream( motor_signals_t *signals, const uint8_t *buf, int
         signals->rear  = (int16_t) ( (buf[4] << 8) | (buf[5] & 0xFF) );
         signals->left  = (int16_t) ( (buf[6] << 8) | (buf[7] & 0xFF) );
         signals->id    = (uint16_t)( (buf[8] << 8) | (buf[9] & 0xFF) );
+
         return( 0 );
     }
 

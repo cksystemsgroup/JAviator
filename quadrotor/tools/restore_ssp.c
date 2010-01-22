@@ -31,41 +31,54 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAP_SIZE        0x00000100  // address space is 256 bytes
-#define MAP_MASK        0x000000FF  // mask for extended addresses
+#define MAP_SIZE        0x00000100  /* address space is 256 bytes */
+#define MAP_MASK        0x000000FF  /* mask for extended addresses */
 
-#define OFFSET_GPIO     0x40E00000  // offset for GPIO registers
-#define GPDR0           0x40E0000C  // GPIO Pin Direction Register          GPIO <31:00>
-#define GPDR2           0x40E00014  // GPIO Pin Direction Register          GPIO <95:64>
-#define GPSR2           0x40E00020  // GPIO Pin Output Set Register         GPIO <95:64>
-#define GPCR2           0x40E0002C  // GPIO Pin Output Clear Register       GPIO <95:64>
-#define GAFR0_L         0x40E00054  // GPIO Alternate Function Register     GPIO <15:00>
-#define GAFR0_U         0x40E00058  // GPIO Alternate Function Register     GPIO <31:16>
-#define GAFR2_L         0x40E00064  // GPIO Alternate Function Register     GPIO <79:64>
+#define OFFSET_GPIO     0x40E00000  /* offset for GPIO registers */
+#define GPDR0           0x40E0000C  /* GPIO Pin Direction Register          GPIO <31:00> */
+#define GPDR2           0x40E00014  /* GPIO Pin Direction Register          GPIO <95:64> */
+#define GPSR2           0x40E00020  /* GPIO Pin Output Set Register         GPIO <95:64> */
+#define GPCR2           0x40E0002C  /* GPIO Pin Output Clear Register       GPIO <95:64> */
+#define GAFR0_L         0x40E00054  /* GPIO Alternate Function Register     GPIO <15:00> */
+#define GAFR0_U         0x40E00058  /* GPIO Alternate Function Register     GPIO <31:16> */
+#define GAFR2_L         0x40E00064  /* GPIO Alternate Function Register     GPIO <79:64> */
 
-#define OFFSET_CLKM     0x41300000  // offset for Clocks Manager registers
-#define CKEN            0x41300004  // Clock Enable Register
+#define OFFSET_CLKM     0x41300000  /* offset for Clocks Manager registers */
+#define CKEN            0x41300004  /* Clock Enable Register */
 
-#define OFFSET_SSP2     0x41700000  // offset for SSP2 registers
-#define SSCR0_2         0x41700000  // SSP2 Control Register 0
-#define SSCR1_2         0x41700004  // SSP2 Control Register 1
+#define OFFSET_SSP2     0x41700000  /* offset for SSP2 registers */
+#define SSCR0_2         0x41700000  /* SSP2 Control Register 0 */
+#define SSCR1_2         0x41700004  /* SSP2 Control Register 1 */
 
-// Global variables
+/* Global variables */
 static volatile void *  map_gpio;
 static volatile void *  map_clkm;
 static volatile void *  map_ssp2;
 static volatile void *  reg;
 static volatile int32_t fd;
 
-// Macro for writing registers
+/* Macro for reading registers */
+#define GET_REG( name ) \
+    static uint32_t get_##name( uint32_t addr ) \
+    { \
+        reg = map_##name + (addr & MAP_MASK); \
+        return( *(uint32_t *) reg ); \
+    }
+
+/* Macro for writing registers */
 #define SET_REG( name ) \
-    static void set_ ##name ( uint32_t addr, uint32_t data ) \
+    static void set_##name( uint32_t addr, uint32_t data ) \
     {                                                      \
-        reg = map_ ##name + (addr & MAP_MASK);              \
+        reg = map_##name + (addr & MAP_MASK);              \
         *(uint32_t *) reg = data;                          \
     }
 
-// Writing instances
+/* Reading instances */
+GET_REG( gpio )
+GET_REG( clkm )
+GET_REG( ssp2 )
+
+/* Writing instances */
 SET_REG( gpio )
 SET_REG( clkm )
 SET_REG( ssp2 )
@@ -98,25 +111,55 @@ int main( int argc, char **argv )
        return( -1 );
     }
 
-    // restore GPIO registers
+    /* print old register values */
+    fprintf( stdout, "\nOld register values:\n\n"
+        "0x%08X\n0x%08X\n0x%08X\n0x%08X\n0x%08X\n"
+        "0x%08X\n0x%08X\n0x%08X\n0x%08X\n0x%08X\n",
+        get_gpio( GPDR0 ),
+        get_gpio( GPDR2 ),
+        get_gpio( GPSR2 ),
+        get_gpio( GPCR2 ),
+        get_gpio( GAFR0_L ),
+        get_gpio( GAFR0_U ),
+        get_gpio( GAFR2_L ),
+        get_clkm( CKEN ),
+        get_ssp2( SSCR0_2 ),
+        get_ssp2( SSCR1_2 ) );
+
+    /* restore GPIO registers */
     set_gpio( GPDR0,   0xC18AF218 );
-    set_gpio( GPDR2,   0x10018340 );
+    set_gpio( GPDR2,   0x10018B40 );
     set_gpio( GPSR2,   0x00000000 );
     set_gpio( GPCR2,   0x00000000 );
     set_gpio( GAFR0_L, 0x80040000 );
     set_gpio( GAFR0_U, 0xA5254010 );
-    set_gpio( GAFR2_L, 0x4AA08AAA );
+    set_gpio( GAFR2_L, 0x4A208AAA );
 
-    // restore CLKM registers
-    set_clkm( CKEN,    0x00500640 );
+    /* restore CLKM registers */
+    set_clkm( CKEN,    0x00501648 );
 
-    // restore SSP2 registers
-    set_ssp2( SSCR0_2, 0x00000000 );
-    set_ssp2( SSCR1_2, 0x00000000 );
+    /* restore SSP2 registers */
+    set_ssp2( SSCR0_2, 0x00000107 );
+    set_ssp2( SSCR1_2, 0x00000EC0 );
+
+    /* print new register values */
+    fprintf( stdout, "\nNew register values:\n\n"
+        "0x%08X\n0x%08X\n0x%08X\n0x%08X\n0x%08X\n"
+        "0x%08X\n0x%08X\n0x%08X\n0x%08X\n0x%08X\n\n",
+        get_gpio( GPDR0 ),
+        get_gpio( GPDR2 ),
+        get_gpio( GPSR2 ),
+        get_gpio( GPCR2 ),
+        get_gpio( GAFR0_L ),
+        get_gpio( GAFR0_U ),
+        get_gpio( GAFR2_L ),
+        get_clkm( CKEN ),
+        get_ssp2( SSCR0_2 ),
+        get_ssp2( SSCR1_2 ) );
 
     close( fd );
     munmap( 0, MAP_SIZE );
     return( 0 );
 }
 
-// End of file.
+/* End of file */

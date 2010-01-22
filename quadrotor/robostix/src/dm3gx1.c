@@ -81,16 +81,16 @@
 #define CMD_CONTINUOUSLY    0x10    /* command for continuous mode */
 #define CMD_DESIRED_DATA    0x31    /* command for desired data */
 
-/* TX/RX buffer sizes */
-#define TX_DATA_SIZE        24      /* max size of transmitted data */
+/* RX/TX buffer sizes */
 #define RX_DATA_SIZE        23      /* max size of received data */
+#define TX_DATA_SIZE        24      /* max size of transmitted data */
 
 /* Global variables */
-static          uint8_t     tx_buf[ TX_DATA_SIZE ];
 static          uint8_t     rx_buf[ RX_DATA_SIZE ];
+static          uint8_t     tx_buf[ TX_DATA_SIZE ];
 static volatile uint8_t     tx_items;
-static volatile uint8_t     tx_index;
 static volatile uint8_t     rx_index;
+static volatile uint8_t     tx_index;
 static volatile uint8_t     new_data;
 
 /* Forward declarations */
@@ -131,8 +131,8 @@ void dm3gx1_init( void )
 
     /* initialize global variables */
     tx_items = 0;
-    tx_index = 0;
     rx_index = 0;
+    tx_index = 0;
     new_data = 0;
 }
 
@@ -177,7 +177,8 @@ void dm3gx1_stop( void )
 */
 uint8_t dm3gx1_is_new_data( void )
 {
-    if( (UCSRnA & (1<<RXC)) )
+    /* check for RX interrupt */
+    if( (UCSRnA & (1 << RXC)) )
     {
         /* indicate that the receive buffer is being updated
 		   and thus data are no longer secure to be copied */
@@ -208,13 +209,15 @@ uint8_t dm3gx1_is_new_data( void )
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t dm3gx1_get_data( javiator_data_t *buf )
+int8_t dm3gx1_get_data( javiator_ldat_t *buf )
 {
     /* check that we're not receiving data currently */
     if( !new_data )
     {
         return( -1 );
     }
+
+    cli( ); /* disable interrupts */
 
     /* extract sensor data */
     buf->roll   = (rx_buf[1]  << 8) | (rx_buf[2]  & 0xFF);
@@ -226,10 +229,11 @@ int8_t dm3gx1_get_data( javiator_data_t *buf )
     buf->droll  = (rx_buf[13] << 8) | (rx_buf[14] & 0xFF);
     buf->dpitch = (rx_buf[15] << 8) | (rx_buf[16] & 0xFF);
     buf->dyaw   = (rx_buf[17] << 8) | (rx_buf[18] & 0xFF);
-    buf->ticks  = (rx_buf[19] << 8) | (rx_buf[20] & 0xFF);
 
     /* clear new-data indicator */
     new_data = 0;
+
+    sei( ); /* enable interrupts */
 
     return( 0 );
 }
