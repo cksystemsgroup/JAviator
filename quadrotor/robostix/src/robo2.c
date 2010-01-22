@@ -56,9 +56,9 @@ static javiator_sdat_t      javiator_data;
 void controller_init        ( void );
 void process_data_packet    ( void );
 void process_sensor_data    ( const uint8_t *, uint8_t );
-void process_en_sensors     ( uint8_t );
-void check_request_delay    ( void );
+void check_receive_delay    ( void );
 void send_sensor_data       ( void );
+void enable_sensors         ( uint8_t );
 
 
 /*****************************************************************************/
@@ -97,8 +97,8 @@ void controller_init( void )
     adc_add_channel( ADC_CH_SONAR );
 
     /* set Robostix signal LEDs */
-    LED_OFF( RED );
-    LED_OFF( BLUE );
+    LED_ON( RED );
+    LED_ON( BLUE );
     LED_ON( YELLOW );
 
     /* enable interrupts */
@@ -142,10 +142,6 @@ void process_data_packet( void )
             process_sensor_data( packet + 2, packet[1] );
             break;
 
-        case COMM_EN_SENSORS:
-            process_en_sensors( packet[2] );
-            break;
-
         default:
             return;
     }
@@ -160,8 +156,11 @@ void process_sensor_data( const uint8_t *data, uint8_t size )
     /* notify that a new request has been received */
     flag_new_request = 1;
 
-    /* extract received motor signals ID */
-    javiator_data.id = (data[ size-2 ] << 8) | data[ size-1 ];
+    /* extract motor signals ID */
+    javiator_data.id = (data[ size-3 ] << 8) | data[ size-2 ];
+
+    /* update sensor status */
+    enable_sensors( data[ size-1 ] );
 
     /* send sensor data to Robostix 1 */
     send_sensor_data( );
@@ -172,51 +171,20 @@ void process_sensor_data( const uint8_t *data, uint8_t size )
     }
 }
 
-/* Processes COMM_EN_SENSORS messages
-*/
-void process_en_sensors( uint8_t enable )
-{
-    if( enable )
-    {
-        lsm215_start( );
-        minia_start( );
-    }
-    else
-    {
-        lsm215_stop( );
-        minia_stop( );
-
-        LED_OFF( RED );
-        LED_OFF( BLUE );
-    }
-}
-
 /* Checks for delays in communication from Robostix 1 to Robostix 2
 */
-void check_request_delay( )
+void check_receive_delay( )
 {
-    static uint8_t first_timeout = 1;
-
     /* check if a new request has been received */
     if( !flag_new_request )
     {
-        /* check if this is the first timeout */
-        if( first_timeout )
-        {
-            first_timeout = 0;
-
-            /* disable sensors to save power */
-            process_en_sensors( 0 );
-        }
+        /* disable specific sensors to save power */
+        enable_sensors( 0 );
 
         /* reset Robostix-1-to-Robostix-2 interface */
         parallel_reset( );
 
         LED_ON( YELLOW );
-    }
-    else
-    {
-        first_timeout = 1;
     }
 
     flag_check_delay = 0;
@@ -242,6 +210,34 @@ void send_sensor_data( void )
     adc_convert( );
 }
 
+/* Enables/disables specific sensors
+*/
+void enable_sensors( uint8_t enable )
+{
+    static uint8_t sensors_enabled = 0;
+
+    /* check for changed sensor status */
+    if( sensors_enabled != enable )
+    {
+        if( enable )
+        {
+            lsm215_start( );
+            minia_start( );
+        }
+        else
+        {
+            lsm215_stop( );
+            minia_stop( );
+
+            LED_ON( RED );
+            LED_ON( BLUE );
+        }
+
+        /* store new sensor status */
+        sensors_enabled = enable;
+    }
+}
+
 /* Initializes and runs Robostix 2
 */
 int main( void )
@@ -250,10 +246,10 @@ int main( void )
 
     while( 1 )
     {
-        /* check if signals arrive in time */
+        /* check if communication is upright */
         if( flag_check_delay )
         {
-            check_request_delay( );
+            check_receive_delay( );
         }
 
         /* check if new parallel data available */

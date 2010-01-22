@@ -92,7 +92,7 @@ static int process_javiator_packet( const comm_packet_t *packet )
 
 int javiator_port_send_ctrl_period( int period )
 {
-    char buf[1] = { (char) period };
+    uint8_t buf[1] = { (uint8_t) period };
     comm_packet_t packet;
 
     packet.type     = COMM_CTRL_PERIOD;
@@ -105,7 +105,7 @@ int javiator_port_send_ctrl_period( int period )
 
 int javiator_port_send_enable_sensors( int enable )
 {
-    char buf[1] = { (char) enable };
+    uint8_t buf[1] = { (uint8_t) enable };
     comm_packet_t packet;
 
     packet.type     = COMM_EN_SENSORS;
@@ -118,7 +118,7 @@ int javiator_port_send_enable_sensors( int enable )
 
 int javiator_port_send_motor_signals( const motor_signals_t *signals )
 {
-    char buf[ MOTOR_SIGNALS_SIZE ];
+    uint8_t buf[ MOTOR_SIGNALS_SIZE ];
     comm_packet_t packet;
 
     *(uint16_t *) &signals->id = ++local_id;

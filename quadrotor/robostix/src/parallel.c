@@ -190,7 +190,16 @@ int8_t parallel_send_data( uint8_t id, const uint8_t *data, uint8_t size )
 */
 void parallel_reset( void )
 {
-    parallel_init( );
+    /* make parallel port an input */
+    PP_DATA_DDR = 0x00;
+
+    rx_items = 0;
+    tx_items = 0;
+    rx_index = 0;
+    tx_index = 0;
+    new_data = 0;
+    if_ready = 0;
+    sending  = 0;
 }
 
 

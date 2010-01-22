@@ -206,7 +206,7 @@ int control_loop_setup( int period, int control_z, int ubisense )
     compute_z        = control_z;
     enable_ubisense  = ubisense;
     controller_state = 0;
-    altitude_mode    = ALT_MODE_GROUND;
+    altitude_mode    = ALT_MODE_SHUTDOWN;
     next_period      = 0;
     uz_old           = 0;
 #ifdef ENABLE_POSITION_CONTROLLERS
@@ -487,7 +487,6 @@ static int get_ubisense_data( void )
 
 static int get_command_data( void )
 {
-    static int sensors_enabled = 0;
     double filtered_ddx  = 0;
     double filtered_ddy  = 0;
     double estimated_dx  = 0;
@@ -501,12 +500,6 @@ static int get_command_data( void )
     {
         altitude_mode = ALT_MODE_SHUTDOWN;
         terminal_port_reset_shut_down( );
-
-        if( sensors_enabled )
-        {
-            sensors_enabled = 0;
-            javiator_port_send_enable_sensors( 0 );
-        }
     }
     else
     if( terminal_port_is_mode_switch( ) )
@@ -530,12 +523,6 @@ static int get_command_data( void )
 
             case ALT_MODE_SHUTDOWN:
                 altitude_mode = ALT_MODE_GROUND;
-
-                if( !sensors_enabled )
-                {
-                    sensors_enabled = 1;
-                    javiator_port_send_enable_sensors( 1 );
-                }
                 break;
 
             default:
@@ -948,7 +935,7 @@ int control_loop_run( void )
     long long start, end;
 	long long loop_start;
 
-    altitude_mode = ALT_MODE_GROUND;
+    altitude_mode = ALT_MODE_SHUTDOWN;
     next_period   = get_utime( ) + us_period;
 
     while( running )

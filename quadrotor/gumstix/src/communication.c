@@ -91,7 +91,6 @@ redo:
         packet->bytes_in_payload = 0;
     }
 
-//	printf("state %d\n", packet->state);
     switch( packet->state )
     {
         case st_MARK1:
@@ -152,7 +151,7 @@ redo:
             }
             if( c > packet->buf_size )
             {
-                fprintf( stderr, "WARNING: payload larger than buffer --> ignoring packet\n" );
+                fprintf( stderr, "WARNING: payload larger than buffer\n" );
                 packet->state = st_MARK1;
                 goto redo;
             }
@@ -213,7 +212,7 @@ redo:
             else
             {
                 retval = EAGAIN;
-				printf("checksum error javiator\n");
+                fprintf( stderr, "WARNING: checksum error\n" );
                 packet->state = 0;
             } 
             break;

@@ -54,9 +54,9 @@ int terminal_port_is_new_alt_params( void );
 
 int terminal_port_is_new_x_y_params( void );
 
-int terminal_port_is_test_mode( void );
-
 int terminal_port_is_mode_switch( void );
+
+int terminal_port_is_test_mode( void );
 
 int terminal_port_is_shut_down( void );
 
