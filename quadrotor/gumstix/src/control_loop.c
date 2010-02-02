@@ -46,7 +46,7 @@
 #include "trace_data.h"
 #include "rotation_matrix.h"
 #include "low_pass_filter.h"
-#include "average_filter.h"
+//#include "average_filter.h"
 #include "median_filter.h"
 #include "kalman_filter.h"
 #include "us_timer.h"
@@ -61,7 +61,7 @@
 /* filter parameters */
 #define FILTER_GAIN_DD          0.1
 #define FILTER_GAIN_CMD         0.1
-#define FILTER_SIZE_BAT         15
+#define FILTER_SIZE_BATT        15
 
 /* plant parameters */
 #define SONAR_POS_ROLL         0//-95                  /* [mm] sonar position on roll axis */
@@ -126,7 +126,7 @@ static low_pass_filter_t        filter_ddz;
 static low_pass_filter_t        filter_cmd_roll;
 static low_pass_filter_t        filter_cmd_pitch;
 static low_pass_filter_t        filter_cmd_z;
-static median_filter_t          filter_battery;
+static median_filter_t          filter_batt;
 static kalman_filter_t          filter_dx;
 static kalman_filter_t          filter_dy;
 static kalman_filter_t          filter_dz;
@@ -236,7 +236,7 @@ int control_loop_setup( int period, int control_z, int ubisense )
     low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
     low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
-    median_filter_init  ( &filter_battery,   FILTER_SIZE_BAT );
+    median_filter_init  ( &filter_batt,      FILTER_SIZE_BATT );
     kalman_filter_init  ( &filter_dx,        ms_period );
     kalman_filter_init  ( &filter_dy,        ms_period );
     kalman_filter_init  ( &filter_dz,        ms_period );
@@ -442,6 +442,15 @@ static int get_javiator_data( void )
     sensor_data.ddy     = (int)( FACTOR_LINEAR_ACCEL * javiator_data.ddy );
     sensor_data.ddz     = (int)( FACTOR_LINEAR_ACCEL * javiator_data.ddz );
 
+
+    javiator_data.maps = (javiator_data.maps >> 4) & 0x00FFFFFF;
+    fprintf( stdout, "%10u  \r", javiator_data.maps );
+    fflush( stdout );
+
+    /* scale and filter battery level */
+    sensor_data.battery = (int) median_filter_apply( &filter_batt,
+        FACTOR_BATTERY * javiator_data.batt );
+
     /* reject possible sonar outliers */
     if( abs( old_z - javiator_data.sonar ) > 20 && count < 2 )
     {
@@ -459,10 +468,6 @@ static int get_javiator_data( void )
     sensor_data.x = (int) get_corrected_x( );
     sensor_data.y = (int) get_corrected_y( );
     sensor_data.z = (int) get_corrected_z( );
-
-    /* scale and filter battery level */
-    sensor_data.battery = (int) median_filter_apply( &filter_battery,
-        FACTOR_BATTERY * javiator_data.batt );
 
     return( 0 );
 }
@@ -1038,7 +1043,7 @@ int control_loop_run( void )
 #endif
     controller_destroy( &ctrl_z );
 
-    median_filter_destroy( &filter_battery );
+    median_filter_destroy( &filter_batt );
 
     print_stats( );
 

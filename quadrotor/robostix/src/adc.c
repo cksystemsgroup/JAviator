@@ -124,10 +124,10 @@ int8_t adc_is_new_data( int8_t channel )
         return( -1 );
     }
 
-    /* check for interrupt */
+    /* check for ADC interrupt */
     if( (ADCSR & (1 << ADIF)) )
     {
-        /* clear interrupt flag */
+        /* clear ADC interrupt flag */
         ADCSR |= (1 << ADIF);
 
         /* to obtain correct 10-bit result: ADCL must be read before ADCH

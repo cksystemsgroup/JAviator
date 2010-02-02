@@ -35,6 +35,7 @@
 #include "adc.h"
 #include "parallel.h"
 #include "lsm215.h"
+#include "ltc24.h"
 #include "minia.h"
 #include "leds.h"
 
@@ -84,6 +85,7 @@ void controller_init( void )
     adc_init( );
     parallel_init( );
     lsm215_init( );
+    ltc24_init( );
     minia_init( );
     leds_init( );
 
@@ -98,7 +100,6 @@ void controller_init( void )
 
     /* set Robostix signal LEDs */
     LED_ON( RED );
-    LED_ON( BLUE );
     LED_ON( YELLOW );
 
     /* enable interrupts */
@@ -222,15 +223,18 @@ void enable_sensors( uint8_t enable )
         if( enable )
         {
             lsm215_start( );
+            ltc24_start( );
             minia_start( );
+
+            LED_OFF( RED );
         }
         else
         {
             lsm215_stop( );
+            ltc24_stop( );
             minia_stop( );
 
             LED_ON( RED );
-            LED_ON( BLUE );
         }
 
         /* store new sensor status */
@@ -238,10 +242,11 @@ void enable_sensors( uint8_t enable )
     }
 }
 
-/* Initializes and runs Robostix 2
+/* Runs the control loop
 */
 int main( void )
 {
+    /* initialize Robostix 2 */
     controller_init( );
 
     while( 1 )
@@ -256,6 +261,15 @@ int main( void )
         if( parallel_is_new_data( ) )
         {
             process_data_packet( );
+        }
+
+        /* check if new pressure data available */
+        if( ltc24_is_new_data( ) )
+        {
+            if( !ltc24_get_data( &javiator_data.maps ) )
+            {
+                javiator_data.state |= JS_NEW_MAPS_DATA;
+            }
         }
 
         /* check if new battery data available */
@@ -291,7 +305,6 @@ int main( void )
             if( !lsm215_get_x_data( javiator_data.x_pos ) )
             {
                 javiator_data.state |= JS_NEW_X_POS_DATA;
-                LED_TOGGLE( RED );
             }
         }
 
@@ -301,7 +314,6 @@ int main( void )
             if( !lsm215_get_y_data( javiator_data.y_pos ) )
             {
                 javiator_data.state |= JS_NEW_Y_POS_DATA;
-                LED_TOGGLE( BLUE );
             }
         }
     }

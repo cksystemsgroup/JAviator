@@ -33,12 +33,6 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Analog input channels assigned to the Analog/Digital Converter
-*/
-#define ADC_CH_TEMP         -1//PF5     /* pin where the temp. sensor connects to */
-#define ADC_CH_BATT         -1//PF6     /* pin where the battery sensor connects to */
-#define ADC_CH_SONAR        -1//PF7     /* pin where the sonar sensor connects to */
-
 /* Max number of timer events that can be added to the timer event list
 */
 #define MAX_TIMER_EVENTS    1       /* should be kept to the minimum required */
@@ -75,11 +69,25 @@
 #define PP_ISC_RDY          ISC70   /* EICRB configuration setting for RDY interrupt */
 #define PP_SIG_RDY          SIG_INTERRUPT7  /* interrupt signal associated with RDY */
 
+/* Analog input channels assigned to the Analog-to-Digital Converter
+*/
+#define ADC_CH_TEMP         PF5     /* pin where the temp. sensor connects to */
+#define ADC_CH_BATT         PF6     /* pin where the battery sensor connects to */
+#define ADC_CH_SONAR        PF7     /* pin where the sonar sensor connects to */
+
+/* Port, data direction register, and pins used for the LTC2400 ADCs (pressure)
+*/
+#define LTC24_PORT          PORTA   /* port exploited for ADC chip-select signals */
+#define LTC24_DDR           DDRA    /* data direction register associated with port */
+#define LTC24_REG           PINA    /* chip-select register associated with port */
+#define LTC24_CS1           PA0     /* pin where the first ADC CS signal connects to */
+#define LTC24_NUM           6       /* number of ADC CS signals connected to port */
+
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
-#define MINIA_PORT          PORTA//PORTC   /* port where the trigger signal is provided */
-#define MINIA_DDR           DDRA//DDRC    /* data direction register associated with port */
-#define MINIA_TRIGGER       PA0//PC0     /* pin where the trigger signal connects to */
+#define MINIA_PORT          PORTA   /* port where the trigger signal is provided */
+#define MINIA_DDR           DDRA    /* data direction register associated with port */
+#define MINIA_TRIGGER       PA7     /* pin where the trigger signal connects to */
 
 /* Default, minimum, and maximum address settings for the SRF10 sonar sensor
 */
@@ -99,22 +107,66 @@
 
 /* Version-dependent connecting positions on the Robostix
 
-        +-----------+           +-----------+
-        |         3A| -----     |         3A| front
-        |         3B| front     |         3B| right
-        |         3C| right     |         3C| -----
-        |         1A| -----     |         1A| -----
-        |         1B| rear      |         1B| rear
-        |         1C| left      |         1C| left
-        |    TOP    |           |    TOP    |
-        |           |           |           | 
-        |           |           |           | 
-        |           |           |           | 
-        |   R341    |           |   R1131   | 
-        |   R790    |           |           | 
-        |           |           |           |
-        +-----------+           +-----------+
+    +-----------+           +-----------+
+    |         3A| -----     |         3A| front
+    |         3B| front     |         3B| right
+    |         3C| right     |         3C| -----
+    |         1A| -----     |         1A| -----
+    |         1B| rear      |         1B| rear
+    |         1C| left      |         1C| left
+    |    TOP    |           |    TOP    |
+    |           |           |           | 
+    |           |           |           | 
+    |           |           |           | 
+    |   R341    |           |   R1131   | 
+    |   R790    |           |           | 
+    |           |           |           |
+    +-----------+           +-----------+
+
 */
+
+/* BMU Board pinout (bottom side)
+     ___________________________________________
+    |  __                                   __  |
+    | /  \                                 /  \ |
+    | \__/                                 \__/ |
+    |          CS5  SCK  SDO  CS4  CS3          |
+    |                                           |
+    |          CS6  V-   CS1  V+   CS2          |
+    |                                           |
+    |          TMP  BAT                         |
+    |                                           |
+    |                                           |
+    |                                           |
+
+*/
+
+/* BMU Board connector (plug-in side)
+
+     CS3 CS4 SDO SCK CS5 TMP
+    +---+---+---+---+---+---+
+    | o | o | o | o | o | o |
+    +---+---+---+---+---+---+
+    | o | o | o | o | o | o |
+    +---+---+---+---+---+---+
+     CS2 V+  CS1 V-  CS6 BAT
+
+*/
+
+/* Robostix BMU interface (top side)
+
+             S S C C C C C C
+             C D S S S S S S
+             K 0 1 2 3 4 5 6
+             ___________________
+     _______|o_o_o_o_o_o_o_o_o_o|____
+    |o o o|o o o|o o o o o o o o|o o
+    |o o o|o o o|o o o o o o o o|o o
+    |o o o|o o o|o o o o o o o o|o o
+    |--------------------------------
+    |PWM_3 PWM_1 0  A/D PORT   7
+    |
+*/
 
 #endif /* !CONFIG_H */
 

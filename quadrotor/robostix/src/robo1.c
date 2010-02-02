@@ -319,16 +319,17 @@ void send_javiator_data( void )
 
     /* request new sensor data */
     parallel_send_data( COMM_SENSOR_DATA, data, 3 );
-
-    /* request new IMU data */
-    dm3gx1_request( );
 }
 
-/* Initializes and runs Robostix 1
+/* Runs the control loop
 */
 int main( void )
 {
+    /* initialize Robostix 1 */
     controller_init( );
+
+    /* start IMU in continuous mode */
+    dm3gx1_start( );
 
     while( 1 )
     {

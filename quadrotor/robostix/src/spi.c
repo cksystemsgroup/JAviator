@@ -82,6 +82,7 @@ void spi_init( void )
 */
 uint8_t spi_is_new_data( void )
 {
+    /* check for SPI interrupt */
 	if( spi_if )
     {
         spi_if = 0;
