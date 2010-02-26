@@ -79,7 +79,7 @@ public class InfoDialog extends Dialog
         ControlTerminal.YAW + " right",                                          "D",
         "Ascend",                                                                "W",
         "Descend",                                                               "S",
-        ControlTerminal.TOGGLE_ + "Test" + ControlTerminal._MODE,                "T",
+        ControlTerminal.TOGGLE_ + ControlTerminal.TEST + ControlTerminal._MODE,  "T",
         ControlTerminal.KEY_ASSISTANCE,                                          "F1",
         ControlTerminal.ABOUT_TERMINAL,                                          "F2",
         ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,                      "F3",
@@ -102,7 +102,7 @@ public class InfoDialog extends Dialog
         NOT_USED,                                                                "4",
         NOT_USED,                                                                "5",
         NOT_USED,                                                                "6",
-        ControlTerminal.TOGGLE_ + "Test" + ControlTerminal._MODE,                "7",
+        ControlTerminal.TOGGLE_ + ControlTerminal.TEST + ControlTerminal._MODE,  "7",
         NOT_USED,                                                                "8",
         ControlTerminal.RESET_NEEDLES,                                           "9",
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "10"

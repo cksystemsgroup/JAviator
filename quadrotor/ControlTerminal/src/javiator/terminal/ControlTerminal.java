@@ -317,44 +317,6 @@ public class ControlTerminal extends Frame
             signalsDialog.rear      .add( motor.rear );
             signalsDialog.left      .add( motor.left );
         }
-
-        batteryLabel.setText( NIL + ( (double)(data.batt / 100) / 10.0 ) );
-
-        if( batteryLabel.getForeground( ) == Color.GREEN )
-        {
-	        if( data.batt < 14000 )
-	        {
-	        	batteryLabel.setForeground( Color.ORANGE );
-	        }
-        }
-        else
-        if( batteryLabel.getForeground( ) == Color.ORANGE )
-        {
-	        if( data.batt < 13500 )
-	        {
-	        	batteryLabel.setForeground( Color.RED );
-	        }
-	        else
-	        if( data.batt > 14000 )
-	        {
-	        	batteryLabel.setForeground( Color.GREEN );
-	        }
-        }
-        else
-        if( batteryLabel.getForeground( ) == Color.RED )
-        {
-	        if( data.batt > 13500 )
-	        {
-	        	batteryLabel.setForeground( Color.ORANGE );
-	        }
-        }
-        else
-        {
-	        batteryLabel.setForeground( Color.RED );
-        }
-        
-        positionX.setText( NIL + data.x );
-        positionY.setText( NIL + data.y );
     }
 
     public void writeLogData( CommandData  commandData,
@@ -585,6 +547,7 @@ public class ControlTerminal extends Frame
     protected static final String KEY_ASSISTANCE   = "Key Assistance";
     protected static final String ABOUT_TERMINAL   = "About Terminal";
     protected static final String DIAGRAMS         = "Diagrams";
+    protected static final String TEST             = "Test";
 
     protected AnalogMeter         meterRoll        = null;
     protected AnalogMeter         meterPitch       = null;
@@ -862,10 +825,7 @@ public class ControlTerminal extends Frame
     private Thread                 remoteThread   = null;
     private Transceiver            remote         = null;
     private Joystick               stick          = null;
-    private Label                  batteryLabel   = null;
     private Label                  logDataLabel   = null;
-    private Label                  positionX      = null;
-    private Label                  positionY      = null;
     private short[]                controlParams  = null;
     private int[]                  changedParamID = null;
     private boolean                newIdlingSpeed = false;
@@ -961,10 +921,7 @@ public class ControlTerminal extends Frame
         meterYaw      = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_YAW );
         meterAltitude = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_ALTITUDE );
         digitalMeter  = new DigitalMeter( this );
-        batteryLabel  = new Label( ZERO, Label.CENTER );
         logDataLabel  = new Label( LOGGING + _DATA, Label.CENTER );
-        positionX     = new Label( ZERO, Label.RIGHT );
-        positionY     = new Label( ZERO, Label.RIGHT );
         logDataLabel  .setForeground( Color.LIGHT_GRAY );
 
         HiddenButton incAltitudeLimit = new HiddenButton( HiddenButton.SYMBOL_PLUS );
@@ -1028,12 +985,12 @@ public class ControlTerminal extends Frame
         } );
 
         Panel altitudeLimitButtons = new Panel( new GridLayout( 1, 6 ) );
-        altitudeLimitButtons.add( new Label( "Pos X:", Label.RIGHT ) );
-        altitudeLimitButtons.add( positionX );
+        altitudeLimitButtons.add( new Label( ) );
+        altitudeLimitButtons.add( new Label( ) );
         altitudeLimitButtons.add( decAltitudeLimit );
         altitudeLimitButtons.add( incAltitudeLimit );
-        altitudeLimitButtons.add( new Label( "Pos Y:", Label.RIGHT ) );
-        altitudeLimitButtons.add( positionY );
+        altitudeLimitButtons.add( new Label( ) );
+        altitudeLimitButtons.add( new Label( ) );
 
         Panel rollPitchLimitButtons = new Panel( new GridLayout( 1, 6 ) );
         rollPitchLimitButtons.add( new Label( ) );
@@ -1053,13 +1010,7 @@ public class ControlTerminal extends Frame
         rollPitchPanel.add( meterPitch, BorderLayout.CENTER );
         rollPitchPanel.add( rollPitchLimitButtons, BorderLayout.SOUTH );
 
-        Panel batteryPanel = new Panel( new BorderLayout( ) );
-        batteryPanel.add( new Label( "Battery", Label.LEFT ), BorderLayout.WEST );
-        batteryPanel.add( batteryLabel, BorderLayout.CENTER );
-        batteryPanel.add( new Label( "Volts", Label.RIGHT ), BorderLayout.EAST );
-
         Panel motorMeterPanel = new Panel( new BorderLayout( ) );
-        motorMeterPanel.add( batteryPanel, BorderLayout.NORTH );
         motorMeterPanel.add( digitalMeter, BorderLayout.CENTER );
         motorMeterPanel.add( logDataLabel, BorderLayout.SOUTH );
 
