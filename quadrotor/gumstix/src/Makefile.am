@@ -13,19 +13,15 @@ control_SOURCES = \
     controller.c \
     control_loop.c \
     ctrl_params.c \
-    inertial_data.c \
-    inertial_port.c \
     javiator_port.c \
     kalman_filter.c \
     low_pass_filter.c \
     main.c \
     median_filter.c \
     pidd_controller.c \
-    rotation_matrix.c \
+    transformation.c \
     serial_channel.c \
     socket_channel.c \
-    spi_channel.c \
-    spi_dev_channel.c \
     terminal_port.c \
     ubisense_port.c \
     udp_socket_channel.c \

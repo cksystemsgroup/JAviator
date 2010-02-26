@@ -71,17 +71,18 @@
 
 /* Analog input channels assigned to the Analog-to-Digital Converter
 */
-#define ADC_CH_TEMP         PF5     /* pin where the temp. sensor connects to */
-#define ADC_CH_BATT         PF6     /* pin where the battery sensor connects to */
-#define ADC_CH_SONAR        PF7     /* pin where the sonar sensor connects to */
+#define ADC_CH_SONAR        PF7     /* pin where the sonar signal connects to */
+#define ADC_CH_BATT         -1      /* pin where the battery signal connects to */
 
-/* Port, data direction register, and pins used for the LTC2400 ADCs (pressure)
+/* Port, data direction register, and pins used for the BMU 09-A sensor
 */
-#define LTC24_PORT          PORTA   /* port exploited for ADC chip-select signals */
-#define LTC24_DDR           DDRA    /* data direction register associated with port */
-#define LTC24_REG           PINA    /* chip-select register associated with port */
-#define LTC24_CS1           PA0     /* pin where the first ADC CS signal connects to */
-#define LTC24_NUM           6       /* number of ADC CS signals connected to port */
+#define BMU09A_PORT         PORTA   /* port exploited for BMU chip-select signals */
+#define BMU09A_DDR          DDRA    /* data direction register associated with port */
+#define BMU09A_REG          PINA    /* control register associated with port pins */
+#define BMU09A_BSY          PA0     /* pin where the LTC2440-BUSY signal connects to */
+#define BMU09A_PCS          PA1     /* pin where the pressure CS signal connects to */
+#define BMU09A_TCS          PA2     /* pin where the temperature CS signal connects to */
+#define BMU09A_BCS          PA3     /* pin where the battery CS signal connects to */
 
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
@@ -105,7 +106,7 @@
 #define ROBOSTIX_R790       0       /* must be either 0 to disable or 1 to enable */
 #define ROBOSTIX_R1131      1       /* must be either 0 to disable or 1 to enable */
 
-/* Version-dependent connecting positions on the Robostix
+/* Robostix PWM connecting positions
 
     +-----------+           +-----------+
     |         3A| -----     |         3A| front
@@ -122,51 +123,32 @@
     |   R790    |           |           | 
     |           |           |           |
     +-----------+           +-----------+
-
-*/
-
-/* BMU Board pinout (bottom side)
-     ___________________________________________
-    |  __                                   __  |
-    | /  \                                 /  \ |
-    | \__/                                 \__/ |
-    |          CS5  SCK  SDO  CS4  CS3          |
-    |                                           |
-    |          CS6  V-   CS1  V+   CS2          |
-    |                                           |
-    |          TMP  BAT                         |
-    |                                           |
-    |                                           |
-    |                                           |
-
-*/
-
-/* BMU Board connector (plug-in side)
-
-     CS3 CS4 SDO SCK CS5 TMP
-    +---+---+---+---+---+---+
-    | o | o | o | o | o | o |
-    +---+---+---+---+---+---+
-    | o | o | o | o | o | o |
-    +---+---+---+---+---+---+
-     CS2 V+  CS1 V-  CS6 BAT
-
 */
 
 /* Robostix BMU interface (top side)
 
-             S S C C C C C C
-             C D S S S S S S
-             K 0 1 2 3 4 5 6
-             ___________________
-     _______|o_o_o_o_o_o_o_o_o_o|____
+           S S S C C C C C C
+           C D D S S S S S S
+           K O I 1 2 3 4 5 6
+           _____________________
+     _____|o_o_o_o_o_o_o_o_o_o_o|____
     |o o o|o o o|o o o o o o o o|o o
     |o o o|o o o|o o o o o o o o|o o
     |o o o|o o o|o o o o o o o o|o o
     |--------------------------------
     |PWM_3 PWM_1 0  A/D PORT   7
-    |
-*/
+    |*/
+
+/* BMU 09-A connector (plug-in side)
+
+     SCK SDO TCS GND VSS
+    +---+---+---+---+---+
+    | o | o | o | o | o |
+    +---+---+---+---+---+
+    | o | o | o | o | o |
+    +---+---+---+---+---+
+     BCS PCS SDI BSY VCC 
+*/
 
 #endif /* !CONFIG_H */
 

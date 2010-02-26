@@ -23,19 +23,19 @@
  *
  */
 
-#ifndef ROTATION_MATRIX_H
-#define ROTATION_MATRIX_H
+#ifndef TRANSFORMATION_H
+#define TRANSFORMATION_H
 
 
-void   rotation_matrix_update( double roll, double pitch, double yaw );
+void   transformation_set_angles( double roll, double pitch, double yaw );
 
-double rotation_matrix_rotate_x( double x, double y, double z );
+double transformation_rotate_X( double x, double y, double z );
 
-double rotation_matrix_rotate_y( double x, double y, double z );
+double transformation_rotate_Y( double x, double y, double z );
 
-double rotation_matrix_rotate_z( double x, double y, double z );
+double transformation_rotate_Z( double x, double y, double z );
 
 
-#endif /* !ROTATION_MATRIX_H */
+#endif /* !TRANSFORMATION_H */
 
 /* End of file */

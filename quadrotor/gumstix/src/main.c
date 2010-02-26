@@ -29,7 +29,6 @@
 #include <stdio.h>
 
 #include "protocol.h"
-#include "transfer.h"
 #include "comm_channel.h"
 #include "serial_channel.h"
 #include "socket_channel.h"
@@ -38,10 +37,11 @@
 #include "ubisense_port.h"
 #include "control_loop.h"
 
-#define PERIOD_MULTIPLIER   1 /* communicate with terminal every period */
-#define Z_AXIS_CONTROLLER   1 /* enable z-axis controller */
-#define EXEC_CONTROL_LOOP   1 /* execute control loop */
-#define ENABLE_UBISENSE     0 /* setup Ubisense socket */
+#define CONTROLLER_PERIOD   14  /* [ms] */
+#define PERIOD_MULTIPLIER   1   /* communicate with terminal every period */
+#define Z_AXIS_CONTROLLER   1   /* enable z-axis controller */
+#define EXEC_CONTROL_LOOP   1   /* execute control loop */
+#define ENABLE_UBISENSE     0   /* setup Ubisense socket */
 #define SPI_DEVICE          "/dev/mem"
 #define SPI_BAUDRATE        115200
 #define SERIAL_DEVICE       "/dev/ttyS2"

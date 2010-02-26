@@ -34,9 +34,9 @@ typedef struct
     int x;
     int y;
 
-} position_data_t;
+} ubisense_data_t;
 
-#define POSITION_DATA_SIZE  16  /* byte size of position_data_t */
+#define POSITION_DATA_SIZE  16  /* byte size of ubisense_data_t */
 
 
 int ubisense_port_tick( void );
@@ -45,7 +45,7 @@ int ubisense_port_init( comm_channel_t *channel, int tag );
 
 int ubisense_port_is_new_data( void );
 
-int ubisense_port_get_data( position_data_t *data );
+int ubisense_port_get_data( ubisense_data_t *data );
 
 
 #endif /* !UBISENSE_PORT_H */

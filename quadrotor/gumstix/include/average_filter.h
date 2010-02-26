@@ -52,10 +52,10 @@ int    average_filter_reset( average_filter_t *filter );
 */
 int    average_filter_destroy( average_filter_t *filter );
 
-/* Applies the average filter to the given update value.
+/* Updates the average filter with the given value.
    Returns the filtered value.
 */
-double average_filter_apply( average_filter_t *filter, double update );
+double average_filter_update( average_filter_t *filter, double update );
 
 
 #endif /* !AVERAGE_FILTER */

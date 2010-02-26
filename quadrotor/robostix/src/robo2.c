@@ -27,15 +27,14 @@
 #include <string.h>
 
 #include "protocol.h"
-#include "transfer.h"
 #include "javiator.h"
 #include "config.h"
 #include "ports.h"
 #include "wdog.h"
 #include "adc.h"
 #include "parallel.h"
+#include "bmu09a.h"
 #include "lsm215.h"
-#include "ltc24.h"
 #include "minia.h"
 #include "leds.h"
 
@@ -84,8 +83,8 @@ void controller_init( void )
     wdog_init( );
     adc_init( );
     parallel_init( );
+    bmu09a_init( );
     lsm215_init( );
-    ltc24_init( );
     minia_init( );
     leds_init( );
 
@@ -94,12 +93,11 @@ void controller_init( void )
     wdog_start( );
 
     /* register ADC channels */
-    adc_add_channel( ADC_CH_BATT );
-    adc_add_channel( ADC_CH_TEMP );
     adc_add_channel( ADC_CH_SONAR );
 
     /* set Robostix signal LEDs */
     LED_ON( RED );
+    LED_ON( BLUE );
     LED_ON( YELLOW );
 
     /* enable interrupts */
@@ -222,19 +220,20 @@ void enable_sensors( uint8_t enable )
     {
         if( enable )
         {
+            bmu09a_start( );
             lsm215_start( );
-            ltc24_start( );
             minia_start( );
 
             LED_OFF( RED );
         }
         else
         {
+            bmu09a_stop( );
             lsm215_stop( );
-            ltc24_stop( );
             minia_stop( );
 
             LED_ON( RED );
+            LED_ON( BLUE );
         }
 
         /* store new sensor status */
@@ -263,58 +262,32 @@ int main( void )
             process_data_packet( );
         }
 
-        /* check if new pressure data available */
-        if( ltc24_is_new_data( ) )
+        /* check if new BMU data available */
+        if( bmu09a_is_new_data( ) )
         {
-            if( !ltc24_get_data( &javiator_data.maps ) )
-            {
-                javiator_data.state |= JS_NEW_MAPS_DATA;
-            }
-        }
-
-        /* check if new battery data available */
-        if( adc_is_new_data( ADC_CH_BATT ) )
-        {
-            if( !adc_get_data( ADC_CH_BATT, &javiator_data.batt ) )
-            {
-                javiator_data.state |= JS_NEW_BATT_DATA;
-            }
-        }
-
-        /* check if new temperature data available */
-        if( adc_is_new_data( ADC_CH_TEMP ) )
-        {
-            if( !adc_get_data( ADC_CH_TEMP, &javiator_data.temp ) )
-            {
-                javiator_data.state |= JS_NEW_TEMP_DATA;
-            }
-        }
-
-        /* check if new sonar data available */
-        if( adc_is_new_data( ADC_CH_SONAR ) )
-        {
-            if( !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
-            {
-                javiator_data.state |= JS_NEW_SONAR_DATA;
-            }
+            bmu09a_get_data( &javiator_data );
         }
 
         /* check if new laser x-data available */
         if( lsm215_is_new_x_data( ) )
         {
-            if( !lsm215_get_x_data( javiator_data.x_pos ) )
-            {
-                javiator_data.state |= JS_NEW_X_POS_DATA;
-            }
+            lsm215_get_x_data( javiator_data.x_pos );
+
+            LED_OFF( BLUE );
         }
 
         /* check if new laser y-data available */
         if( lsm215_is_new_y_data( ) )
         {
-            if( !lsm215_get_y_data( javiator_data.y_pos ) )
-            {
-                javiator_data.state |= JS_NEW_Y_POS_DATA;
-            }
+            lsm215_get_y_data( javiator_data.y_pos );
+
+            LED_ON( BLUE );
+        }
+
+        /* check if new sonar data available */
+        if( adc_is_new_data( ADC_CH_SONAR ) )
+        {
+            adc_get_data( ADC_CH_SONAR, &javiator_data.sonar );
         }
     }
 

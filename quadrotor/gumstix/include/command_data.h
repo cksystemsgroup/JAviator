@@ -32,28 +32,28 @@
 /* Structure for representing command data */
 typedef struct
 {
-    int16_t roll;
-    int16_t pitch;
-    int16_t yaw;
-    int16_t z;
+    double  roll;
+    double  pitch;
+    double  yaw;
+    double  z;
 
 } command_data_t;
 
-#define COMMAND_DATA_SIZE   8   /* byte size of command_data_t */
+#define COMMAND_DATA_SIZE   8   /* <int16_t> byte size of command_data_t */
 
 static inline
 int command_data_to_stream( const command_data_t *data, uint8_t *buf, int len )
 {
     if( len == COMMAND_DATA_SIZE )
     {
-        buf[0] = (uint8_t)( data->roll >> 8 );
-        buf[1] = (uint8_t)( data->roll );
-        buf[2] = (uint8_t)( data->pitch >> 8 );
-        buf[3] = (uint8_t)( data->pitch );
-        buf[4] = (uint8_t)( data->yaw >> 8 );
-        buf[5] = (uint8_t)( data->yaw );
-        buf[6] = (uint8_t)( data->z >> 8 );
-        buf[7] = (uint8_t)( data->z );
+        buf[0] = (uint8_t)( (int16_t) data->roll >> 8 );
+        buf[1] = (uint8_t)( (int16_t) data->roll );
+        buf[2] = (uint8_t)( (int16_t) data->pitch >> 8 );
+        buf[3] = (uint8_t)( (int16_t) data->pitch );
+        buf[4] = (uint8_t)( (int16_t) data->yaw >> 8 );
+        buf[5] = (uint8_t)( (int16_t) data->yaw );
+        buf[6] = (uint8_t)( (int16_t) data->z >> 8 );
+        buf[7] = (uint8_t)( (int16_t) data->z );
         return( 0 );
     }
 

@@ -34,24 +34,24 @@
 #include "motor_signals.h"
 
 /* State of a controller for 1 degree of freedom. */
-struct controller_state
+struct ctrl_state
 {
     double dtime;        /* Control period [s] */
-    double Kp;           /* Gain for tracking error [PWM/mrad] */
-    double Ki;           /* Gain for integral of tracking error [PWM/(mrad*s)] */
-    double Kd;           /* Gain for derivative of tracking error [PWM/(mrad/s)] */
-    double Kdd;          /* Gain for second derivative of tracking error */
+    double kp;           /* Gain for tracking error [PWM/mrad] */
+    double ki;           /* Gain for integral of tracking error [PWM/(mrad*s)] */
+    double kd;           /* Gain for derivative of tracking error [PWM/(mrad/s)] */
+    double kdd;          /* Gain for second derivative of tracking error */
     double integral;     /* Running integral of the tracking error [mrad*s] */
     double int_limit;    /* Integral limit [mrad*s] */
     double last_desired; /* Stores command to use for finite differencing [mrad] */
-    double pTerm;
-    double iTerm;
-    double dTerm;
-    double ddTerm;
+    double p;
+    double i;
+    double d;
+    double dd;
 };
 
 
-static void saturate_integral( struct controller_state *state )
+static void saturate_integral( ctrl_state_t *state )
 {
     /* Saturate the integral (anti-windup) */
     if( state->integral > state->int_limit )
@@ -65,7 +65,7 @@ static void saturate_integral( struct controller_state *state )
     }
 }
 
-static double pidd_compute( struct controller_state *state,
+static double pidd_compute( ctrl_state_t *state,
     double s_error, double v_error, double acceleration )
 {
     /* Compute integral of error */
@@ -73,20 +73,20 @@ static double pidd_compute( struct controller_state *state,
     saturate_integral( state );
 
     /* Compute the contribution of each metric of the angle error */
-    state->pTerm  = state->Kp  * s_error;         /* error contribution to control effort */
-    state->iTerm  = state->Ki  * state->integral; /* error integral contribution to control effort */
-    state->dTerm  = state->Kd  * v_error;         /* velocity error contribution to control effort */
-    state->ddTerm = state->Kdd * acceleration;    /* acceleration error contribution to control effort */
+    state->p  = state->kp  * s_error;         /* error contribution to control effort */
+    state->i  = state->ki  * state->integral; /* error integral contribution to control effort */
+    state->d  = state->kd  * v_error;         /* velocity error contribution to control effort */
+    state->dd = state->kdd * acceleration;    /* acceleration error contribution to control effort */
 
-    return( state->pTerm + state->iTerm + state->dTerm + state->ddTerm );
+    return( state->p + state->i + state->d + state->dd );
 }
 
-static inline double get_s_error( double current, double desired )
+static inline double get_s_error( double desired, double current )
 {
     return( desired - current );
 }
 
-static inline double get_yaw_s_error( double current, double desired )
+static inline double get_yaw_s_error( double desired, double current )
 {
     double s_error = desired - current;
 
@@ -127,12 +127,12 @@ static inline double get_v_error(
  *
  * \return Requested control effort for the degree of freedom.
  */
-static double pidd_control( struct controller *controller,
-    double current, double desired, double velocity, double acceleration )
+static double pidd_control( controller_t *controller,
+    double desired, double current, double velocity, double acceleration )
 {
     /* Local definition to avoid double indirection in use */
-    struct controller_state *state = controller->state;
-    double s_error = get_s_error( current, desired );
+    ctrl_state_t *state = controller->state;
+    double s_error = get_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
 
     state->last_desired = desired;
@@ -140,12 +140,12 @@ static double pidd_control( struct controller *controller,
     return pidd_compute( state, s_error, v_error, acceleration );
 }
 
-static double pidd_yaw_control( struct controller *controller,
-    double current, double desired, double velocity, double acceleration )
+static double pidd_yaw_control( controller_t *controller,
+    double desired, double current, double velocity, double acceleration )
 {
     /* Local definition to avoid double indirection in use */
-    struct controller_state *state = controller->state;
-    double s_error = get_yaw_s_error( current, desired );
+    ctrl_state_t *state = controller->state;
+    double s_error = get_yaw_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
 
     state->last_desired = desired;
@@ -153,12 +153,12 @@ static double pidd_yaw_control( struct controller *controller,
     return pidd_compute( state, s_error, v_error, acceleration );
 }
 
-static double pidd_x_y_control( struct controller *controller,
-    double current, double desired, double velocity, double acceleration )
+static double pidd_x_y_control( controller_t *controller,
+    double desired, double current, double velocity, double acceleration )
 {
     /* Local definition to avoid double indirection in use */
-    struct controller_state *state = controller->state;
-    double s_error = get_s_error( current, desired );
+    ctrl_state_t *state = controller->state;
+    double s_error = get_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
 
     state->last_desired = desired;
@@ -166,22 +166,22 @@ static double pidd_x_y_control( struct controller *controller,
     return pidd_compute( state, s_error, v_error, acceleration );
 }
 
-static int pidd_reset_zero( struct controller *controller )
+static int pidd_reset_zero( controller_t *controller )
 {
     controller->state->integral = 0;
 
     return( 0 );
 }
 
-static int setPIDD( struct controller *controller,
-    double p, double i, double d, double dd )
+static int setPIDD( controller_t *controller,
+    double kp, double ki, double kd, double kdd )
 {
-    struct controller_state *state = controller->state;
+    ctrl_state_t *state = controller->state;
 
-    state->Kp  = p;
-    state->Ki  = i;
-    state->Kd  = d;
-    state->Kdd = dd;
+    state->kp  = kp;
+    state->ki  = ki;
+    state->kd  = kd;
+    state->kdd = kdd;
 
     return( 0 );
 }
@@ -193,16 +193,16 @@ static int setPIDD( struct controller *controller,
  * \param period int, control loop period (ms)
  * \return If allocation succeeds, returns 0, otherwise returns -1.
  */
-int pidd_def_controller_init( struct controller *controller, int period )
+int pidd_def_controller_init( controller_t *controller, int period )
 {
-    struct controller_state *state = malloc( sizeof( struct controller_state ) );
+    ctrl_state_t *state = malloc( sizeof( ctrl_state_t ) );
 
     if( !state )
     {
         return( ENOMEM );
     }
 
-    memset( state, 0, sizeof( struct controller_state ) );
+    memset( state, 0, sizeof( ctrl_state_t ) );
 
     state->dtime           = period / 1000.0; /* controller uses period in seconds */
     state->int_limit       = MOTOR_MAX;
@@ -216,7 +216,7 @@ int pidd_def_controller_init( struct controller *controller, int period )
     return( 0 );
 }
 
-int pidd_yaw_controller_init( struct controller *controller, int period )
+int pidd_yaw_controller_init( controller_t *controller, int period )
 {
     int res = pidd_def_controller_init( controller, period );
 
@@ -225,7 +225,7 @@ int pidd_yaw_controller_init( struct controller *controller, int period )
     return( res );
 }
 
-int pidd_x_y_controller_init( struct controller *controller, int period )
+int pidd_x_y_controller_init( controller_t *controller, int period )
 {
     int res = pidd_def_controller_init( controller, period );
 
@@ -234,9 +234,9 @@ int pidd_x_y_controller_init( struct controller *controller, int period )
     return( res );
 }
 
-int pidd_all_controller_destroy( struct controller *controller )
+int pidd_all_controller_destroy( controller_t *controller )
 {
-    struct controller_state *state = controller->state;
+    ctrl_state_t *state = controller->state;
 
     controller->state = NULL;
     free( state );
@@ -244,32 +244,32 @@ int pidd_all_controller_destroy( struct controller *controller )
     return( 0 );
 }
 
-double controller_get_p_term( struct controller *controller )
+double controller_get_term_P( controller_t *controller )
 {
-    return( controller->state->pTerm );
+    return( controller->state->p );
 }
 
-double controller_get_i_term( struct controller *controller )
+double controller_get_term_I( controller_t *controller )
 {
-    return( controller->state->iTerm );
+    return( controller->state->i );
 }
 
-double controller_get_d_term( struct controller *controller )
+double controller_get_term_D( controller_t *controller )
 {
-    return( controller->state->dTerm );
+    return( controller->state->d );
 }
 
-double controller_get_dd_term( struct controller *controller )
+double controller_get_term_DD( controller_t *controller )
 {
-    return( controller->state->ddTerm );
+    return( controller->state->dd );
 }
 
-double controller_get_integral( struct controller *controller )
+double controller_get_integral( controller_t *controller )
 {
     return( controller->state->integral );
 }
 
-void controller_set_integral( struct controller *controller, double value )
+void controller_set_integral( controller_t *controller, double value )
 {
     controller->state->integral = value;
 }

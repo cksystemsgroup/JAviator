@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   transfer.h     Definition of shared constants and data types.           */
+/*   bmu09a.h   Interface for the BMU 09-A barometric measurement unit.      */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -21,30 +21,40 @@
 /*                                                                           */
 /*****************************************************************************/
 
-#ifndef TRANSFER_H
-#define TRANSFER_H
+#ifndef BMU09A_H
+#define BMU09A_H
 
 #include <stdint.h>
+#include "javiator.h"
 
 
 /*****************************************************************************/
 /*                                                                           */
-/*   Shared Definitions                                                      */
+/*   Public Functions                                                        */
 /*                                                                           */
 /*****************************************************************************/
 
-/* Controller period */
-#define CONTROLLER_PERIOD   14      /* [ms] */
+/* Initializes the SPI interface for the BMU sensor
+*/
+void    bmu09a_init( void );
 
-/* JAviator states */
-#define JS_NEW_MAPS_DATA    0x0001  /* pressure data have been updated */
-#define JS_NEW_BATT_DATA    0x0002  /* battery data have been updated */
-#define JS_NEW_TEMP_DATA    0x0004  /* temperature data have been updated */
-#define JS_NEW_SONAR_DATA   0x0008  /* sonar data have been updated */
-#define JS_NEW_X_POS_DATA   0x0010  /* x-position data have been updated */
-#define JS_NEW_Y_POS_DATA   0x0020  /* y-position data have been updated */
+/* Starts the BMU sensor in continuous mode
+*/
+void    bmu09a_start( void );
 
+/* Stops the BMU sensor if in continuous mode
+*/
+void    bmu09a_stop( void );
 
-#endif /* !TRANSFER_H */
+/* Returns 1 if new data available, 0 otherwise
+*/
+uint8_t bmu09a_is_new_data( void );
+
+/* Copies the sampled data to the given buffer.
+   Returns 0 if successful, -1 otherwise.
+*/
+int8_t  bmu09a_get_data( javiator_sdat_t *buf );
+
+#endif /* !BMU09A_H */
 
 /* End of file */

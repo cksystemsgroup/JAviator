@@ -76,7 +76,7 @@ public class ControlTerminal extends Frame
     private static final boolean SHOW_3DWINDOW = false;
     private boolean show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/new_laser_test_.csv";
+    public static final String  LOG_FILE_NAME = "traces/bmu_test_.csv";
 
     public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
 											    "roll,pitch,yaw," +
@@ -85,6 +85,7 @@ public class ControlTerminal extends Frame
 											    "x,y,z," +
 											    "dx,dy,dz," +
 											    "ddx,ddy,ddz," +
+											    "maps,temp,batt," +
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
 											    "roll,pitch," +
@@ -317,11 +318,11 @@ public class ControlTerminal extends Frame
             signalsDialog.left      .add( motor.left );
         }
 
-        batteryLabel.setText( NIL + ( (double)(data.battery / 100) / 10.0 ) );
+        batteryLabel.setText( NIL + ( (double)(data.batt / 100) / 10.0 ) );
 
         if( batteryLabel.getForeground( ) == Color.GREEN )
         {
-	        if( data.battery < 14000 )
+	        if( data.batt < 14000 )
 	        {
 	        	batteryLabel.setForeground( Color.ORANGE );
 	        }
@@ -329,12 +330,12 @@ public class ControlTerminal extends Frame
         else
         if( batteryLabel.getForeground( ) == Color.ORANGE )
         {
-	        if( data.battery < 13500 )
+	        if( data.batt < 13500 )
 	        {
 	        	batteryLabel.setForeground( Color.RED );
 	        }
 	        else
-	        if( data.battery > 14000 )
+	        if( data.batt > 14000 )
 	        {
 	        	batteryLabel.setForeground( Color.GREEN );
 	        }
@@ -342,7 +343,7 @@ public class ControlTerminal extends Frame
         else
         if( batteryLabel.getForeground( ) == Color.RED )
         {
-	        if( data.battery > 13500 )
+	        if( data.batt > 13500 )
 	        {
 	        	batteryLabel.setForeground( Color.ORANGE );
 	        }
@@ -359,7 +360,7 @@ public class ControlTerminal extends Frame
     public void writeLogData( CommandData  commandData,
                               SensorData   sensorData,
                               MotorSignals motorSignals,
-                              CommandData motorOffsets,
+                              CommandData  motorOffsets,
                               TraceData    traceData )
     {
         if( logData && logFile != null )
@@ -389,6 +390,9 @@ public class ControlTerminal extends Frame
 			+ ',' + (short) sensorData.ddx
 			+ ',' + (short) sensorData.ddy
 			+ ',' + (short) sensorData.ddz
+			+ ',' + (short) sensorData.maps
+			+ ',' + (short) sensorData.temp
+			+ ',' + (short) sensorData.batt
 			/* Motor Signals */
 			+ ',' + (short) motorSignals.front
 			+ ',' + (short) motorSignals.right

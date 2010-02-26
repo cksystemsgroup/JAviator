@@ -31,7 +31,6 @@
 #include <sched.h>
 
 #include "protocol.h"
-#include "transfer.h"
 #include "controller.h"
 #include "comm_channel.h"
 #include "communication.h"

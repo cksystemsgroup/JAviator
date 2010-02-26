@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   ltc24.c    Interface for the LTC24 ADCs (pressure conversion).          */
+/*   bmu09a.c   Interface for the BMU 09-A barometric measurement unit.      */
 /*                                                                           */
 /*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
 /*                                                                           */
@@ -25,8 +25,7 @@
 #include <string.h>
 
 #include "config.h"
-#include "ltc24.h"
-#include "leds.h"
+#include "bmu09a.h"
 
 
 /*****************************************************************************/
@@ -35,48 +34,24 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Validation and selection of the user-defined output rate
-*/
-#if( LTC24_NUM == 1 )
+/* EOC polling IDs */
+#define EOC_MAPS            1       /* EOC ID assigned to pressure ADC */
+#define EOC_TEMP            2       /* EOC ID assigned to temperature ADC */
+#define EOC_BATT            3       /* EOC ID assigned to battery ADC */
 
-#define CNT_TOP     35000u//15000u  /*  16.67Hz (60ms) */
+/* Size of BMU data */
+#define RX_MAPS_SIZE        4       /* size of received pressure data */
+#define RX_TEMP_SIZE        2       /* size of received temperature data */
+#define RX_BATT_SIZE        2       /* size of received battery data */
 
-#elif( LTC24_NUM == 2 )
-
-#define CNT_TOP     7500u   /*  33.32Hz (30ms) */
-
-#elif( LTC24_NUM == 3 )
-
-#define CNT_TOP     5000u   /*  50.00Hz (20ms) */
-
-#elif( LTC24_NUM == 4 )
-
-#define CNT_TOP     3750u   /*  66.67Hz (15ms) */
-
-#elif( LTC24_NUM == 5 )
-
-#define CNT_TOP     3000u   /*  83.32Hz (12ms) */
-
-#elif( LTC24_NUM == 6 )
-
-#define CNT_TOP     2500u   /* 100.00Hz (10ms) */
-
-#else /* LTC24_NUM */
-
-#error No valid number of ADC CS signals defined.
-
-#endif /* LTC24_NUM */
-
-/* Size of ADC data */
-#define RX_DATA_SIZE        3
+/* Over-Sample Ratio */
+#define LTC2440_OSR         0x30    /* 110Hz pressure conversion rate */
 
 /* Global variables */
-static          uint8_t     ltc24_cs[ LTC24_NUM ];
-static volatile uint8_t     ltc24_id;
-static          uint8_t     rx_buf[ RX_DATA_SIZE ];
+static          uint8_t     rx_buf[ RX_MAPS_SIZE + RX_TEMP_SIZE + RX_BATT_SIZE ];
 static volatile uint8_t     rx_index;
 static volatile uint8_t     new_data;
-static volatile uint8_t     timer_if;
+static volatile uint8_t     poll_eoc;
 static volatile uint8_t     spi_rx;
 static volatile uint8_t     spi_if;
 
@@ -87,37 +62,10 @@ static volatile uint8_t     spi_if;
 /*                                                                           */
 /*****************************************************************************/
 
-/* Initializes Timer T1 and the SPI interface
+/* Initializes the SPI interface for the BMU sensor
 */
-void ltc24_init( void )
+void bmu09a_init( void )
 {
-    /* Calculation of TOP value for the CTC Mode at N Hz
-
-       TOP = fosc / (prescaler * fctc)
-
-           = 16MHz / (64 * N)
-
-           = 250000 / N
-
-       N =  16.67  ==>  TOP = 15000
-       N =  33.32  ==>  TOP =  7500
-       N =  50.00  ==>  TOP =  5000
-       N =  66.67  ==>  TOP =  3750
-       N =  83.32  ==>  TOP =  3000
-       N = 100.00  ==>  TOP =  2500
-    */
-    /* set counter top and bottom value */
-    ICR1   = CNT_TOP;
-    TCNT1  = 0x00;
-
-    /* set Compare Output Mode 0, Waveform Generation Mode 12, fosc/64 */
-    TCCR1A = 0x00;
-    TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11) | (1 << CS10);
-    TCCR1C = 0x00; /* not used */
-
-    /* disable ICF1 interrupt */
-    TIMSK &= ~(1 << TICIE1);
-
     /* make MOSI, SCK, and SS outputs, make MISO an input */
     DDRB  |=  (1 << DDB2) | (1 << DDB1) | (1 << DDB0);
     DDRB  &= ~(1 << DDB3);
@@ -125,93 +73,80 @@ void ltc24_init( void )
     /* rise SS signal (hard-wired to the Gumstix) */
     PORTB |=  (1 << DDB0);
 
-    /* enable SPI interrupt and interface, set Master mode, fosc/16 */
-    SPCR   =  (1 << SPIE) | (1 << SPE) | (1 << MSTR) | (1 << SPR0);
+    /* enable SPI interface, set Master mode, set fosc/16 */
+    SPCR   =  (1 << SPE) | (1 << MSTR) | (1 << SPR0);
 
-    /* initialize LTC24 CS signals */
-    for( ltc24_id = 0; ltc24_id < LTC24_NUM; ++ltc24_id )
-    {
-        /* store pin mask of CS signals */
-        ltc24_cs[ ltc24_id ] = (1 << (LTC24_CS1 + ltc24_id));
+    /* make PCS, TCS, and BCS outputs, make BSY an input */
+    BMU09A_DDR  |=  (1 << BMU09A_BCS) | (1 << BMU09A_TCS) | (1 << BMU09A_PCS);
+    BMU09A_DDR  &= ~(1 << BMU09A_BSY);
 
-        /* make all CS pins outputs */
-        LTC24_DDR  |= ltc24_cs[ ltc24_id ];
-
-        /* rise all CS signals */
-        LTC24_PORT |= ltc24_cs[ ltc24_id ];
-    }
+    /* rise PCS, TCS, and BCS signal */
+    BMU09A_PORT |=  (1 << BMU09A_BCS) | (1 << BMU09A_TCS) | (1 << BMU09A_PCS);
 
     /* initialize global variables */
-    ltc24_id = 0;
     rx_index = 0;
     new_data = 0;
-    timer_if = 0;
+    poll_eoc = 0;
     spi_rx   = 0;
     spi_if   = 0;
-
-    LED_OFF( BLUE );
 }
 
-/* Starts all LTC24 ADCs in continuous mode
+/* Starts the BMU sensor in continuous mode
 */
-void ltc24_start( void )
+void bmu09a_start( void )
 {
-    /* enable ICF1 interrupt */
-    TIMSK |= (1 << TICIE1);
+    /* enable SPI interrupt */
+    SPCR |= (1 << SPIE);
+
+    /* set polling ID */
+    poll_eoc = EOC_MAPS;
 }
 
-/* Stops all LTC24 ADCs if in continuous mode
+/* Stops the BMU sensor if in continuous mode
 */
-void ltc24_stop( void )
+void bmu09a_stop( void )
 {
-    /* disable ICF1 interrupt */
-    TIMSK &= ~(1 << TICIE1);
+    /* disable SPI interrupt */
+    SPCR &= ~(1 << SPIE);
 
-    /* rise selected CS signal */
-    LTC24_PORT |= ltc24_cs[ ltc24_id ];
+    /* rise all CS signals */
+    BMU09A_PORT |= (1 << BMU09A_BCS) | (1 << BMU09A_TCS) | (1 << BMU09A_PCS);
 
     /* reset global variables */
-    ltc24_id = 0;
     rx_index = 0;
     new_data = 0;
-    timer_if = 0;
+    poll_eoc = 0;
     spi_rx   = 0;
     spi_if   = 0;
-
-    LED_OFF( BLUE );
 }
 
 /* Returns 1 if new data available, 0 otherwise
 */
-uint8_t ltc24_is_new_data( void )
+uint8_t bmu09a_is_new_data( void )
 {
-    /* check for timer interrupt */
-    if( timer_if )
+    /* check for MAPS EOC flag to poll */
+    if( poll_eoc == EOC_MAPS )
     {
-        /* sink selected CS signal */
-        LTC24_PORT &= ~ltc24_cs[ ltc24_id ];
+        /* check for end of MAPS conversion */
+        if( !(BMU09A_REG & (1 << BMU09A_BSY)) )
+        {
+            /* sink MAPS-related CS signal */
+            BMU09A_PORT &= ~(1 << BMU09A_PCS);
 
-        /* short 2-clock-cycle delay to give the port latches
-           time to synchronize before checking the SDO signal */
-        __asm__ __volatile__
-        (
-            "nop\n\t"
-            "nop\n\t"
-        );
-
-        /* check for end of conversion (MISO <-- SDO) */
+            /* start MAPS data transfer */
+            SPDR     = LTC2440_OSR;
+            poll_eoc = 0;
+        }
+    }
+    else /* check for TEMP/BATT EOC flag to poll */
+    if( poll_eoc == EOC_TEMP || poll_eoc == EOC_BATT )
+    {
+        /* check for end of TEMP/BATT conversion */
         if( (PINB & (1 << PINB3)) )
         {
-            /* rise selected CS signal */
-            LTC24_PORT |= ltc24_cs[ ltc24_id ];
-        }
-        else
-        {
-            timer_if = 0;
-            rx_index = 0;
-
-            /* start data transfer */
-            SPDR = 0;
+            /* start TEMP/BATT data transfer */
+            SPDR     = 0;
+            poll_eoc = 0;
         }
     }
 
@@ -227,25 +162,40 @@ uint8_t ltc24_is_new_data( void )
         /* read data from SPI port */
         rx_buf[ rx_index ] = spi_rx;
 
-        /* check for end of data stream */
-        if( ++rx_index == RX_DATA_SIZE )
+        /* check for end of MAPS data stream */
+        if( ++rx_index == RX_MAPS_SIZE )
         {
-            /* rise selected CS signal */
-            LTC24_PORT |= ltc24_cs[ ltc24_id ];
+            /* rise MAPS-related CS signal */
+            BMU09A_PORT |= (1 << BMU09A_PCS);
 
-            /* select next CS signal */
-            if( ++ltc24_id == LTC24_NUM )
-            {
-                ltc24_id = 0;
+            /* sink TEMP-related CS signal */
+            BMU09A_PORT &= ~(1 << BMU09A_TCS);
 
-                LED_TOGGLE( BLUE );
-            }
-
-            new_data = 1;
+            poll_eoc = EOC_TEMP;
         }
-        else
+        else /* check for end of TEMP data stream */
+        if( rx_index == RX_MAPS_SIZE + RX_TEMP_SIZE )
         {
-            /* start next transfer */
+            /* rise TEMP-related CS signal */
+            BMU09A_PORT |= (1 << BMU09A_TCS);
+
+            /* sink BATT-related CS signal */
+            BMU09A_PORT &= ~(1 << BMU09A_BCS);
+
+            poll_eoc = EOC_BATT;
+        }
+        else /* check for end of BATT data stream */
+        if( rx_index == RX_MAPS_SIZE + RX_TEMP_SIZE + RX_BATT_SIZE )
+        {
+            /* rise BATT-related CS signal */
+            BMU09A_PORT |= (1 << BMU09A_BCS);
+
+            rx_index = 0;
+            new_data = 1;
+            poll_eoc = EOC_MAPS;
+        }
+        else /* start next data transfer */
+        {
             SPDR = 0;
         }
     }
@@ -256,7 +206,7 @@ uint8_t ltc24_is_new_data( void )
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t ltc24_get_data( uint32_t *buf )
+int8_t bmu09a_get_data( javiator_sdat_t *buf )
 {
     /* check that we're not receiving data currently */
     if( !new_data )
@@ -266,12 +216,24 @@ int8_t ltc24_get_data( uint32_t *buf )
 
     cli( ); /* disable interrupts */
 
-    /* copy received data to given buffer */
-    *buf   = rx_buf[0] & 0x0F; /* drop ADC status bits */
-    *buf <<= 8;
-    *buf  |= rx_buf[1];
-    *buf <<= 8;
-    *buf  |= rx_buf[2];
+    /* extract 24-bit MAPS data */
+    buf->maps   = rx_buf[0] & 0x1F; /* drop 3 leading status bits */
+    buf->maps <<= 8;                /* 5 leading bits in buffer */
+    buf->maps  |= rx_buf[1];        /* mask in next full 8 bits */
+    buf->maps <<= 8;                /* 13 leading bits in buffer */
+    buf->maps  |= rx_buf[2];        /* mask in next full 8 bits */
+    buf->maps <<= 3;                /* 21 leading bits in buffer */
+    buf->maps  |= rx_buf[3] >> 5;   /* mask in remaining 3 bits */
+
+    /* extract 12-bit TEMP data */
+    buf->temp   = rx_buf[4] & 0x7F; /* drop 1 leading status bit */
+    buf->temp <<= 5;                /* 7 leading bits in buffer */
+    buf->temp  |= rx_buf[5] >> 3;   /* mask in remaining 5 bits */
+
+    /* extract 10-bit BATT data */
+    buf->batt   = rx_buf[6] & 0x7F; /* drop 1 leading status bit */
+    buf->batt <<= 3;                /* 7 leading bits in buffer */
+    buf->batt  |= rx_buf[7] >> 5;   /* mask in remaining 3 bits */
 
     /* clear new-data indicator */
     new_data = 0;
@@ -287,13 +249,6 @@ int8_t ltc24_get_data( uint32_t *buf )
 /*   Private Functions                                                       */
 /*                                                                           */
 /*****************************************************************************/
-
-/* T1 Input Capture Interrupt callback function
-*/
-SIGNAL( SIG_INPUT_CAPTURE1 )
-{
-    timer_if = 1;
-}
 
 /* SPI Transmission Complete callback function
 */

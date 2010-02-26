@@ -299,7 +299,7 @@ public class AnalogMeter extends Canvas
 
     private static Painter   painter        = null;
 
-    private AnalogMeter       nextMeter      = null;
+    private AnalogMeter      nextMeter      = null;
     private Image            meterImage     = null;
     private Color            colorDesired   = null;
     private Color            colorCurrent   = null;

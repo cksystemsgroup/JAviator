@@ -182,8 +182,7 @@ static int server_socket_transmit( comm_channel_t *channel, const char *buf, int
     if( !sc->connected )
     {
 		errno = EAGAIN;
-		return -1;
-        //res = socket_connection_accept( sc );
+		return( -1 );
     }
 
     if( sc->connected )

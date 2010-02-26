@@ -24,14 +24,14 @@
  */
 
 #include <math.h>
-#include "rotation_matrix.h"
+#include "transformation.h"
 
 static double r11, r12, r13;
 static double r21, r22, r23;
 static double r31, r32, r33;
 
 
-void rotation_matrix_update( double roll, double pitch, double yaw )
+void transformation_set_angles( double roll, double pitch, double yaw )
 {
 	/* prepare all cosine and sine values */
 	double cr = cos( roll );
@@ -56,17 +56,17 @@ void rotation_matrix_update( double roll, double pitch, double yaw )
     r33 = cr * cp;
 }
 
-double rotation_matrix_rotate_x( double x, double y, double z )
+double transformation_rotate_X( double x, double y, double z )
 {
     return( x * r11 + y * r12 + z * r13 );
 }
 
-double rotation_matrix_rotate_y( double x, double y, double z )
+double transformation_rotate_Y( double x, double y, double z )
 {
     return( x * r21 + y * r22 + z * r23 );
 }
 
-double rotation_matrix_rotate_z( double x, double y, double z )
+double transformation_rotate_Z( double x, double y, double z )
 {
     return( x * r31 + y * r32 + z * r33 );
 }

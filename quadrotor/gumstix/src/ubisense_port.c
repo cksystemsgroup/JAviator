@@ -32,7 +32,7 @@
 #include "communication.h"
 #include "ubisense_port.h"
 
-static position_data_t  position_data;
+static ubisense_data_t  ubisense_data;
 static comm_channel_t * comm_channel;
 static char             comm_buf[ COMM_BUF_SIZE ];
 static int              ubisense_tag;
@@ -70,14 +70,14 @@ static inline int parse_data_packet( const char *buf, int len )
         return( -1 );
     }
 
-    position_data.y = atoi( ++buf );
+    ubisense_data.y = atoi( ++buf );
 
     if( !(buf = strchr( buf, ',' )) )
     {
         return( -1 );
     }
 
-    position_data.x = atoi( ++buf );
+    ubisense_data.x = atoi( ++buf );
 
     new_data = 1;
 
@@ -157,7 +157,7 @@ int ubisense_port_init( comm_channel_t *channel, int tag )
 
     if( !already_initialized )
     {
-        memset( &position_data, 0, sizeof( position_data ) );
+        memset( &ubisense_data, 0, sizeof( ubisense_data ) );
 
         comm_channel        = channel;
         ubisense_tag        = tag;
@@ -178,10 +178,10 @@ int ubisense_port_is_new_data( void )
     return( new_data );
 }
 
-int ubisense_port_get_data( position_data_t *data )
+int ubisense_port_get_data( ubisense_data_t *data )
 {
 	lock( );
-    memcpy( data, &position_data, sizeof( *data ) );
+    memcpy( data, &ubisense_data, sizeof( *data ) );
     new_data = 0;
 	unlock( );
     return( 0 );

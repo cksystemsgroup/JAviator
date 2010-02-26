@@ -29,7 +29,6 @@
 #include <pthread.h>
 
 #include "protocol.h"
-#include "transfer.h"
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"

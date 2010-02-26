@@ -57,13 +57,11 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_control_OBJECTS = average_filter.$(OBJEXT) communication.$(OBJEXT) \
 	controller.$(OBJEXT) control_loop.$(OBJEXT) \
-	ctrl_params.$(OBJEXT) inertial_data.$(OBJEXT) \
-	inertial_port.$(OBJEXT) javiator_port.$(OBJEXT) \
+	ctrl_params.$(OBJEXT) javiator_port.$(OBJEXT) \
 	kalman_filter.$(OBJEXT) low_pass_filter.$(OBJEXT) \
 	main.$(OBJEXT) median_filter.$(OBJEXT) \
-	pidd_controller.$(OBJEXT) rotation_matrix.$(OBJEXT) \
+	pidd_controller.$(OBJEXT) transformation.$(OBJEXT) \
 	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
-	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
 	terminal_port.$(OBJEXT) ubisense_port.$(OBJEXT) \
 	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
@@ -198,19 +196,15 @@ control_SOURCES = \
     controller.c \
     control_loop.c \
     ctrl_params.c \
-    inertial_data.c \
-    inertial_port.c \
     javiator_port.c \
     kalman_filter.c \
     low_pass_filter.c \
     main.c \
     median_filter.c \
     pidd_controller.c \
-    rotation_matrix.c \
+    transformation.c \
     serial_channel.c \
     socket_channel.c \
-    spi_channel.c \
-    spi_dev_channel.c \
     terminal_port.c \
     ubisense_port.c \
     udp_socket_channel.c \
@@ -295,20 +289,16 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/control_loop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctrl_params.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inertial_data.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inertial_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/javiator_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kalman_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/low_pass_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/median_filter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pidd_controller.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rotation_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_channel.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_channel.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi_dev_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/terminal_port.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transformation.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ubisense_port.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/udp_socket_channel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/us_timer.Po@am__quote@

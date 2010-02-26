@@ -53,10 +53,10 @@ int low_pass_filter_reset( low_pass_filter_t *filter )
     return( 0 );
 }
 
-/* Applies the low-pass filter to the given update value.
+/* Updates the low-pass filter with the given value.
    Returns the filtered value.
 */
-double low_pass_filter_apply( low_pass_filter_t *filter, double update )
+double low_pass_filter_update( low_pass_filter_t *filter, double update )
 {
     filter->value = filter->value + filter->gain * (update - filter->value);
 

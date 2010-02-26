@@ -57,13 +57,11 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_control_OBJECTS = average_filter.$(OBJEXT) communication.$(OBJEXT) \
 	controller.$(OBJEXT) control_loop.$(OBJEXT) \
-	ctrl_params.$(OBJEXT) inertial_data.$(OBJEXT) \
-	inertial_port.$(OBJEXT) javiator_port.$(OBJEXT) \
+	ctrl_params.$(OBJEXT) javiator_port.$(OBJEXT) \
 	kalman_filter.$(OBJEXT) low_pass_filter.$(OBJEXT) \
 	main.$(OBJEXT) median_filter.$(OBJEXT) \
-	pidd_controller.$(OBJEXT) rotation_matrix.$(OBJEXT) \
+	pidd_controller.$(OBJEXT) transformation.$(OBJEXT) \
 	serial_channel.$(OBJEXT) socket_channel.$(OBJEXT) \
-	spi_channel.$(OBJEXT) spi_dev_channel.$(OBJEXT) \
 	terminal_port.$(OBJEXT) ubisense_port.$(OBJEXT) \
 	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
@@ -198,19 +196,15 @@ control_SOURCES = \
     controller.c \
     control_loop.c \
     ctrl_params.c \
-    inertial_data.c \
-    inertial_port.c \
     javiator_port.c \
     kalman_filter.c \
     low_pass_filter.c \
     main.c \
     median_filter.c \
     pidd_controller.c \
-    rotation_matrix.c \
+    transformation.c \
     serial_channel.c \
     socket_channel.c \
-    spi_channel.c \
-    spi_dev_channel.c \
     terminal_port.c \
     ubisense_port.c \
     udp_socket_channel.c \
@@ -295,20 +289,16 @@ include ./$(DEPDIR)/communication.Po
 include ./$(DEPDIR)/control_loop.Po
 include ./$(DEPDIR)/controller.Po
 include ./$(DEPDIR)/ctrl_params.Po
-include ./$(DEPDIR)/inertial_data.Po
-include ./$(DEPDIR)/inertial_port.Po
 include ./$(DEPDIR)/javiator_port.Po
 include ./$(DEPDIR)/kalman_filter.Po
 include ./$(DEPDIR)/low_pass_filter.Po
 include ./$(DEPDIR)/main.Po
 include ./$(DEPDIR)/median_filter.Po
 include ./$(DEPDIR)/pidd_controller.Po
-include ./$(DEPDIR)/rotation_matrix.Po
 include ./$(DEPDIR)/serial_channel.Po
 include ./$(DEPDIR)/socket_channel.Po
-include ./$(DEPDIR)/spi_channel.Po
-include ./$(DEPDIR)/spi_dev_channel.Po
 include ./$(DEPDIR)/terminal_port.Po
+include ./$(DEPDIR)/transformation.Po
 include ./$(DEPDIR)/ubisense_port.Po
 include ./$(DEPDIR)/udp_socket_channel.Po
 include ./$(DEPDIR)/us_timer.Po

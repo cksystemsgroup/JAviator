@@ -51,10 +51,10 @@ int    median_filter_reset( median_filter_t *filter );
 */
 int    median_filter_destroy( median_filter_t *filter );
 
-/* Applies the median filter to the given update value.
+/* Updates the median filter with the given value.
    Returns the filtered value.
 */
-double median_filter_apply( median_filter_t *filter, double update );
+double median_filter_update( median_filter_t *filter, double update );
 
 
 #endif /* !MEDIAN_FILTER */

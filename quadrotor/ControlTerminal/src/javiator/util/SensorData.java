@@ -28,7 +28,7 @@ package javiator.util;
  */
 public class SensorData extends NumeratedSendable
 {
-	public static final int PACKET_SIZE = 38;
+	public static final int PACKET_SIZE = 42;
 
 	public SensorData()
 	{
@@ -55,7 +55,9 @@ public class SensorData extends NumeratedSendable
 		ddx     = 0;
 		ddy     = 0;
 		ddz     = 0;
-		battery = 0;
+		maps    = 0;
+		temp    = 0;
+		batt    = 0;
 	}
 
 	public String toString( )
@@ -79,7 +81,9 @@ public class SensorData extends NumeratedSendable
 		result += " ddx: "     + ddx;
 		result += " ddy: "     + ddy;
 		result += " ddz: "     + ddz;
-		result += " battery: " + battery;
+		result += " maps: "    + maps;
+		result += " temp: "    + temp;
+		result += " batt: "    + batt;
 
 		return( result );
 	}
@@ -130,8 +134,12 @@ public class SensorData extends NumeratedSendable
 		packet.payload[ offset + 33 ] = (byte)( ddy );
 		packet.payload[ offset + 34 ] = (byte)( ddz >> 8 );
 		packet.payload[ offset + 35 ] = (byte)( ddz );
-		packet.payload[ offset + 36 ] = (byte)( battery >> 8 );
-		packet.payload[ offset + 37 ] = (byte)( battery );
+		packet.payload[ offset + 36 ] = (byte)( maps >> 8 );
+		packet.payload[ offset + 37 ] = (byte)( maps );
+		packet.payload[ offset + 38 ] = (byte)( temp >> 8 );
+		packet.payload[ offset + 39 ] = (byte)( temp );
+		packet.payload[ offset + 40 ] = (byte)( batt >> 8 );
+		packet.payload[ offset + 41 ] = (byte)( batt );
 	}
 
 	public synchronized Packet toPacket( byte type )
@@ -168,7 +176,9 @@ public class SensorData extends NumeratedSendable
 		ddx     = (short)( (packet.payload[ offset + 30 ] << 8) | (packet.payload[ offset + 31 ] & 0xFF) );
 		ddy     = (short)( (packet.payload[ offset + 32 ] << 8) | (packet.payload[ offset + 33 ] & 0xFF) );
 		ddz     = (short)( (packet.payload[ offset + 34 ] << 8) | (packet.payload[ offset + 35 ] & 0xFF) );
-		battery = (short)( (packet.payload[ offset + 36 ] << 8) | (packet.payload[ offset + 37 ] & 0xFF) );
+		maps    = (short)( (packet.payload[ offset + 36 ] << 8) | (packet.payload[ offset + 37 ] & 0xFF) );
+		temp    = (short)( (packet.payload[ offset + 38 ] << 8) | (packet.payload[ offset + 39 ] & 0xFF) );
+		batt    = (short)( (packet.payload[ offset + 40 ] << 8) | (packet.payload[ offset + 41 ] & 0xFF) );
 	}
 
 	public synchronized Object clone( )
@@ -206,7 +216,9 @@ public class SensorData extends NumeratedSendable
 		copy.ddx     = ddx;
 		copy.ddy     = ddy;
 		copy.ddz     = ddz;
-		copy.battery = battery;
+		copy.maps    = maps;
+		copy.temp    = temp;
+		copy.batt    = batt;
 	}
 
 	public short roll;
@@ -227,5 +239,7 @@ public class SensorData extends NumeratedSendable
 	public short ddx;
 	public short ddy;
 	public short ddz;
-	public short battery;
+	public short maps;
+	public short temp;
+	public short batt;
 }

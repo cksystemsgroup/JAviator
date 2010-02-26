@@ -32,9 +32,9 @@
 /* Structure for short JAviator data */
 typedef struct
 {
-    uint32_t    maps;               /* [Pa] 24-bit resolution */
-    uint16_t    batt;               /* [mV] 10-bit resolution */
+    uint32_t    maps;               /* [mV] 24-bit resolution */
     uint16_t    temp;               /* [mV] 10-bit resolution */
+    uint16_t    batt;               /* [mV] 10-bit resolution */
     uint16_t    sonar;              /* [mV] 10-bit resolution */
     uint16_t    state;              /* JAviator data state */
     uint16_t    id;                 /* transmisson ID */
@@ -48,9 +48,9 @@ typedef struct
 /* Structure for long JAviator data */
 typedef struct
 {
-    uint32_t    maps;               /* [Pa] 24-bit resolution */
-    uint16_t    batt;               /* [mV] 10-bit resolution */
+    uint32_t    maps;               /* [mV] 24-bit resolution */
     uint16_t    temp;               /* [mV] 10-bit resolution */
+    uint16_t    batt;               /* [mV] 10-bit resolution */
     uint16_t    sonar;              /* [mV] 10-bit resolution */
     uint16_t    state;              /* JAviator data state */
     uint16_t    id;                 /* transmisson ID */
@@ -81,11 +81,11 @@ int javiator_sdat_to_stream( const javiator_sdat_t *data, uint8_t *buf, uint8_t 
         buf[2]  = (uint8_t)( data->maps >> 8 );
         buf[3]  = (uint8_t)( data->maps );
 
-        buf[4]  = (uint8_t)( data->batt >> 8 );
-        buf[5]  = (uint8_t)( data->batt );
+        buf[4]  = (uint8_t)( data->temp >> 8 );
+        buf[5]  = (uint8_t)( data->temp );
 
-        buf[6]  = (uint8_t)( data->temp >> 8 );
-        buf[7]  = (uint8_t)( data->temp );
+        buf[6]  = (uint8_t)( data->batt >> 8 );
+        buf[7]  = (uint8_t)( data->batt );
 
         buf[8]  = (uint8_t)( data->sonar >> 8 );
         buf[9]  = (uint8_t)( data->sonar );
@@ -133,13 +133,13 @@ int javiator_sdat_from_stream( javiator_sdat_t *data, const uint8_t *buf, uint8_
 		data->maps   <<= 8;
 		data->maps    |= buf[3];
 
-		data->batt     = buf[4];
-		data->batt   <<= 8;
-		data->batt    |= buf[5];
-
-		data->temp     = buf[6];
+		data->temp     = buf[4];
 		data->temp   <<= 8;
-		data->temp    |= buf[7];
+		data->temp    |= buf[5];
+
+		data->batt     = buf[6];
+		data->batt   <<= 8;
+		data->batt    |= buf[7];
 
 		data->sonar    = buf[8];
 		data->sonar  <<= 8;
@@ -187,11 +187,11 @@ int javiator_ldat_to_stream( const javiator_ldat_t *data, uint8_t *buf, uint8_t 
         buf[2]  = (uint8_t)( data->maps >> 8 );
         buf[3]  = (uint8_t)( data->maps );
 
-        buf[4]  = (uint8_t)( data->batt >> 8 );
-        buf[5]  = (uint8_t)( data->batt );
+        buf[4]  = (uint8_t)( data->temp >> 8 );
+        buf[5]  = (uint8_t)( data->temp );
 
-        buf[6]  = (uint8_t)( data->temp >> 8 );
-        buf[7]  = (uint8_t)( data->temp );
+        buf[6]  = (uint8_t)( data->batt >> 8 );
+        buf[7]  = (uint8_t)( data->batt );
 
         buf[8]  = (uint8_t)( data->sonar >> 8 );
         buf[9]  = (uint8_t)( data->sonar );
@@ -258,13 +258,13 @@ int javiator_ldat_from_stream( javiator_ldat_t *data, const uint8_t *buf, uint8_
 		data->maps   <<= 8;
 		data->maps    |= buf[3];
 
-		data->batt     = buf[4];
-		data->batt   <<= 8;
-		data->batt    |= buf[5];
-
-		data->temp     = buf[6];
+		data->temp     = buf[4];
 		data->temp   <<= 8;
-		data->temp    |= buf[7];
+		data->temp    |= buf[5];
+
+		data->batt     = buf[6];
+		data->batt   <<= 8;
+		data->batt    |= buf[7];
 
 		data->sonar    = buf[8];
 		data->sonar  <<= 8;

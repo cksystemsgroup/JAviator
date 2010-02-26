@@ -27,7 +27,6 @@
 #include <string.h>
 
 #include "protocol.h"
-#include "transfer.h"
 #include "javiator.h"
 #include "signals.h"
 #include "config.h"

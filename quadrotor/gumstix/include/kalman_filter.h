@@ -58,7 +58,7 @@ int    kalman_filter_reset( kalman_filter_t *filter );
    to be given as follows: s in [mm] and dds in [mm/s^2].
    Returns the estimated velocity ds in [mm/s].
 */
-double kalman_filter_apply( kalman_filter_t *filter, double s, double dds );
+double kalman_filter_update( kalman_filter_t *filter, double s, double dds );
 
 
 #endif /* !KALMAN_FILTER */
