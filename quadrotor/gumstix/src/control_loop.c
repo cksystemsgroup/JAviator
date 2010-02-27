@@ -178,18 +178,6 @@ static void                     print_stats( void );
  *          Control Loop Code           *
  ****************************************/
 
-static inline void set_ctrl_params( controller_t *ctrl,
-    double kp, double ki, double kd, double kdd )
-{
-    ctrl->set_params( ctrl, kp, ki, kd, kdd );
-}
-
-static inline double do_control( controller_t *ctrl,
-    double desired, double current, double velocity, double acceleration )
-{
-    return ctrl->control( ctrl, desired, current, velocity, acceleration );
-}
-
 int control_loop_setup( int period, int control_z, int ubisense )
 {
     struct sigaction act;
@@ -274,17 +262,17 @@ static void set_control_params( ctrl_params_t *params,
 
     if( ctrl_1 != NULL )
     {
-        set_ctrl_params( ctrl_1, kp, ki, kd, kdd );
+        controller_set_params( ctrl_1, kp, ki, kd, kdd );
         fprintf( stdout, "parameter update: %s", ctrl_1->name );
 
         if( ctrl_2 != NULL )
         {
-            set_ctrl_params( ctrl_2, kp, ki, kd, kdd );
+            controller_set_params( ctrl_2, kp, ki, kd, kdd );
             fprintf( stdout, "/%s", ctrl_2->name );
         }
 
-        fprintf( stdout, "\n--> Kp: %+3.5f   Ki: %+3.5f   Kd: %+3.5f   Kdd: %+3.5f\n",
-            kp, ki, kd, kdd );
+        fprintf( stdout, "\n--> Kp: %+3.5f   Ki: %+3.5f   "
+            "Kd: %+3.5f   Kdd: %+3.5f\n", kp, ki, kd, kdd );
         fflush( stdout );
     }
 }
@@ -489,7 +477,7 @@ static int get_command_data( void )
     else
     if( terminal_port_is_mode_switch( ) )
     {
-		printf( "Mode Switch ...\n" );
+		printf( "Mode Switch...\n" );
 		print_stats( );
 
 		loop_count = 0;
@@ -536,14 +524,14 @@ static inline void reset_motor_signals( void )
     motor_signals.left  = 0;
 }
 
-static void reset_controllers( void )
+static inline void reset_controllers( void )
 {
-    ctrl_roll  .reset_zero( &ctrl_roll );
-    ctrl_pitch .reset_zero( &ctrl_pitch );
-    ctrl_yaw   .reset_zero( &ctrl_yaw );
-    ctrl_x     .reset_zero( &ctrl_x );
-    ctrl_y     .reset_zero( &ctrl_y );
-    ctrl_z     .reset_zero( &ctrl_z );
+    controller_reset_zero( &ctrl_roll );
+    controller_reset_zero( &ctrl_pitch );
+    controller_reset_zero( &ctrl_yaw );
+    controller_reset_zero( &ctrl_x );
+    controller_reset_zero( &ctrl_y );
+    controller_reset_zero( &ctrl_z );
 
     motor_speed = 0;
 }
@@ -617,11 +605,11 @@ static int compute_motor_signals( void )
 
     if( terminal_port_is_test_mode( ) )
     {
-        command_data.roll  = -do_control( &ctrl_y, offset_y - command_data.roll,
-            sensor_data.y, sensor_data.dy, sensor_data.ddy );
+        command_data.roll  = -controller_do_control( &ctrl_y, offset_y
+            - command_data.roll, sensor_data.y, sensor_data.dy, sensor_data.ddy );
 
-        command_data.pitch =  do_control( &ctrl_x, offset_x + command_data.pitch,
-            sensor_data.x, sensor_data.dx, sensor_data.ddx );
+        command_data.pitch =  controller_do_control( &ctrl_x, offset_x
+            + command_data.pitch, sensor_data.x, sensor_data.dx, sensor_data.ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -676,18 +664,18 @@ static int compute_motor_signals( void )
             controller_set_integral( &ctrl_z, controller_get_integral( &ctrl_z ) - 10 );
         }
 
-        u_roll  = do_control( &ctrl_roll, command_data.roll,
+        u_roll  = controller_do_control( &ctrl_roll, command_data.roll,
             sensor_data.roll, sensor_data.droll, sensor_data.ddroll );
 
-        u_pitch = do_control( &ctrl_pitch, command_data.pitch,
+        u_pitch = controller_do_control( &ctrl_pitch, command_data.pitch,
             sensor_data.pitch, sensor_data.dpitch, sensor_data.ddpitch );
 
-        u_yaw   = do_control( &ctrl_yaw, command_data.yaw,
+        u_yaw   = controller_do_control( &ctrl_yaw, command_data.yaw,
             sensor_data.yaw, sensor_data.dyaw, sensor_data.ddyaw );
 
         if( compute_z )
 	    {
-            u_z = base_motor_speed + do_control( &ctrl_z, command_data.z,
+            u_z = base_motor_speed + controller_do_control( &ctrl_z, command_data.z,
                 sensor_data.z, sensor_data.dz, sensor_data.ddz );
 	    }
         else

@@ -38,6 +38,8 @@ import java.awt.event.WindowEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 
+import javiator.util.ControllerConstants;
+
 
 /*****************************************************************************/
 /*                                                                           */
@@ -74,7 +76,7 @@ public class ParamDialog extends Dialog
     private static ParamDialog    Instance       = null;
     private short[]               controlParams  = null;
     private int[]                 changedParamID = null;
-    private Label[]               paramLabels    = null;
+    private EditField[]           paramFields    = null;
     private MotionThread          motion         = null;
 
     private ParamDialog( ControlTerminal parent, String title,
@@ -84,7 +86,7 @@ public class ParamDialog extends Dialog
 
         this.controlParams  = controlParams;
         this.changedParamID = changedParamID;
-        paramLabels         = new Label[ controlParams.length ];
+        paramFields         = new EditField[ controlParams.length ];
 
         setBackground( Color.WHITE );
         makePanel( );
@@ -153,39 +155,16 @@ public class ParamDialog extends Dialog
 
         for( int i = 0; i < controlParams.length; ++i )
         {
-        	paramLabels[i] = new Label( ControlTerminal.NIL
-                + (double) controlParams[i] / SCALING_FACTOR, Label.RIGHT );
+        	paramFields[i] = new EditField( ControlTerminal.NIL
+                + (double) controlParams[i] / SCALING_FACTOR, 60, 10 );
+        	paramFields[i].addKeyListener( new IDKeyListener( i ) );
 
         	HiddenButton minusButton = new HiddenButton( HiddenButton.SYMBOL_MINUS );
-        	minusButton.addMouseListener( new IDMouseAdapter( i )
-            {
-                public void mousePressed( MouseEvent me )
-                {
-                	motion.setOffset( getAdapterID( ), -PARAM_STEP );
-                }
-
-                public void mouseReleased( MouseEvent me )
-                {
-                	motion.setOffset( getAdapterID( ), 0 );
-                	changedParamID[0] = getAdapterID( );
-                }
-            } );
+        	minusButton.addMouseListener( new IDMouseAdapter( i, -PARAM_STEP ) );
 
             HiddenButton plusButton = new HiddenButton( HiddenButton.SYMBOL_PLUS );
-            plusButton.addMouseListener( new IDMouseAdapter( i )
-            {
-                public void mousePressed( MouseEvent me )
-                {
-                	motion.setOffset( getAdapterID( ), PARAM_STEP );
-                }
+            plusButton.addMouseListener( new IDMouseAdapter( i, PARAM_STEP ) );
 
-                public void mouseReleased( MouseEvent me )
-                {
-                	motion.setOffset( getAdapterID( ), 0 );
-                	changedParamID[0] = getAdapterID( );
-                }
-            } );
-            
             if( i < sectionRows )
             {
                 panel = r_p_Section;
@@ -212,7 +191,7 @@ public class ParamDialog extends Dialog
             }
 
             panel.add( new Label( PARAMETERS[ i % PARAMETERS.length ], Label.LEFT ) );
-            panel.add( paramLabels[i] );
+            panel.add( paramFields[i] );
             Panel buttonPanel = new Panel( new BorderLayout( ) );
             buttonPanel.add( minusButton, BorderLayout.WEST );
             buttonPanel.add( plusButton, BorderLayout.EAST );
@@ -242,11 +221,71 @@ public class ParamDialog extends Dialog
         x_y_Panel.add( new Label( "X / Y", Label.CENTER ), BorderLayout.CENTER );
         x_y_Panel.add( x_y_Section, BorderLayout.SOUTH );
 
-        setLayout( new GridLayout( 4, 1, 0, 0 ) );
-        add( r_p_Panel );
-        add( yaw_Panel );
-        add( alt_Panel );
-        add( x_y_Panel );
+        Panel gridPanel = new Panel( new GridLayout( 4, 1 ) );
+        gridPanel.add( r_p_Panel );
+        gridPanel.add( yaw_Panel );
+        gridPanel.add( alt_Panel );
+        gridPanel.add( x_y_Panel );
+
+        setLayout( new BorderLayout( ) );
+        add( gridPanel, BorderLayout.CENTER );
+        add( new Label( ), BorderLayout.SOUTH );
+    }
+
+    /*************************************************************************/
+    /*                                                                       */
+    /* Class IDKeyListener                                                   */
+    /*                                                                       */
+    /*************************************************************************/
+
+    private class IDKeyListener implements KeyListener
+    {
+    	public IDKeyListener( int listenerID )
+    	{
+    		super( );
+    		this.listenerID = listenerID;
+    	}
+
+        public void keyPressed( KeyEvent ke )
+        {
+        	if( ke.getKeyCode( ) == KeyEvent.VK_ENTER )
+        	{
+        		try
+        		{
+                    int scaledParam = (int)( Double.parseDouble(
+                        paramFields[ listenerID ].getText( ) ) * SCALING_FACTOR );
+
+                    if( scaledParam < -ControllerConstants.MOTOR_MAX ||
+                        scaledParam >  ControllerConstants.MOTOR_MAX )
+                    {
+                    	paramFields[ listenerID ].setForeground( Color.RED );
+                    }
+                    else
+                    {
+                    	paramFields[ listenerID ].setForeground( Color.BLUE );
+    	            	paramFields[ listenerID ].setText( ControlTerminal.NIL
+                            + (double) scaledParam / SCALING_FACTOR );
+                    	controlParams[ listenerID ] = (short) scaledParam;
+                        changedParamID[0] = listenerID;
+            	    }
+        		}
+        		catch( NumberFormatException nfe )
+        		{
+        			paramFields[ listenerID ].setForeground( Color.RED );
+        			paramFields[ listenerID ].setText( "NaN" );
+        		}
+        	}
+        }
+
+        public void keyReleased( KeyEvent ke )
+        {
+        }
+
+        public void keyTyped( KeyEvent ke )
+        {
+        }
+
+    	private int listenerID;
     }
 
     /*************************************************************************/
@@ -257,18 +296,26 @@ public class ParamDialog extends Dialog
 
     private class IDMouseAdapter extends MouseAdapter
     {
-    	IDMouseAdapter( int adapterID )
+    	public IDMouseAdapter( int adapterID, int paramStep )
     	{
     		super( );
     		this.adapterID = adapterID;
-    	}
-    	
-    	public int getAdapterID( )
-    	{
-    		return( adapterID );
+            this.paramStep = paramStep;
     	}
 
+        public void mousePressed( MouseEvent me )
+        {
+        	motion.setOffset( adapterID, paramStep );
+        }
+
+        public void mouseReleased( MouseEvent me )
+        {
+        	motion.setOffset( adapterID, 0 );
+        	changedParamID[0] = adapterID;
+        }
+
     	private int adapterID;
+    	private int paramStep;
     }
 
     /*************************************************************************/
@@ -299,7 +346,7 @@ public class ParamDialog extends Dialog
 	            if( offset != 0 )
 	            {
 	            	controlParams[ index ] += (short) offset;
-	            	paramLabels[ index ].setText( ControlTerminal.NIL
+	            	paramFields[ index ].setText( ControlTerminal.NIL
                         + (double) controlParams[ index ] / SCALING_FACTOR );
 	            }
 

@@ -36,12 +36,12 @@ struct ctrl_state;
 typedef struct controller controller_t;
 typedef struct ctrl_state ctrl_state_t;
 
-typedef double (*control)( controller_t *controller,
-                           double desired, double current,
-                           double velocity, double acceleration );
-typedef int (*reset_zero)( controller_t *controller );
-typedef int (*set_params)( controller_t *controller,
-                           double kp, double ki, double kd, double kdd );
+typedef double (*do_control)( controller_t *controller,
+                              double desired, double current,
+                              double velocity, double acceleration );
+typedef int    (*set_params)( controller_t *controller,
+                              double kp, double ki, double kd, double kdd );
+typedef int    (*reset_zero)( controller_t *controller );
 
 typedef enum
 {
@@ -54,9 +54,9 @@ typedef enum
 struct controller
 {
     ctrl_type_t     type;
-    control         control;
-    reset_zero      reset_zero;
+    do_control      do_control;
     set_params      set_params;
+    reset_zero      reset_zero;
     char *          name;
     ctrl_state_t *  state;
 };
@@ -72,6 +72,23 @@ double controller_get_term_DD ( controller_t *controller );
 double controller_get_integral( controller_t *controller );
 void   controller_set_integral( controller_t *controller, double value );
 
+
+static inline double controller_do_control( controller_t *ctrl,
+    double desired, double current, double velocity, double acceleration )
+{
+    return ctrl->do_control( ctrl, desired, current, velocity, acceleration );
+}
+
+static inline int controller_set_params( controller_t *ctrl,
+    double kp, double ki, double kd, double kdd )
+{
+    return ctrl->set_params( ctrl, kp, ki, kd, kdd );
+}
+
+static inline int controller_reset_zero( controller_t *ctrl )
+{
+    return ctrl->reset_zero( ctrl );
+}
 
 #endif /* CONTROLLER_H */
 

@@ -101,4 +101,4 @@ public class TCPTransceiver extends Transceiver
     private int    port;
 }
 
-//End of file.
+/* End of file */

@@ -111,9 +111,9 @@ public class InfoDialog extends Dialog
     private static final String[] ABOUT_STRINGS =
     {
     	ControlTerminal.NIL,
-        "JAviator Control Terminal version 3.2",
+        "JAviator Control Terminal version 10.2",
         ControlTerminal.NIL,
-        "Copyright (c) 2006-2009  Rainer Trummer",
+        "Copyright (c) 2006-2010  Rainer Trummer",
         "Department of Computer Sciences",
         "University of Salzburg, Austria",
         ControlTerminal.NIL,
@@ -228,4 +228,4 @@ public class InfoDialog extends Dialog
     }
 }
 
-// End of file.
+/* End of file */

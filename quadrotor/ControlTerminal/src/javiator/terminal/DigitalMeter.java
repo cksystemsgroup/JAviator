@@ -121,7 +121,6 @@ public class DigitalMeter extends Panel
 
     public void setSensorData( SensorData data )
     {
-        battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
 
         if( battLabel.getForeground( ) == colorAllRight )
         {
@@ -155,7 +154,10 @@ public class DigitalMeter extends Panel
         {
 	        battLabel.setForeground( colorAlerting );
         }
-        
+
+        mapsLabel.setText( ControlTerminal.NIL + ( (double)(data.maps / 100) / 10.0 ) );
+        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 100) / 10.0 ) );
+        battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
         positionX.setText( ControlTerminal.NIL + data.x );
         positionY.setText( ControlTerminal.NIL + data.y );
     }
@@ -427,7 +429,7 @@ public class DigitalMeter extends Panel
         controlDisplay.add( testMode );
         controlDisplay.add( new Label( "MAPS:" ) );
         controlDisplay.add( mapsLabel );
-        controlDisplay.add( new Label( "kPa", Label.CENTER ) );
+        controlDisplay.add( new Label( "Pa", Label.CENTER ) );
         controlDisplay.add( new Label( "Temp:" ) );
         controlDisplay.add( tempLabel );
         controlDisplay.add( new Label( "C", Label.CENTER ) );
@@ -470,4 +472,4 @@ public class DigitalMeter extends Panel
     }
 }
 
-// End of file.
+/* End of file */

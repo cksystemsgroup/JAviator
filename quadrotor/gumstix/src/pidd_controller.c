@@ -127,7 +127,7 @@ static inline double get_v_error(
  *
  * \return Requested control effort for the degree of freedom.
  */
-static double pidd_control( controller_t *controller,
+static double pidd_do_control( controller_t *controller,
     double desired, double current, double velocity, double acceleration )
 {
     /* Local definition to avoid double indirection in use */
@@ -166,14 +166,7 @@ static double pidd_x_y_control( controller_t *controller,
     return pidd_compute( state, s_error, v_error, acceleration );
 }
 
-static int pidd_reset_zero( controller_t *controller )
-{
-    controller->state->integral = 0;
-
-    return( 0 );
-}
-
-static int setPIDD( controller_t *controller,
+static int pidd_set_params( controller_t *controller,
     double kp, double ki, double kd, double kdd )
 {
     ctrl_state_t *state = controller->state;
@@ -182,6 +175,13 @@ static int setPIDD( controller_t *controller,
     state->ki  = ki;
     state->kd  = kd;
     state->kdd = kdd;
+
+    return( 0 );
+}
+
+static int pidd_reset_zero( controller_t *controller )
+{
+    controller->state->integral = 0;
 
     return( 0 );
 }
@@ -208,9 +208,9 @@ int pidd_def_controller_init( controller_t *controller, int period )
     state->int_limit       = MOTOR_MAX;
     state->last_desired    = 0;
 
-    controller->control    = pidd_control;
+    controller->do_control = pidd_do_control;
+    controller->set_params = pidd_set_params;
     controller->reset_zero = pidd_reset_zero;
-    controller->set_params = setPIDD;
     controller->state      = state;
 
     return( 0 );
@@ -220,7 +220,7 @@ int pidd_yaw_controller_init( controller_t *controller, int period )
 {
     int res = pidd_def_controller_init( controller, period );
 
-    controller->control = pidd_yaw_control;
+    controller->do_control = pidd_yaw_control;
 
     return( res );
 }
@@ -229,7 +229,7 @@ int pidd_x_y_controller_init( controller_t *controller, int period )
 {
     int res = pidd_def_controller_init( controller, period );
 
-    controller->control = pidd_x_y_control;
+    controller->do_control = pidd_x_y_control;
 
     return( res );
 }

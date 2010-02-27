@@ -28,9 +28,9 @@ import java.awt.Dialog;
 import java.awt.Panel;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
-import java.awt.TextField;
 import java.awt.Button;
 import java.awt.Label;
+import java.awt.Font;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.GraphicsEnvironment;
@@ -70,23 +70,20 @@ public class PortDialog extends Dialog
 
     private static PortDialog      Instance  = null;
     private        ControlTerminal parent    = null;
-    private        TextField       hostField = null;
-    private        TextField       portField = null;
+    private        EditField       hostField = null;
+    private        EditField       portField = null;
 
     private PortDialog( ControlTerminal parent, String title )
     {
         super( parent, title, false );
 
         this.parent = parent;
-        hostField   = new TextField( "@@@@@@@@@@@@@@@" );
-        portField   = new TextField( "88888" );
+        hostField   = new EditField( parent.relayHost, 130, 10 );
+        portField   = new EditField( ControlTerminal.NIL + parent.relayPort, 50, 10 );
 
         setBackground( Color.WHITE );
         makePanel( );
         pack( );
-
-        hostField.setText( parent.relayHost );
-        portField.setText( ControlTerminal.NIL + parent.relayPort );
 
         addWindowListener( new WindowAdapter( )
         {
@@ -104,12 +101,15 @@ public class PortDialog extends Dialog
 
     private void makePanel( )
     {
+        Label colonLabel = new Label( ":", Label.RIGHT );
+        colonLabel.setFont( new Font( "monospace", Font.BOLD, 12 ) );
+
         Panel hostPanel = new Panel( new BorderLayout( ) );
         hostPanel.add( new Label( "Host", Label.CENTER ), BorderLayout.NORTH );
         hostPanel.add( hostField, BorderLayout.CENTER );
         hostPanel.add( new Label( ), BorderLayout.SOUTH );
         hostPanel.add( new Label( ), BorderLayout.WEST );
-        hostPanel.add( new Label( ":", Label.RIGHT ), BorderLayout.EAST );
+        hostPanel.add( colonLabel, BorderLayout.EAST );
 
         Panel portPanel = new Panel( new BorderLayout( ) );
         portPanel.add( new Label( "Port", Label.CENTER ), BorderLayout.NORTH );
@@ -213,4 +213,4 @@ public class PortDialog extends Dialog
     }
 }
 
-// End of file.
+/* End of file */

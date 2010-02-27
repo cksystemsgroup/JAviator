@@ -574,4 +574,4 @@ public class AnalogMeter extends Canvas
     }
 }
 
-// End of file.
+/* End of file */

@@ -192,4 +192,4 @@ public class HiddenButton extends Label
     }
 }
 
-// End of file.
+/* End of file */

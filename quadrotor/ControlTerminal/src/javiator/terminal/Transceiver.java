@@ -251,4 +251,4 @@ public abstract class Transceiver extends javiator.util.Transceiver
     private static Transceiver Instance = null;
 }
 
-// End of file.
+/* End of file */
