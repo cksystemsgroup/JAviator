@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -26,7 +25,6 @@
 #ifndef TRANSFORMATION_H
 #define TRANSFORMATION_H
 
-
 void   transformation_set_angles( double roll, double pitch, double yaw );
 
 double transformation_rotate_X( double x, double y, double z );
@@ -34,7 +32,6 @@ double transformation_rotate_X( double x, double y, double z );
 double transformation_rotate_Y( double x, double y, double z );
 
 double transformation_rotate_Z( double x, double y, double z );
-
 
 #endif /* !TRANSFORMATION_H */
 

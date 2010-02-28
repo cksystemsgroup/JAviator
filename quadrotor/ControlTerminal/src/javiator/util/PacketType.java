@@ -29,7 +29,7 @@ public final class PacketType
     public static final byte COMM_SENSOR_DATA   = 0x04; /* transmission of sensor data */
     public static final byte COMM_MOTOR_SIGNALS = 0x05; /* transmission of motor signals */
     public static final byte COMM_MOTOR_OFFSETS = 0x06; /* transmission of motor offsets */
-    public static final byte COMM_STATE_MODE    = 0x07; /* transmission of state and mode */
+    public static final byte COMM_MODE_STATE    = 0x07; /* transmission of mode and state */
     public static final byte COMM_GROUND_REPORT = 0x08; /* transmission of ground report */
     public static final byte COMM_TRACE_DATA    = 0x09; /* transmission of trace data */
     public static final byte COMM_COMMAND_DATA  = 0x0A; /* transmission of command data */

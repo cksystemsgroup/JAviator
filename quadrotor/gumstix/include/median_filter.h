@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -26,7 +25,6 @@
 #ifndef MEDIAN_FILTER
 #define MEDIAN_FILTER
 
-
 /* Structure for representing median-filter parameters */
 typedef struct
 {
@@ -34,7 +32,6 @@ typedef struct
     double *array;
 
 } median_filter_t;
-
 
 /* Initializes the median filter.
    Returns 0 if successful, -1 otherwise.
@@ -55,7 +52,6 @@ int    median_filter_destroy( median_filter_t *filter );
    Returns the filtered value.
 */
 double median_filter_update( median_filter_t *filter, double update );
-
 
 #endif /* !MEDIAN_FILTER */
 

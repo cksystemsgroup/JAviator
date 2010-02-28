@@ -32,7 +32,6 @@
 #include "controller.h"
 #include "communication.h"
 #include "javiator_port.h"
-#include "inertial_port.h"
 #include "terminal_port.h"
 
 static command_data_t   command_data;
@@ -416,27 +415,27 @@ int terminal_port_send_motor_signals( const motor_signals_t *signals )
     return comm_send_packet( comm_channel, &packet );
 }
 
-int terminal_port_send_motor_offsets( const command_data_t *offsets )
+int terminal_port_send_motor_offsets( const motor_offsets_t *offsets )
 {
-    uint8_t buf[ COMMAND_DATA_SIZE ];
+    uint8_t buf[ MOTOR_OFFSETS_SIZE ];
     comm_packet_t packet;
 
-    command_data_to_stream( offsets, buf, COMMAND_DATA_SIZE );
+    motor_offsets_to_stream( offsets, buf, MOTOR_OFFSETS_SIZE );
 
     packet.type     = COMM_MOTOR_OFFSETS;
-    packet.size     = COMMAND_DATA_SIZE;
-    packet.buf_size = COMMAND_DATA_SIZE;
+    packet.size     = MOTOR_OFFSETS_SIZE;
+    packet.buf_size = MOTOR_OFFSETS_SIZE;
     packet.payload  = buf;
 
     return comm_send_packet( comm_channel, &packet );
 }
 
-int terminal_port_send_state_and_mode( const int state, const int mode )
+int terminal_port_send_mode_and_state( const int mode, const int state )
 {
-    char buf[2] = { (char) state, (char) mode };
+    char buf[2] = { (char) mode, (char) state };
     comm_packet_t packet;
 
-    packet.type     = COMM_STATE_MODE;
+    packet.type     = COMM_MODE_STATE;
     packet.size     = 2;
     packet.buf_size = 2;
     packet.payload  = buf;
@@ -444,17 +443,15 @@ int terminal_port_send_state_and_mode( const int state, const int mode )
     return comm_send_packet( comm_channel, &packet );
 }
 
-int terminal_port_send_report(
-        const sensor_data_t   *sensors,
-        const motor_signals_t *signals,
-        const command_data_t  *offsets,
-        const int state, const int mode )
+int terminal_port_send_report( const sensor_data_t *sensors,
+    const motor_signals_t *signals, const motor_offsets_t *offsets,
+    const int mode, const int state )
 {
     static int counter = 1;
     uint8_t buf[ SENSOR_DATA_SIZE
-            + MOTOR_SIGNALS_SIZE
-            + COMMAND_DATA_SIZE
-            + 2 ]; /* state and mode */
+               + MOTOR_SIGNALS_SIZE
+               + MOTOR_OFFSETS_SIZE
+               + 2 ]; /* mode and state */
     comm_packet_t packet;
     int i = 0;
 
@@ -466,11 +463,11 @@ int terminal_port_send_report(
         motor_signals_to_stream( signals, &buf[i], MOTOR_SIGNALS_SIZE );
         i += MOTOR_SIGNALS_SIZE;
 
-        command_data_to_stream( offsets, &buf[i], COMMAND_DATA_SIZE );
-        i += COMMAND_DATA_SIZE;
+        motor_offsets_to_stream( offsets, &buf[i], MOTOR_OFFSETS_SIZE );
+        i += MOTOR_OFFSETS_SIZE;
 
-        buf[i++] = (char)( state | test_mode );
         buf[i++] = (char)( mode );
+        buf[i++] = (char)( state );
 
         packet.type     = COMM_GROUND_REPORT;
         packet.size     = i;

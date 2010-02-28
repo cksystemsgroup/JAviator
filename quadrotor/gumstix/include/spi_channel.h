@@ -28,19 +28,19 @@
 
 #include "comm_channel.h"
 
-
 #define SPI_MAX_NAME    32
 
-/* create busy wait spi channel */
-int spi_channel_init( comm_channel_t *channel, char *interface, int baudrate );
-int spi_channel_create( comm_channel_t *channel );
-int spi_channel_destroy( comm_channel_t *channel );
+int spi_dma_channel_init( comm_channel_t *channel, char *interface, int baudrate );
 
-/* use Linux kernel SPI driver */
+int spi_dma_channel_create( comm_channel_t *channel );
+
+int spi_dma_channel_destroy( comm_channel_t *channel );
+
 int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate );
-int spi_dev_channel_create( comm_channel_t *channel );
-int spi_dev_channel_destroy( comm_channel_t *channel );
 
+int spi_dev_channel_create( comm_channel_t *channel );
+
+int spi_dev_channel_destroy( comm_channel_t *channel );
 
 #endif /* !SPI_CHANNEL_H */
 

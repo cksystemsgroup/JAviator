@@ -1446,6 +1446,21 @@ public class ControlTerminal extends Frame
         private boolean alreadyToggledButton10 = false;
         private boolean halt                   = false;
 
+        private int correct_yaw( int yaw )
+        {
+            if( yaw < -AnalogMeter.DEG_180 )
+	        {
+                yaw += AnalogMeter.DEG_360;
+            }
+            else
+            if( yaw > AnalogMeter.DEG_180 )
+	        {
+                yaw -= AnalogMeter.DEG_360;
+            }
+
+            return( yaw );
+        }
+
         private void processJoystick( )
         {
             stick.poll( );
@@ -1514,18 +1529,7 @@ public class ControlTerminal extends Frame
 
             if( (buttonsPressed & Joystick.BUTTON2) != 0 )
             {
-	            int yaw = meterYaw.getDesired( ) + (int)( stick.getZ( ) * 10.0f );
-	
-	            if( yaw < -AnalogMeter.DEG_180 )
-	            {
-	            	yaw += AnalogMeter.DEG_360;
-	            }
-	            else if( yaw > AnalogMeter.DEG_180 )
-	            {
-	            	yaw -= AnalogMeter.DEG_360;
-	            }
-	
-	            meterYaw.setDesired( yaw );
+	            meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) + (int)( stick.getZ( ) * 10.0f ) ) );
             }
 
             meterAltitude.setDesired( (int)( meterAltitude.getMaximum( ) * ( stick.getR( ) - 1.0f ) * -0.5f ) );
@@ -1538,7 +1542,7 @@ public class ControlTerminal extends Frame
 	        {
 	            meterRoll.setDesired( meterRoll.getDesired( ) + offsetDesiredRoll );
 	        }
-	
+
 	        if( offsetDesiredPitch != 0 )
 	        {
 	            meterPitch.setDesired( meterPitch.getDesired( ) + offsetDesiredPitch );
@@ -1546,20 +1550,9 @@ public class ControlTerminal extends Frame
 
 	        if( offsetDesiredYaw != 0 )
 	        {
-                int yaw = meterYaw.getDesired( ) + offsetDesiredYaw;
-
-	            if( yaw < -AnalogMeter.DEG_180 )
-	            {
-	            	yaw += AnalogMeter.DEG_360;
-	            }
-	            else if( yaw > AnalogMeter.DEG_180 )
-	            {
-	            	yaw -= AnalogMeter.DEG_360;
-	            }
-
-	            meterYaw.setDesired( yaw );
+                meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) + offsetDesiredYaw ) );
 	        }
-	
+
 	        if( offsetDesiredAltitude != 0 )
 	        {
 	            meterAltitude.setDesired( meterAltitude.getDesired( ) + offsetDesiredAltitude );

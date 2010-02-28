@@ -186,11 +186,11 @@ static int pidd_reset_zero( controller_t *controller )
     return( 0 );
 }
 
-/* Initialize PID controller.
+/* Initialize PIDD controller.
  *
  * Allocate memory for the state, set constants for the state and for the controller.
  * \param controller *controller, pointer to the controller to be created
- * \param period int, control loop period (ms)
+ * \param period int, control loop period [ms]
  * \return If allocation succeeds, returns 0, otherwise returns -1.
  */
 int pidd_def_controller_init( controller_t *controller, int period )

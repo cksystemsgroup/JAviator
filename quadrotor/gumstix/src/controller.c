@@ -34,7 +34,6 @@ extern int pidd_yaw_controller_init( controller_t *, int );
 extern int pidd_x_y_controller_init( controller_t *, int );
 extern int pidd_all_controller_destroy( controller_t * );
 
-
 int controller_init( controller_t *controller,
     char *name, ctrl_type_t type, int period )
 {

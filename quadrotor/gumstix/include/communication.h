@@ -28,7 +28,6 @@
 
 #include "comm_channel.h"
 
-
 /* Structure for representing a communication packet */
 typedef struct
 {
@@ -42,11 +41,9 @@ typedef struct
 
 } comm_packet_t;
 
-
 int comm_recv_packet( comm_channel_t *channel, comm_packet_t *packet );
 
 int comm_send_packet( comm_channel_t *channel, const comm_packet_t *packet );
-
 
 #endif /* !COMMUNICATION_H */
 

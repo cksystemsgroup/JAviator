@@ -31,18 +31,14 @@
 #include "javiator_data.h"
 #include "motor_signals.h"
 
-
 //#define SHORT_JAVIATOR_DATA
 
-
 int javiator_port_init( comm_channel_t *channel );
-
 #ifdef SHORT_JAVIATOR_DATA
 int javiator_port_get_data( javiator_sdat_t *data );
 #else
 int javiator_port_get_data( javiator_ldat_t *data );
 #endif
-
 int javiator_port_send_ctrl_period( int period );
 
 int javiator_port_send_enable_sensors( int enable );
@@ -50,7 +46,6 @@ int javiator_port_send_enable_sensors( int enable );
 int javiator_port_send_motor_signals( const motor_signals_t *signals );
 
 int javiator_port_forward( const comm_packet_t *packet );
-
 
 #endif /* !JAVIATOR_PORT_H */
 

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -28,7 +27,6 @@
 
 #include <stdint.h>
 
-
 /* Structure for representing control parameters */
 typedef struct
 {
@@ -41,11 +39,39 @@ typedef struct
 
 #define CTRL_PARAMS_SIZE    8   /* byte size of ctrl_params_t */
 
+static inline
+int ctrl_params_to_stream( const ctrl_params_t *params, char *buf, int len )
+{
+    if( len == CTRL_PARAMS_SIZE )
+    {
+        buf[0] = (char)( params->kp >> 8 );
+        buf[1] = (char)( params->kp );
+        buf[2] = (char)( params->ki >> 8 );
+        buf[3] = (char)( params->ki );
+        buf[4] = (char)( params->kd >> 8 );
+        buf[5] = (char)( params->kd );
+        buf[6] = (char)( params->kdd >> 8 );
+        buf[7] = (char)( params->kdd );
+        return( 0 );
+    }
 
-int ctrl_params_to_stream( const ctrl_params_t *params, char *buf, int len );
+    return( -1 );
+}
 
-int ctrl_params_from_stream( ctrl_params_t *params, const char *buf, int len );
+static inline
+int ctrl_params_from_stream( ctrl_params_t *params, const char *buf, int len )
+{
+    if( len == CTRL_PARAMS_SIZE )
+    {
+        params->kp  = (int16_t)( (buf[0] << 8) | (buf[1] & 0xFF) );
+        params->ki  = (int16_t)( (buf[2] << 8) | (buf[3] & 0xFF) );
+        params->kd  = (int16_t)( (buf[4] << 8) | (buf[5] & 0xFF) );
+        params->kdd = (int16_t)( (buf[6] << 8) | (buf[7] & 0xFF) );
+        return( 0 );
+    }
 
+    return( -1 );
+}
 
 #endif /* !CTRL_PARAMS_H */
 

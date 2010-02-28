@@ -1,19 +1,19 @@
 package javiator.util;
 
-public class StateAndMode extends NumeratedSendable
+public class ModeAndState extends NumeratedSendable
 {
 	public static final int PACKET_SIZE = 2;
 
-    public StateAndMode( byte state, byte mode )
+    public ModeAndState( byte mode, byte state )
     {
-        this.state = state;
         this.mode  = mode;
+        this.state = state;
     }
 
     public void reset( )
     {
-        state = 0;
         mode  = 0;
+        state = 0;
     }
 
     public synchronized Packet toPacket( )
@@ -26,8 +26,8 @@ public class StateAndMode extends NumeratedSendable
 
 	public void encode( Packet packet, int offset )
 	{
-		packet.payload[ offset + 0 ] = state;
-		packet.payload[ offset + 1 ] = mode;
+		packet.payload[ offset + 0 ] = mode;
+		packet.payload[ offset + 1 ] = state;
 	}
 
     public synchronized Packet toPacket( byte type )
@@ -46,23 +46,23 @@ public class StateAndMode extends NumeratedSendable
 
 	public void decode( Packet packet, int offset )
 	{
-		state = (byte)( packet.payload[ offset + 0 ] & 0xFF );
-		mode  = (byte)( packet.payload[ offset + 1 ] & 0xFF );
+		mode  = (byte)( packet.payload[ offset + 0 ] & 0xFF );
+		state = (byte)( packet.payload[ offset + 1 ] & 0xFF );
 	}
 
     public synchronized Object clone( )
     {
-        return new StateAndMode( state, mode );
+        return new ModeAndState( mode, state );
     }
 
     public void copyTo( Copyable to )
 	{
     	super.copyTo( to );
-    	StateAndMode copy = (StateAndMode) to;
-    	copy.state           = state;
+    	ModeAndState copy = (ModeAndState) to;
     	copy.mode            = mode;
+    	copy.state           = state;
 	}
 
-    public byte state;
     public byte mode;
+    public byte state;
 }

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -38,7 +37,6 @@ typedef struct
 
 #define POSITION_DATA_SIZE  16  /* byte size of ubisense_data_t */
 
-
 int ubisense_port_tick( void );
 
 int ubisense_port_init( comm_channel_t *channel, int tag );
@@ -46,7 +44,6 @@ int ubisense_port_init( comm_channel_t *channel, int tag );
 int ubisense_port_is_new_data( void );
 
 int ubisense_port_get_data( ubisense_data_t *data );
-
 
 #endif /* !UBISENSE_PORT_H */
 

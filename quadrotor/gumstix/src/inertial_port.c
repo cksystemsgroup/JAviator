@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -40,9 +39,6 @@
 #define CMD_CONTINUOUSLY    0x10    /* command for continuous mode */
 #define CMD_DESIRED_DATA    0x31    /* command for desired data */
 
-static int                  inertial_local = 0;
-static int                  _started;
-static int                  _automatic;
 static inertial_data_t      inertial_data;
 static comm_channel_t *     comm_channel;
 static char                 comm_buf[ DM3_GX1_DATA_SIZE ];
@@ -59,23 +55,18 @@ typedef enum
 
 static inline int parse_inertial_data( void )
 {
-    int res = inertial_data_from_stream( &inertial_data,
-        comm_buf + 1, DM3_GX1_DATA_SIZE - 1 ); /* skip header byte */
-
-    //new_data = 1;
-
-    return( res );
+    return inertial_data_from_stream( &inertial_data, comm_buf + 1, DM3_GX1_DATA_SIZE - 1 );
 }
 
 static inline int is_valid_data( const uint8_t *data, int size )
 {
-    uint16_t checksum = ( (data[ size-2 ] << 8) | (data[ size-1 ] & 0xFF) ) - (data[0] & 0xFF);
+    uint16_t checksum = ( (data[ size-2 ] << 8) | data[ size-1 ] ) - data[0];
 
     size -= 3;
 
     while( size )
     {
-        checksum -= (data[ size-1 ] << 8) | (data[ size ] & 0xFF);
+        checksum -= (data[ size-1 ] << 8) | data[ size ];
         size -= 2;
     }
 
@@ -119,7 +110,7 @@ redo:
             }
             else
             {
-                retval = -1;
+                retval = 1;
             }
             state = st_TYPE;
             break;
@@ -131,23 +122,14 @@ redo:
     return( retval );
 }
 
-int inertial_port_init( comm_channel_t *channel, int automatic)
+int inertial_port_init( comm_channel_t *channel )
 {
     memset( &inertial_data, 0, sizeof( inertial_data ) );
 
     comm_channel = channel;
     new_data     = 0;
 
-	_automatic = automatic;
-	_started = 0;
-	inertial_local = 1;
-
     return( 0 );
-}
-
-int inertial_is_local()
-{
-	return inertial_local;
 }
 
 int inertial_port_tick( void )
@@ -168,7 +150,7 @@ int inertial_port_tick( void )
             return( res );
         }
         else
-        if( res == -1 )
+        if( res == 1 )
         {
             fprintf( stderr, "ERROR: invalid data from IMU channel\n" );
         }
@@ -183,67 +165,64 @@ int inertial_port_tick( void )
 
 int inertial_port_send_request( void )
 {
-	if (!_automatic) {
-		char buf[1] = { (char) CMD_DESIRED_DATA };
+    char buf[1] = { (char) CMD_DESIRED_DATA };
 
-		return comm_channel->transmit( comm_channel, buf, 1 );
-	}
-	return 0;
+    return comm_channel->transmit( comm_channel, buf, 1 );
 }
 
 int inertial_port_send_start( void )
 {
-	if (_automatic) {
-		char buf[64] = { (char) CMD_CONTINUOUSLY,
-			(char) CMD_CONFIRMATION,
-			(char) CMD_DESIRED_DATA };
+    char buf[3] = { (char) CMD_CONTINUOUSLY,
+                    (char) CMD_CONFIRMATION,
+                    (char) CMD_DESIRED_DATA };
 
-		_started = 1;
-		comm_channel->flush(comm_channel);
-		comm_channel->transmit( comm_channel, buf, 3 );
-	}
-	return 0;
+    comm_channel->flush( comm_channel );
+
+    return comm_channel->transmit( comm_channel, buf, 3 );
 }
 
 int inertial_port_send_stop( void )
 {
-	if (_automatic) {
-		char buf[3] = { (char) CMD_CONTINUOUSLY,
-			(char) CMD_CONFIRMATION,
-			(char) CMD_CONFIRMATION };
+    char buf[3] = { (char) CMD_CONTINUOUSLY,
+        			(char) CMD_CONFIRMATION,
+        			(char) CMD_CONFIRMATION };
 
-		_started = 0;
-		return comm_channel->transmit( comm_channel, buf, 3 );
-	}
+    comm_channel->flush( comm_channel );
 
-	return 0;
+    return comm_channel->transmit( comm_channel, buf, 3 );
 }
 
 int inertial_port_get_data( inertial_data_t *data )
 {
-    int res;
+    int res, attempts = 0;
 
-	if (_automatic && !_started)
-		return 0;
-
-    while (!new_data) {
+    do
+    {
         res = inertial_port_tick( );
 
         if( res == EAGAIN )
         {
+            if( ++attempts > 100 )
+            {
+                return( -1 );
+            }
+
+            inertial_port_send_request( );
             sleep_for( 1000 );
         }
         else
-        if( res == -1 )
+        if( res == 1 )
         {
             return( res );
         }
         else
         if( res != 0 )
         {
-            return( 1 );
+            return( -1 );
         }
     }
+    while( !new_data );
+
     memcpy( data, &inertial_data, sizeof( *data ) );
     new_data = 0;
 
@@ -251,4 +230,3 @@ int inertial_port_get_data( inertial_data_t *data )
 }
 
 /* End of file */
-

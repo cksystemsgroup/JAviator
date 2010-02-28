@@ -41,6 +41,7 @@
 #include "javiator_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
+#include "motor_offsets.h"
 #include "ctrl_params.h"
 #include "trace_data.h"
 #include "transformation.h"
@@ -51,9 +52,13 @@
 #include "us_timer.h"
 
 /* controller modes */
-#define ALT_MODE_GROUND         0x00
-#define ALT_MODE_FLYING         0x01
-#define ALT_MODE_SHUTDOWN       0x02
+#define CTRL_MODE_GROUND        0x00
+#define CTRL_MODE_FLYING        0x01
+#define CTRL_MODE_SHUTDOWN      0x02
+
+/* controller states */
+#define CTRL_STATE_NORMAL       0x00
+#define CTRL_STATE_TESTING      0x01
 
 /* filter parameters */
 #define FILTER_GAIN_ACC         0.1
@@ -95,8 +100,8 @@ static int                      ms_period;
 static int                      us_period;
 static int                      compute_z;
 static int                      enable_ubisense;
-static int                      controller_state;
 static int                      altitude_mode;
+static int                      control_state;
 static long long                next_period;
 static double                   offset_x;
 static double                   offset_y;
@@ -135,7 +140,7 @@ static javiator_ldat_t          javiator_data;
 static ubisense_data_t          ubisense_data;
 static sensor_data_t            sensor_data;
 static motor_signals_t          motor_signals;
-static command_data_t           motor_offsets;
+static motor_offsets_t          motor_offsets;
 static trace_data_t             trace_data;
 
 /* controller statistics */
@@ -187,8 +192,8 @@ int control_loop_setup( int period, int control_z, int ubisense )
     us_period         = period * 1000;
     compute_z         = control_z;
     enable_ubisense   = ubisense;
-    controller_state  = 0;
-    altitude_mode     = ALT_MODE_SHUTDOWN;
+    altitude_mode     = CTRL_MODE_SHUTDOWN;
+    control_state     = CTRL_STATE_NORMAL;
     next_period       = 0;
     offset_x          = 0;
     offset_y          = 0;
@@ -471,7 +476,7 @@ static int get_command_data( void )
 {
     if( terminal_port_is_shut_down( ) )
     {
-        altitude_mode = ALT_MODE_SHUTDOWN;
+        altitude_mode = CTRL_MODE_SHUTDOWN;
         terminal_port_reset_shut_down( );
     }
     else
@@ -486,20 +491,20 @@ static int get_command_data( void )
 
         switch( altitude_mode )
         {
-            case ALT_MODE_GROUND:
-                altitude_mode = ALT_MODE_FLYING;
+            case CTRL_MODE_GROUND:
+                altitude_mode = CTRL_MODE_FLYING;
                 break;
 
-            case ALT_MODE_FLYING:
-                altitude_mode = ALT_MODE_GROUND;
+            case CTRL_MODE_FLYING:
+                altitude_mode = CTRL_MODE_GROUND;
                 break;
 
-            case ALT_MODE_SHUTDOWN:
-                altitude_mode = ALT_MODE_GROUND;
+            case CTRL_MODE_SHUTDOWN:
+                altitude_mode = CTRL_MODE_GROUND;
                 break;
 
             default:
-                altitude_mode = ALT_MODE_SHUTDOWN;
+                altitude_mode = CTRL_MODE_SHUTDOWN;
         }
     }
     else
@@ -548,9 +553,8 @@ static inline void reset_filters( void )
 
 static int perform_shut_down( void )
 {
-    controller_state = 0;
-    revving_step     = 0;
     base_motor_speed = terminal_port_get_base_motor_speed( );
+    revving_step     = 0;
 
     reset_motor_signals( );
     reset_controllers( );
@@ -605,6 +609,8 @@ static int compute_motor_signals( void )
 
     if( terminal_port_is_test_mode( ) )
     {
+        control_state = CTRL_STATE_TESTING;
+
         command_data.roll  = -controller_do_control( &ctrl_y, offset_y
             - command_data.roll, sensor_data.y, sensor_data.dy, sensor_data.ddy );
 
@@ -632,15 +638,19 @@ static int compute_motor_signals( void )
         }
     }
     else
-    if( enable_ubisense )
     {
-        offset_x = ubisense_data.x;
-        offset_y = ubisense_data.y;
-    }
-    else
-    {
-        offset_x = sensor_data.x;
-        offset_y = sensor_data.y;
+        control_state = CTRL_STATE_NORMAL;
+
+        if( enable_ubisense )
+        {
+            offset_x = ubisense_data.x;
+            offset_y = ubisense_data.y;
+        }
+        else
+        {
+            offset_x = sensor_data.x;
+            offset_y = sensor_data.y;
+        }
     }
 
     /* rotate roll/pitch command depending on yaw angle */
@@ -753,7 +763,7 @@ static int send_motor_signals( void )
 static int send_report_to_terminal( void )
 {
     return terminal_port_send_report( &sensor_data, &motor_signals,
-        &motor_offsets, controller_state, altitude_mode );
+        &motor_offsets, altitude_mode, control_state );
 }
 
 static int send_trace_data_to_terminal( void )
@@ -775,7 +785,7 @@ static int wait_for_next_period( void )
 
 void calc_stats( long long time, int id )
 {
-    stats[id] += time;
+    stats[ id ] += time;
 
     if( loop_count > 10 && time > max_stats[ id ] )
     { 
@@ -855,7 +865,7 @@ int control_loop_run( void )
     long long start, end;
 	long long loop_start;
 
-    altitude_mode = ALT_MODE_SHUTDOWN;
+    altitude_mode = CTRL_MODE_SHUTDOWN;
     next_period   = get_utime( ) + us_period;
 
     while( running )
@@ -873,7 +883,7 @@ int control_loop_run( void )
 
         if( read_sensors( ) )
         {
-            altitude_mode = ALT_MODE_SHUTDOWN;
+            altitude_mode = CTRL_MODE_SHUTDOWN;
             perform_shut_down( );
             break;
         }
@@ -882,7 +892,7 @@ int control_loop_run( void )
 
         if( check_terminal_connection( ) )
         {
-            altitude_mode = ALT_MODE_SHUTDOWN;
+            altitude_mode = CTRL_MODE_SHUTDOWN;
 
             if( first_time )
             {
@@ -905,15 +915,15 @@ int control_loop_run( void )
  
         switch( altitude_mode )
         {
-            case ALT_MODE_GROUND:
+            case CTRL_MODE_GROUND:
                 perform_ground_actions( );
                 break;
 
-            case ALT_MODE_FLYING:
+            case CTRL_MODE_FLYING:
                 compute_motor_signals( );
                 break;
 
-            case ALT_MODE_SHUTDOWN:
+            case CTRL_MODE_SHUTDOWN:
                 perform_shut_down( );
                 break;
 

@@ -26,29 +26,29 @@
 #ifndef COMM_CHANNEL_H
 #define COMM_CHANNEL_H
 
-
 /* Forward declaration of structure channel */
 struct channel;
 
 /* Type definition of communication channel */
 typedef struct channel comm_channel_t;
 
+/* Function pointers used by a communication channel */
+typedef int (*transmit)( comm_channel_t *channel, const char *buf, int len );
+typedef int (*receive) ( comm_channel_t *channel, char *buf, int len );
+typedef int (*start)   ( comm_channel_t *channel );
+typedef int (*flush)   ( comm_channel_t *channel );
+typedef int (*poll)    ( comm_channel_t *channel, long poll );
+
 /* Enums for indicating a specific channel type */
 typedef enum
 {
-    CH_SPI = 1,
+    CH_SPI_DMA = 1,
     CH_SPI_DEV,
     CH_SERIAL,
     CH_SOCKET,
 	CH_MAX_TYPE,
-} channel_type_t;
 
-/* Function pointers used by a communication channel */
-typedef int (*transmit)( comm_channel_t *channel, const char *buf, int len );
-typedef int (*receive)( comm_channel_t *channel, char *buf, int len );
-typedef int (*start)( comm_channel_t *channel );
-typedef int (*flush)( comm_channel_t *channel );
-typedef int (*poll)( comm_channel_t *channel, long poll );
+} channel_type_t;
 
 /* Structure for representing a communication channel */
 struct channel
@@ -60,9 +60,7 @@ struct channel
     flush           flush;
     poll            poll;
     void            *data;
-
 };
-
 
 #endif /* !COMM_CHANNEL_H */
 

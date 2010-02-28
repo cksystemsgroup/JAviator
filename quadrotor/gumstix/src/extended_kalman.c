@@ -23,43 +23,39 @@
  */
 
 #include <stdio.h>
-#include "low_pass_filter.h"
+#include "extended_kalman.h"
 
 
-/* Initializes the low-pass filter.
+/* Initializes the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_init( low_pass_filter_t *filter, double gain )
+int extended_kalman_init( extended_kalman_t *filter, int period )
 {
-    if( gain < 0 )
+    if( period < 0 )
     {
-        fprintf( stderr, "ERROR: invalid low-pass-filter gain\n" );
+        fprintf( stderr, "ERROR: invalid Kalman filter period\n" );
         return( -1 );
     }
 
-    filter->gain = gain;
+    filter->dtime = period / 1000.0; /* filter uses period in seconds */
 
-    return low_pass_filter_reset( filter );
+    return extended_kalman_reset( filter );
 }
 
-/* Resets the low-pass filter.
+/* Resets the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_reset( low_pass_filter_t *filter )
+int extended_kalman_reset( extended_kalman_t *filter )
 {
-    filter->value = 0;
-
     return( 0 );
 }
 
-/* Updates the low-pass filter with the given value.
-   Returns the filtered value.
+/* Updates the extended Kalman filter.
+   Returns 0 if successful, -1 otherwise.
 */
-double low_pass_filter_update( low_pass_filter_t *filter, double update )
+int extended_kalman_update( extended_kalman_t *filter )
 {
-    filter->value = filter->value + filter->gain * (update - filter->value);
-
-    return( filter->value );
+    return( 0 );
 }
 
 /* End of file */

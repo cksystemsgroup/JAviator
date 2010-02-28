@@ -1,6 +1,5 @@
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
- * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at
@@ -44,7 +43,7 @@
 #define BUF_SIZE 64
 #define N_BUF    16
 
-#include "shared/protocol.h"
+#include "protocol.h"
 #include "spi_channel.h"
 
 struct spi_data;
@@ -225,7 +224,6 @@ static int spi_receive( comm_channel_t *channel, char *buf, int len )
 		put_active_pending(sc, data);
 	} else {
 		count = -1;
-//		printf("spi_receive: no pending data\n");
 		errno = EAGAIN;
 	}
 
@@ -273,7 +271,6 @@ again:
 	}
 	return NULL;
 }
-
 
 static int spi_start( comm_channel_t *channel )
 {

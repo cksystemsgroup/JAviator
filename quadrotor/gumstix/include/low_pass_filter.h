@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -26,7 +25,6 @@
 #ifndef LOW_PASS_FILTER
 #define LOW_PASS_FILTER
 
-
 /* Structure for representing low-pass-filter parameters */
 typedef struct
 {
@@ -34,7 +32,6 @@ typedef struct
     double value;
 
 } low_pass_filter_t;
-
 
 /* Initializes the low-pass filter.
    Returns 0 if successful, -1 otherwise.
@@ -50,7 +47,6 @@ int    low_pass_filter_reset( low_pass_filter_t *filter );
    Returns the filtered value.
 */
 double low_pass_filter_update( low_pass_filter_t *filter, double update );
-
 
 #endif /* !LOW_PASS_FILTER */
 

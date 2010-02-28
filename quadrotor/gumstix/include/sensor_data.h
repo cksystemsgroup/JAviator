@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -27,7 +26,6 @@
 #define SENSOR_DATA_H
 
 #include <stdint.h>
-
 
 /* Structure for representing sensor data */
 typedef struct

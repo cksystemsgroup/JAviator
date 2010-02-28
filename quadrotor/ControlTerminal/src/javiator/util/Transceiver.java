@@ -337,7 +337,7 @@ public abstract class Transceiver implements Runnable, Port
             case PacketType.COMM_SENSOR_DATA:
             case PacketType.COMM_MOTOR_SIGNALS:
             case PacketType.COMM_MOTOR_OFFSETS:
-            case PacketType.COMM_STATE_MODE:
+            case PacketType.COMM_MODE_STATE:
             case PacketType.COMM_GROUND_REPORT:
             case PacketType.COMM_TRACE_DATA:
             case PacketType.COMM_COMMAND_DATA:

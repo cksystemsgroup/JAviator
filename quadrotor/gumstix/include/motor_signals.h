@@ -1,6 +1,5 @@
 /*
  * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
- * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
  * Department of Computer Science, cs.uni-salzburg.at

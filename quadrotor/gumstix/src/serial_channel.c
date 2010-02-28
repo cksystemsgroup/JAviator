@@ -126,11 +126,18 @@ static int serial_flush( comm_channel_t *channel )
     serial_connection_t *sc = serial_get_connection( channel );
     int res;
 
-    if (!sc) return( -1 );
+    if( !sc )
+    {
+        return( -1 );
+    }
 
-	res = tcflush(sc->fd, TCIOFLUSH);
-	if (res)
-		perror("tcflush");
+	res = tcflush( sc->fd, TCIOFLUSH );
+
+	if( res )
+    {
+		perror( "tcflush" );
+    }
+
     return( res );
 }
 
@@ -140,16 +147,20 @@ static int serial_poll( comm_channel_t *channel, long timeout )
     struct timeval tv;
     fd_set readfs;
     int maxfd;
-    int res;
 
     if( !sc )
     {
         return( -1 );
     }
-	if (timeout > 0) {
+
+	if( timeout > 0 )
+    {
 	    tv.tv_usec = (timeout * 1000) % 1000000;
-    	tv.tv_sec  = timeout/1000;
-	} else if (timeout < 0) {
+    	tv.tv_sec  =  timeout / 1000;
+	}
+    else
+    if( timeout < 0 )
+    {
 	    tv.tv_usec = 0;
     	tv.tv_sec  = 0;
 	}
@@ -157,8 +168,7 @@ static int serial_poll( comm_channel_t *channel, long timeout )
     FD_SET( sc->fd, &readfs );
     maxfd = sc->fd + 1;
 
-    res = select( maxfd, &readfs, NULL, NULL, timeout?&tv:0 );
-    return res;
+    return select( maxfd, &readfs, NULL, NULL, timeout ? &tv : NULL );
 }
 
 static int init_termios( serial_connection_t *sc )
@@ -220,7 +230,7 @@ int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate 
         return( -1 );
     }
 
-    sc->fd = open( interface, O_RDWR | O_NOCTTY );//| O_NONBLOCK );
+    sc->fd = open( interface, O_RDWR | O_NOCTTY );
 
     if( sc->fd < 0 )
     {

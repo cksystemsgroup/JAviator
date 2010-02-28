@@ -190,8 +190,8 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 parent.digitalMeter.setMotorOffsets( motorOffsets );
                 break;
 
-            case PacketType.COMM_STATE_MODE:
-                parent.digitalMeter.setModeAndState( packet.payload[1], packet.payload[0] );
+            case PacketType.COMM_MODE_STATE:
+                parent.digitalMeter.setModeAndState( packet.payload[0], packet.payload[1] );
                 break;
 
             case PacketType.COMM_GROUND_REPORT:
@@ -229,7 +229,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 parent.checkJAviatorSettled( motorSignals );
                 report.motorOffsets.copyTo( motorOffsets );
                 parent.digitalMeter.setMotorOffsets( motorOffsets );
-                parent.digitalMeter.setModeAndState( report.stateAndMode.mode, report.stateAndMode.state );
+                parent.digitalMeter.setModeAndState( report.modeAndState.mode, report.modeAndState.state );
                 break;
 
             case PacketType.COMM_TRACE_DATA:

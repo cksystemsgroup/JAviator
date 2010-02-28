@@ -61,26 +61,30 @@ struct controller
     ctrl_state_t *  state;
 };
 
+int    controller_init( controller_t *controller, char *name, ctrl_type_t type, int period );
 
-int    controller_init        ( controller_t *controller, char *name,
-                                ctrl_type_t type, int period );
-int    controller_destroy     ( controller_t *controller );
-double controller_get_term_P  ( controller_t *controller );
-double controller_get_term_I  ( controller_t *controller );
-double controller_get_term_D  ( controller_t *controller );
-double controller_get_term_DD ( controller_t *controller );
+int    controller_destroy( controller_t *controller );
+
+double controller_get_term_P( controller_t *controller );
+
+double controller_get_term_I( controller_t *controller );
+
+double controller_get_term_D( controller_t *controller );
+
+double controller_get_term_DD( controller_t *controller );
+
 double controller_get_integral( controller_t *controller );
+
 void   controller_set_integral( controller_t *controller, double value );
 
-
-static inline double controller_do_control( controller_t *ctrl,
-    double desired, double current, double velocity, double acceleration )
+static inline double controller_do_control(
+    controller_t *ctrl, double desired, double current, double velocity, double acceleration )
 {
     return ctrl->do_control( ctrl, desired, current, velocity, acceleration );
 }
 
-static inline int controller_set_params( controller_t *ctrl,
-    double kp, double ki, double kd, double kdd )
+static inline int controller_set_params(
+    controller_t *ctrl, double kp, double ki, double kd, double kdd )
 {
     return ctrl->set_params( ctrl, kp, ki, kd, kdd );
 }

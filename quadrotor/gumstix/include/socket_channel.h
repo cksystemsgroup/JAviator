@@ -28,67 +28,78 @@
 
 #include "comm_channel.h"
 
-
 /* Emums for indicating a specific socket type */
 typedef enum
 {
     SOCK_SERVER,
     SOCK_CLIENT,
 	SOCK_UDP
+
 } socket_type_t;
 
 int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
+
 int tcp_socket_channel_create( comm_channel_t *channel ); 
+
 int tcp_socket_channel_destroy( comm_channel_t *channel );
 
 int udp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
+
 int udp_socket_channel_create( comm_channel_t *channel ); 
+
 int udp_socket_channel_destroy( comm_channel_t *channel );
 
-static inline int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ) {
-	switch (type) {
+
+static inline
+int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port )
+{
+	switch( type )
+    {
 		case SOCK_SERVER:
 		case SOCK_CLIENT:
-			return tcp_socket_channel_init(channel, type, addr, port);
-			break;
+			return tcp_socket_channel_init( channel, type, addr, port );
+
 		case SOCK_UDP:
-			return udp_socket_channel_init(channel, type, addr, port);
-			break;
+			return udp_socket_channel_init( channel, type, addr, port );
+
 		default:
-			return -1;
+			return( -1 );
 	}
 }
 
-static inline int socket_channel_create( comm_channel_t *channel, socket_type_t type ) {
-
-	switch (type) {
+static inline
+int socket_channel_create( comm_channel_t *channel, socket_type_t type )
+{
+	switch( type )
+    {
 		case SOCK_SERVER:
 		case SOCK_CLIENT:
-			return tcp_socket_channel_create(channel);
-			break;
+			return tcp_socket_channel_create( channel );
+
 		case SOCK_UDP:
-			return udp_socket_channel_create(channel);
-			break;
+			return udp_socket_channel_create( channel );
+
 		default:
-			return -1;
+			return( -1 );
 	}
 }
 
-static inline int socket_channel_destroy( comm_channel_t *channel, socket_type_t type ) {
-	switch (type) {
+static inline
+int socket_channel_destroy( comm_channel_t *channel, socket_type_t type )
+{
+	switch( type )
+    {
 		case SOCK_SERVER:
 		case SOCK_CLIENT:
-			return tcp_socket_channel_destroy(channel);
-			break;
+			return tcp_socket_channel_destroy( channel );
+
 		case SOCK_UDP:
-			return udp_socket_channel_destroy(channel);
-			break;
+			return udp_socket_channel_destroy( channel );
+
 		default:
-			return -1;
+			return( -1 );
 	}
-
 }
-
 
 #endif /* !SOCKET_CHANNEL_H */
 

@@ -1,5 +1,4 @@
 /*
- * Copypitch (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copypitch (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -28,7 +27,6 @@
 
 #include <stdint.h>
 
-
 /* Structure for representing motor offsets */
 typedef struct
 {
@@ -40,7 +38,6 @@ typedef struct
 } motor_offsets_t;
 
 #define MOTOR_OFFSETS_SIZE  8   /* byte size of motor_offsets_t */
-
 
 static inline
 int motor_offsets_to_stream( const motor_offsets_t *offsets, uint8_t *buf, int len )
@@ -75,7 +72,6 @@ int motor_offsets_from_stream( motor_offsets_t *offsets, const uint8_t *buf, int
 
     return( -1 );
 }
-
 
 #endif /* !MOTOR_OFFSETS_H */
 

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -28,7 +27,6 @@
 
 #include <stdint.h>
 
-
 /* Structure for representing trace data */
 typedef struct
 {
@@ -52,7 +50,6 @@ typedef struct
 } trace_data_t;
 
 #define TRACE_DATA_SIZE 32  /* byte size of trace_data_t */
-
 
 static inline
 int trace_data_to_stream( const trace_data_t *data, char *buf, int len )
@@ -123,7 +120,6 @@ int trace_data_from_stream( trace_data_t *data, const char *buf, int len )
 
     return( -1 );
 }
-
 
 #endif /* !TRACE_DATA_H */
 

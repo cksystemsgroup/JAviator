@@ -26,7 +26,6 @@
 #ifndef KALMAN_FILTER
 #define KALMAN_FILTER
 
-
 #define KALMAN_STATES   2   /* number of Kalman states */
 #define KALMAN_P        4   /* elements in the covariance matrix */
 #define KALMAN_Q        10000.0
@@ -43,7 +42,6 @@ typedef struct
 
 } kalman_filter_t;
 
-
 /* Initializes the Kalman filter with the given period [ms].
    Returns 0 if successful, -1 otherwise.
 */
@@ -59,7 +57,6 @@ int    kalman_filter_reset( kalman_filter_t *filter );
    Returns the estimated velocity ds in [mm/s].
 */
 double kalman_filter_update( kalman_filter_t *filter, double s, double dds );
-
 
 #endif /* !KALMAN_FILTER */
 

@@ -12,17 +12,17 @@ control_SOURCES = \
     communication.c \
     controller.c \
     control_loop.c \
-    ctrl_params.c \
+    extended_kalman.c \
     javiator_port.c \
     kalman_filter.c \
     low_pass_filter.c \
     main.c \
     median_filter.c \
     pidd_controller.c \
-    transformation.c \
     serial_channel.c \
-    socket_channel.c \
+    tcp_socket_channel.c \
     terminal_port.c \
+    transformation.c \
     ubisense_port.c \
     udp_socket_channel.c \
     us_timer.c

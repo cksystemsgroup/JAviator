@@ -1,5 +1,4 @@
 /*
- * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
  * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
  * University Salzburg, www.uni-salzburg.at
@@ -26,7 +25,6 @@
 #ifndef AVERAGE_FILTER
 #define AVERAGE_FILTER
 
-
 /* Structure for representing average-filter parameters */
 typedef struct
 {
@@ -35,7 +33,6 @@ typedef struct
     int     index;
 
 } average_filter_t;
-
 
 /* Initializes the average filter.
    Returns 0 if successful, -1 otherwise.
@@ -56,7 +53,6 @@ int    average_filter_destroy( average_filter_t *filter );
    Returns the filtered value.
 */
 double average_filter_update( average_filter_t *filter, double update );
-
 
 #endif /* !AVERAGE_FILTER */
 

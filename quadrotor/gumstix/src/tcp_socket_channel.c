@@ -75,7 +75,7 @@ static inline int socket_connection_accept( socket_connection_t *sc )
 
     if( sc->fd > 0 )
     {
-        saved_fd = fcntl( sc->fd, F_GETFL );// | O_NONBLOCK;
+        saved_fd = fcntl( sc->fd, F_GETFL );
         fcntl( sc->fd, F_SETFL, saved_fd );
 
         if( setsockopt( sc->fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof( flag ) ) )
@@ -248,13 +248,18 @@ static int server_socket_poll( comm_channel_t *channel, long timeout )
         return( -1 );
     }
 
-	if (timeout > 0) {
+	if( timeout > 0 )
+    {
 	    tv.tv_usec = (timeout * 1000) % 1000000;
-    	tv.tv_sec  = timeout/1000;
-	} else if (timeout < 0) {
+    	tv.tv_sec  =  timeout / 1000;
+	}
+    else
+    if( timeout < 0 )
+    {
 	    tv.tv_usec = 0;
     	tv.tv_sec  = 0;
 	}
+
     if( !sc->connected )
     {
         FD_SET( sc->accept_fd, &readfs );
@@ -266,7 +271,7 @@ static int server_socket_poll( comm_channel_t *channel, long timeout )
         maxfd = sc->fd + 1;
     }
 
-    return select( maxfd, &readfs, NULL, NULL, timeout?&tv:NULL );
+    return select( maxfd, &readfs, NULL, NULL, timeout ? &tv : NULL );
 }
 
 static int client_socket_connect( socket_connection_t *sc )
@@ -339,8 +344,8 @@ static int server_socket_init( socket_connection_t *sc, int port )
     struct linger linger;
     int saved_fd;
 
-    sc->connected = 0;
-    sc->accept_fd = socket( AF_INET, SOCK_STREAM, 0 );
+    sc->connected  = 0;
+    sc->accept_fd  = socket( AF_INET, SOCK_STREAM, 0 );
     linger.l_onoff = 0;
 
     if( setsockopt( sc->accept_fd, SOL_SOCKET, SO_LINGER, &linger, sizeof( linger ) ) )
@@ -361,7 +366,7 @@ static int server_socket_init( socket_connection_t *sc, int port )
         return( -1 );
     }
 
-    saved_fd = fcntl( sc->accept_fd, F_GETFL );// | O_NONBLOCK;
+    saved_fd = fcntl( sc->accept_fd, F_GETFL );
     fcntl( sc->accept_fd, F_SETFL, saved_fd );
 
     if( listen( sc->accept_fd, 3 ) < 0 )
@@ -448,8 +453,9 @@ int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *
             channel->transmit = client_socket_transmit;
             channel->receive  = client_socket_receive;
             return client_socket_init( sc, addr, port );
+
 		default:
-			printf("unknown type here\n");
+            fprintf( stderr, "ERROR: unknown socket type\n" );
     }
 
     return( -1 );

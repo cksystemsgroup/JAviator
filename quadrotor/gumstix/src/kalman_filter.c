@@ -38,7 +38,7 @@ int kalman_filter_init( kalman_filter_t *filter, int period )
         return( -1 );
     }
 
-    filter->dtime = period / 1000.0; // Kalman filter uses period in seconds
+    filter->dtime = period / 1000.0; /* filter uses period in seconds */
 
     return kalman_filter_reset( filter );
 }

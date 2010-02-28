@@ -49,7 +49,7 @@
 #define COMM_SENSOR_DATA    0x04    /* transmission of sensor data */
 #define COMM_MOTOR_SIGNALS  0x05    /* transmission of motor signals */
 #define COMM_MOTOR_OFFSETS  0x06    /* transmission of motor offsets */
-#define COMM_STATE_MODE     0x07    /* transmission of state and mode */
+#define COMM_MODE_STATE     0x07    /* transmission of mode and state */
 #define COMM_GROUND_REPORT  0x08    /* transmission of ground report */
 #define COMM_TRACE_DATA     0x09    /* transmission of trace data */
 #define COMM_COMMAND_DATA   0x0A    /* transmission of command data */
