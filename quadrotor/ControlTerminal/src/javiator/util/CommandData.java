@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck, Rainer Trummer                        */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,17 +21,13 @@
 
 package javiator.util;
 
-/**
- * Represents the navigation data
- * @author hroeck 
- */
 public class CommandData extends NumeratedSendable
 {
 	public static final int PACKET_SIZE = 8;
 	
 	public CommandData( )
     {
-        reset();
+        reset( );
     }
 
     public void reset( )
@@ -49,7 +45,6 @@ public class CommandData extends NumeratedSendable
         result += " pitch: " + pitch;
         result += " yaw: "   + yaw;
         result += " z: "     + z;
-
         return( result );
     }
 
@@ -62,7 +57,6 @@ public class CommandData extends NumeratedSendable
     {
         Packet packet = new Packet( PACKET_SIZE );
         encode( packet, 0 );
-
         return( packet );
     }
 
@@ -83,7 +77,6 @@ public class CommandData extends NumeratedSendable
         Packet packet = toPacket( );
         packet.type   = type;
         packet.calcChecksum( );
-
         return( packet );
     }
 
@@ -125,10 +118,10 @@ public class CommandData extends NumeratedSendable
 	{
     	super.copyTo( to );
     	CommandData copy = (CommandData) to;
-    	copy.roll  = roll;
-    	copy.pitch = pitch;
-    	copy.yaw   = yaw;
-    	copy.z     = z;
+    	copy.roll        = roll;
+    	copy.pitch       = pitch;
+    	copy.yaw         = yaw;
+    	copy.z           = z;
 	}
     
     public short roll;

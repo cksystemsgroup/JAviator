@@ -24,20 +24,23 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <math.h>
 
-#include "low_pass_filter.h"
+#include "outlier_filter.h"
 
-/* State of a low-pass filter */
-struct lpf_state
+/* State of an outlier filter */
+struct of_state
 {
-    double gain;
-    double value;
+    double  mdiff;
+    double  value;
+    int     limit;
+    int     count;
 };
 
 
-static inline lpf_state_t *get_lpf_state( const low_pass_filter_t *filter )
+static inline of_state_t *get_of_state( const outlier_filter_t *filter )
 {
-    lpf_state_t *state = (lpf_state_t *) filter->state;
+    of_state_t *state = (of_state_t *) filter->state;
 
     if( !state )
     {
@@ -47,20 +50,20 @@ static inline lpf_state_t *get_lpf_state( const low_pass_filter_t *filter )
     return( state );
 }
 
-/* Initializes a low-pass filter.
+/* Initializes an outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain )
+int outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int limit )
 {
-    lpf_state_t *state;
+    of_state_t *state;
 
-    if( gain < 0 )
+    if( limit < 1 )
     {
-        fprintf( stderr, "ERROR: invalid %s filter gain (%f)\n", name, gain );
+        fprintf( stderr, "ERROR: invalid %s filter limit (%d)\n", name, limit );
         return( -1 );
     }
 
-    state = malloc( sizeof( lpf_state_t ) );
+    state = malloc( sizeof( of_state_t ) );
 
     if( !state )
     {
@@ -68,28 +71,29 @@ int low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain )
         return( -1 );
     }
 
-    state->gain   = gain;
+    state->mdiff  = fabs( mdiff ); /* make sure state->mdiff is positive */
+    state->limit  = limit;
     filter->name  = name;
     filter->state = state;
-    return low_pass_filter_reset( filter );
+    return outlier_filter_reset( filter );
 }
 
-/* Destroys a low-pass filter.
+/* Destroys an outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_destroy( low_pass_filter_t *filter )
+int outlier_filter_destroy( outlier_filter_t *filter )
 {
     free( filter->state );
     filter->state = NULL;
     return( 0 );
 }
 
-/* Resets a low-pass filter.
+/* Resets the outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_reset( low_pass_filter_t *filter )
+int outlier_filter_reset( outlier_filter_t *filter )
 {
-    lpf_state_t *state = get_lpf_state( filter );
+    of_state_t *state = get_of_state( filter );
 
     if( !state )
     {
@@ -97,23 +101,34 @@ int low_pass_filter_reset( low_pass_filter_t *filter )
     }
 
     state->value = 0;
+    state->count = 0;
     return( 0 );
 }
 
-/* Updates a low-pass filter with the given value.
+/* Updates an outlier filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double low_pass_filter_update( low_pass_filter_t *filter, double update )
+double outlier_filter_update( outlier_filter_t *filter, double update )
 {
-    lpf_state_t *state = get_lpf_state( filter );
+    of_state_t *state = get_of_state( filter );
 
     if( !state )
     {
         return( -1 );
     }
 
-    state->value = state->value + state->gain * (update - state->value);
-    return( state->value );
+    if( fabs( state->value - update ) > state->mdiff && state->count < state->limit )
+    {
+        update = state->value;
+        ++state->count;
+    }
+    else
+    {
+        state->value = update;
+        state->count = 0;
+    }
+
+    return( update );
 }
 
 /* End of file */

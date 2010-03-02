@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck, Rainer Trummer                        */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,16 +21,11 @@
 
 package javiator.util;
 
-/**
- * Represents the sensor data
- * 
- * @author hroeck
- */
 public class TraceData extends NumeratedSendable
 {
 	public static final int PACKET_SIZE = 32;
 
-	public TraceData()
+	public TraceData( )
 	{
 		reset( );
 	}
@@ -74,7 +69,6 @@ public class TraceData extends NumeratedSendable
 		result += " value 14: " + value_14;
 		result += " value 15: " + value_15;
 		result += " value 16: " + value_16;
-
 		return( result );
 	}
 
@@ -82,7 +76,6 @@ public class TraceData extends NumeratedSendable
 	{
 		Packet packet = new Packet( PACKET_SIZE );
 		encode( packet, 0 );
-
 		return( packet );
 	}
 	
@@ -127,7 +120,6 @@ public class TraceData extends NumeratedSendable
 		Packet packet = toPacket( );
 		packet.type   = type;
 		packet.calcChecksum( );
-
 		return( packet );
 	}
 
@@ -160,7 +152,6 @@ public class TraceData extends NumeratedSendable
 	{
 		TraceData copy = new TraceData( );
 		copyTo( copy );
-
 		return( copy );
 	}
 

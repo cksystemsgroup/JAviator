@@ -28,8 +28,6 @@
 
 #include <controller-config.h>
 
-extern int errno;
-
 struct controller;
 struct ctrl_state;
 
@@ -53,11 +51,11 @@ typedef enum
 
 struct controller
 {
+    char *          name;
     ctrl_type_t     type;
     do_control      do_control;
     set_params      set_params;
     reset_zero      reset_zero;
-    char *          name;
     ctrl_state_t *  state;
 };
 

@@ -26,37 +26,55 @@
 #ifndef KALMAN_FILTER
 #define KALMAN_FILTER
 
-#define KALMAN_STATES   2   /* number of Kalman states */
-#define KALMAN_P        4   /* elements in the covariance matrix */
-#define KALMAN_Q        10000.0
-#define KALMAN_R        0.01
+struct kf_state;
+typedef struct kf_state kf_state_t;
 
-/* Structure for representing Kalman filter parameters */
+/* This Kalman filter is designed to estimate the missing velocity ds
+   from a given distance s and acceleration dds.  The distance s is
+   assumed to represent a certain distance between the helicopter and
+   some environmental object and is therefore assumed to have always
+   a positive value.  Passing a negative value to the update function
+   causes the filter to reset, indicated by returning -1 instead of 0.
+   In addition to estimating velocity ds, the passed-in distance s is
+   filtered, and therefore, the filter's internal s-component should
+   be accessed and used in subsequent computations.
+*/
 typedef struct
 {
-    double dtime;
-    double x[ KALMAN_STATES ];
-    double p[ KALMAN_P ];
-    double s;
-    double ds;
+    char *          name;
+    kf_state_t *    state;
 
 } kalman_filter_t;
 
-/* Initializes the Kalman filter with the given period [ms].
+/* Initializes a Kalman filter with the given period.
+   Parameter <period> is expected to be given in [ms].
    Returns 0 if successful, -1 otherwise.
 */
-int    kalman_filter_init( kalman_filter_t *filter, int period );
+int    kalman_filter_init( kalman_filter_t *filter, char *name, int period );
 
-/* Resets the Kalman filter.
+/* Destroys a Kalman filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    kalman_filter_destroy( kalman_filter_t *filter );
+
+/* Resets a Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
 int    kalman_filter_reset( kalman_filter_t *filter );
 
-/* Estimates the speed ds.  Parameters are expected
-   to be given as follows: s in [mm] and dds in [mm/s^2].
-   Returns the estimated velocity ds in [mm/s].
+/* Filters the given distance and estimates the missing velocity ds.
+   Parameter <s> is expected to be given in [mm] and <dds> in [mm/s^2].
+   Returns 0 if successful, -1 otherwise.
 */
-double kalman_filter_update( kalman_filter_t *filter, double s, double dds );
+int    kalman_filter_update( kalman_filter_t *filter, double s, double dds );
+
+/* Returns the filtered distance s in [mm] if successful, -1 otherwise.
+*/
+double kalman_filter_get_S( kalman_filter_t *filter );
+
+/* Returns the estimated velocity ds in [mm/s] if successful, -1 otherwise.
+*/
+double kalman_filter_get_dS( kalman_filter_t *filter );
 
 #endif /* !KALMAN_FILTER */
 

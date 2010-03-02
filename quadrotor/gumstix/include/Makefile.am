@@ -14,6 +14,7 @@ nobase_noinst_HEADERS = \
     low_pass_filter.h \
     median_filter.h \
     motor_signals.h \
+    outlier_filter.h \
     sensor_data.h \
     serial_channel.h \
     socket_channel.h \

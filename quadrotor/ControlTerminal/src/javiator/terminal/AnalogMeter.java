@@ -4,7 +4,7 @@
 /*   AnalogMeter.java   Constructs a panel meter representing either roll,   */
 /*                      pitch, yaw, or altitude user and heli data.          */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

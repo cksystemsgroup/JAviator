@@ -24,85 +24,130 @@
  */
 
 #include <stdio.h>
+#include <malloc.h>
+
 #include "kalman_filter.h"
 
+#define KALMAN_STATES   2       /* number of Kalman states */
+#define KALMAN_P        4       /* elements in covariance matrix */
+#define KALMAN_Q        10000.0
+#define KALMAN_R        0.01
 
-/* Initializes the Kalman filter with the given period [ms].
+/* State of a Kalman filter */
+struct kf_state
+{
+    double dtime;
+    double x[ KALMAN_STATES ];
+    double p[ KALMAN_P ];
+};
+
+
+static inline kf_state_t *get_kf_state( const kalman_filter_t *filter )
+{
+    kf_state_t *state = (kf_state_t *) filter->state;
+
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
+    }
+
+    return( state );
+}
+
+/* Initializes a Kalman filter with the given period.
+   Parameter <period> is expected to be given in [ms].
    Returns 0 if successful, -1 otherwise.
 */
-int kalman_filter_init( kalman_filter_t *filter, int period )
+int kalman_filter_init( kalman_filter_t *filter, char *name, int period )
 {
-    if( period < 0 )
+    kf_state_t *state;
+
+    if( period < 1 )
     {
-        fprintf( stderr, "ERROR: invalid Kalman filter period\n" );
+        fprintf( stderr, "ERROR: invalid %s filter period (%d)\n", name, period );
         return( -1 );
     }
 
-    filter->dtime = period / 1000.0; /* filter uses period in seconds */
+    state = malloc( sizeof( kf_state_t ) );
 
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
+        return( -1 );
+    }
+
+    state->dtime  = period / 1000.0; /* filter uses period in seconds */
+    filter->name  = name;
+    filter->state = state;
     return kalman_filter_reset( filter );
 }
 
-/* Resets the Kalman filter.
+/* Destroys a Kalman filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int kalman_filter_destroy( kalman_filter_t *filter )
+{
+    free( filter->state );
+    filter->state = NULL;
+    return( 0 );
+}
+
+/* Resets a Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
 int kalman_filter_reset( kalman_filter_t *filter )
 {
-    int i;
+    kf_state_t *state = get_kf_state( filter );
 
-    if( KALMAN_STATES != 2 || KALMAN_P != 4 )
+    if( !state )
     {
-        fprintf( stderr, "ERROR: invalid Kalman filter constants\n" );
         return( -1 );
     }
 
-    /* reset Kalman states */
-    for( i = 0; i < KALMAN_STATES; ++i )
-    {
-        filter->x[i] = 0;
-    }
-
-    /* reset covariance matrix */
-    for( i = 0; i < KALMAN_P; ++i )
-    {
-        filter->p[i] = 0;
-    }
-
-    filter->s  = 0;
-    filter->ds = 0;
-
+    state->x[0] = 0;
+    state->x[1] = 0;
+    state->p[0] = 0;
+    state->p[1] = 0;
+    state->p[2] = 0;
+    state->p[3] = 0;
     return( 0 );
 }
 
-/* Estimates the speed ds.  Parameters are expected
-   to be given as follows: s in [mm] and dds in [mm/s^2].
-   Returns the estimated velocity ds in [mm/s].
+/* Filters the given distance and estimates the missing velocity ds.
+   Parameter <s> is expected to be given in [mm] and <dds> in [mm/s^2].
+   Returns 0 if successful, -1 otherwise.
 */
-double kalman_filter_update( kalman_filter_t *filter, double s, double dds )
+int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
 {
+    kf_state_t *state = get_kf_state( filter );
     double x1, x2, p11, p12, p21, p22, k1, k2;
 
-    /* update local variables */
-    x1  = filter->x[0];
-    x2  = filter->x[1];
-    p11 = filter->p[0];
-    p12 = filter->p[1];
-    p21 = filter->p[2];
-    p22 = filter->p[3];
+    if( !state )
+    {
+        return( -1 );
+    }
 
     if( s > 0 )
     {
+        /* update local variables */
+        x1  = state->x[0];
+        x2  = state->x[1];
+        p11 = state->p[0];
+        p12 = state->p[1];
+        p21 = state->p[2];
+        p22 = state->p[3];
+
         /* TIME UPDATE */
 
         /* project state ahead */
-        x1 = x1 + filter->dtime * x2;
-        x2 = x2 + filter->dtime * dds;
+        x1 = x1 + state->dtime * x2;
+        x2 = x2 + state->dtime * dds;
 
         /* project error covariance ahead */
-        p11 = p11 + filter->dtime * (p21 + p12) + filter->dtime * filter->dtime * p22;
-        p12 = p12 + filter->dtime * p22;
-        p21 = p21 + filter->dtime * p22;
-        p22 = p22 + filter->dtime * filter->dtime * KALMAN_Q;
+        p11 = p11 + state->dtime * (p21 + p12) + state->dtime * state->dtime * p22;
+        p12 = p12 + state->dtime * p22;
+        p21 = p21 + state->dtime * p22;
+        p22 = p22 + state->dtime * state->dtime * KALMAN_Q;
 
         /* MEASURE UPDATE */
 
@@ -121,29 +166,45 @@ double kalman_filter_update( kalman_filter_t *filter, double s, double dds )
         p11 = (1 - k1) * p11;
 
         /* store local variables */
-        filter->x[0] = x1;
-        filter->x[1] = x2;
-        filter->p[0] = p11;
-        filter->p[1] = p12;
-        filter->p[2] = p21;
-        filter->p[3] = p22;
+        state->x[0] = x1;
+        state->x[1] = x2;
+        state->p[0] = p11;
+        state->p[1] = p12;
+        state->p[2] = p21;
+        state->p[3] = p22;
+        return( 0 );
     }
-    else
+
+    kalman_filter_reset( filter );
+    return( -1 );
+}
+
+/* Returns the filtered distance s in [mm] if successful, -1 otherwise.
+*/
+double kalman_filter_get_S( kalman_filter_t *filter )
+{
+    kf_state_t *state = get_kf_state( filter );
+
+    if( !state )
     {
-        /* reset local variables */
-        filter->x[0] = 0;
-        filter->x[1] = 0;
-        filter->p[0] = 0;
-        filter->p[1] = 0;
-        filter->p[2] = 0;
-        filter->p[3] = 0;
+        return( -1 );
     }
 
-    /* store z and dz value */
-    filter->s  = filter->x[0];
-    filter->ds = filter->x[1];
+    return( state->x[0] );
+}
 
-    return( filter->ds );
+/* Returns the estimated velocity ds in [mm/s] if successful, -1 otherwise.
+*/
+double kalman_filter_get_dS( kalman_filter_t *filter )
+{
+    kf_state_t *state = get_kf_state( filter );
+
+    if( !state )
+    {
+        return( -1 );
+    }
+
+    return( state->x[1] );
 }
 
 /* End of file */

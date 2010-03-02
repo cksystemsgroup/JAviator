@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck, Rainer Trummer                        */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,16 +21,11 @@
 
 package javiator.util;
 
-/**
- * Represents the sensor data
- * 
- * @author hroeck
- */
 public class SensorData extends NumeratedSendable
 {
 	public static final int PACKET_SIZE = 42;
 
-	public SensorData()
+	public SensorData( )
 	{
 		reset( );
 	}
@@ -84,7 +79,6 @@ public class SensorData extends NumeratedSendable
 		result += " maps: "    + maps;
 		result += " temp: "    + temp;
 		result += " batt: "    + batt;
-
 		return( result );
 	}
 
@@ -92,7 +86,6 @@ public class SensorData extends NumeratedSendable
 	{
 		Packet packet = new Packet( PACKET_SIZE );
 		encode( packet, 0 );
-
 		return( packet );
 	}
 	
@@ -147,7 +140,6 @@ public class SensorData extends NumeratedSendable
 		Packet packet = toPacket( );
 		packet.type   = type;
 		packet.calcChecksum( );
-
 		return( packet );
 	}
 
@@ -185,7 +177,6 @@ public class SensorData extends NumeratedSendable
 	{
 		SensorData copy = new SensorData( );
 		copyTo( copy );
-
 		return( copy );
 	}
 

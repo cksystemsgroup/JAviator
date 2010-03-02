@@ -22,97 +22,143 @@
  *
  */
 
+#include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "median_filter.h"
 
+/* State of a median filter */
+struct mf_state
+{
+    double *array;
+    int     size;
+};
 
-/* Initializes the median filter.
+
+static inline mf_state_t *get_mf_state( const median_filter_t *filter )
+{
+    mf_state_t *state = (mf_state_t *) filter->state;
+
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
+    }
+
+    return( state );
+}
+
+/* Initializes a median filter.
    Returns 0 if successful, -1 otherwise.
 */
-int median_filter_init( median_filter_t *filter, int size )
+int median_filter_init( median_filter_t *filter, char *name, int size )
 {
+    mf_state_t *state;
+
     if( size < 1 )
     {
-        fprintf( stderr, "ERROR: invalid median-filter size\n" );
+        fprintf( stderr, "ERROR: invalid %s filter size (%d)\n", name, size );
         return( -1 );
     }
 
-    filter->size  = size;
-    filter->array = malloc( sizeof( *filter->array ) * filter->size );
+    state = malloc( sizeof( mf_state_t ) );
 
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
+        return( -1 );
+    }
+
+    state->array = malloc( sizeof( *state->array ) * size );
+
+    if( !state->array )
+    {
+        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
+        free( state );
+        return( -1 );
+    }
+
+    state->size   = size;
+    filter->name  = name;
+    filter->state = state;
     return median_filter_reset( filter );
 }
 
-/* Resets the median filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int median_filter_reset( median_filter_t *filter )
-{
-    if( filter->array == NULL )
-    {
-        fprintf( stderr, "ERROR: median filter not initialized\n" );
-        return( -1 );
-    }
-
-    memset( filter->array, 0, sizeof( *filter->array ) * filter->size );
-    return( 0 );
-}
-
-/* Destroys the median filter.
+/* Destroys a median filter.
    Returns 0 if successful, -1 otherwise.
 */
 int median_filter_destroy( median_filter_t *filter )
 {
-    free( filter->array );
-    filter->array = NULL;
+    free( filter->state->array );
+    free( filter->state );
+    filter->state = NULL;
     return( 0 );
 }
 
-/* Updates the median filter with the given value.
-   Returns the filtered value.
+/* Resets a median filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int median_filter_reset( median_filter_t *filter )
+{
+    mf_state_t *state = get_mf_state( filter );
+
+    if( !state )
+    {
+        return( -1 );
+    }
+
+    memset( state->array, 0, sizeof( *state->array ) * state->size );
+    return( 0 );
+}
+
+/* Updates a median filter with the given value.
+   Returns the filtered value if successful, -1 otherwise.
 */
 double median_filter_update( median_filter_t *filter, double update )
 {
+    mf_state_t *state = get_mf_state( filter );
     int i, j;
 
-    for( i = 0; i < filter->size; ++i )
+    if( !state )
     {
-        if( update < filter->array[i] )
+        return( -1 );
+    }
+
+    for( i = 0; i < state->size; ++i )
+    {
+        if( update < state->array[i] )
         {
             break;
         }
     }
 
-    if( i < filter->size )
+    if( i < state->size )
     {
-        j = filter->size - 1;
+        j = state->size - 1;
 
         while( j > i )
         {
-            filter->array[j] = filter->array[j-1];
+            state->array[j] = state->array[j-1];
             --j;
         }
 
-        filter->array[j] = update;
+        state->array[j] = update;
     }
     else
     {
-        i = filter->size - 1;
+        i = state->size - 1;
         j = 0;
 
         while( j < i )
         {
-            filter->array[j] = filter->array[j+1];
+            state->array[j] = state->array[j+1];
             ++j;
         }
 
-        filter->array[j] = update;
+        state->array[j] = update;
     }
 
-    return( filter->array[ filter->size >> 1 ] );
+    return( state->array[ state->size >> 1 ] );
 }
 
 /* End of file */

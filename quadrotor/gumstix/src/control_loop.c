@@ -45,10 +45,12 @@
 #include "ctrl_params.h"
 #include "trace_data.h"
 #include "transformation.h"
-#include "low_pass_filter.h"
 #include "average_filter.h"
-#include "median_filter.h"
 #include "kalman_filter.h"
+#include "low_pass_filter.h"
+#include "median_filter.h"
+#include "outlier_filter.h"
+#include "extended_kalman.h"
 #include "us_timer.h"
 
 /* controller modes */
@@ -61,11 +63,15 @@
 #define CTRL_STATE_TESTING      0x01
 
 /* filter parameters */
-#define FILTER_GAIN_ACC         0.1
-#define FILTER_GAIN_CMD         0.1
-#define FILTER_SIZE_MAPS        1
-#define FILTER_SIZE_TEMP        1
-#define FILTER_SIZE_BATT        15
+#define FILTER_MDIFF_X_Y        250                 /* [mm] maximum allowed x/y-difference */
+#define FILTER_LIMIT_X_Y        2                   /* limit for counting x/y-outliers */
+#define FILTER_MDIFF_Z          50                  /* [mm] maximum allowed z-difference */
+#define FILTER_LIMIT_Z          2                   /* limit for counting z-outliers */
+#define FILTER_GAIN_LACC        0.1                 /* gain for linear accelerations */
+#define FILTER_GAIN_CCMD        0.1                 /* gain for control commands */
+#define FILTER_SIZE_MAPS        1                   /* buffer size for pressure data */
+#define FILTER_SIZE_TEMP        1                   /* buffer size for temperature data */
+#define FILTER_SIZE_BATT        15                  /* buffer size for battery data */
 
 /* plant parameters */
 #define X_LASER_POS_ROLL        60                  /* [mm] x-laser position on roll axis */
@@ -81,7 +87,7 @@
 
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
-#define MAX_ROLL_PITCH          500                 /* [mrad] */
+#define MAX_ROLL_PITCH          500                 /* [mrad] max allowed roll/pitch angle */
 
 /* scaling constants */
 #define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units]    --> [mrad] (2*PI*1000 mrad/2^16) */
@@ -112,6 +118,24 @@ static int                      motor_revving_add;
 static int                      base_motor_speed;
 static int                      revving_step;
 
+/* filter objects */
+static outlier_filter_t         filter_x;
+static outlier_filter_t         filter_y;
+static outlier_filter_t         filter_z;
+static kalman_filter_t          filter_dx;
+static kalman_filter_t          filter_dy;
+static kalman_filter_t          filter_dz;
+static low_pass_filter_t        filter_ddx;
+static low_pass_filter_t        filter_ddy;
+static low_pass_filter_t        filter_ddz;
+static low_pass_filter_t        filter_cmdr;
+static low_pass_filter_t        filter_cmdp;
+static low_pass_filter_t        filter_cmdz;
+static average_filter_t         filter_maps;
+static average_filter_t         filter_temp;
+static median_filter_t          filter_batt;
+static extended_kalman_t        filter_ekf;
+
 /* controller objects */
 static controller_t             ctrl_roll;
 static controller_t             ctrl_pitch;
@@ -119,20 +143,6 @@ static controller_t             ctrl_yaw;
 static controller_t             ctrl_x;
 static controller_t             ctrl_y;
 static controller_t             ctrl_z;
-
-/* filter objects */
-static low_pass_filter_t        filter_ddx;
-static low_pass_filter_t        filter_ddy;
-static low_pass_filter_t        filter_ddz;
-static low_pass_filter_t        filter_cmd_roll;
-static low_pass_filter_t        filter_cmd_pitch;
-static low_pass_filter_t        filter_cmd_z;
-static average_filter_t         filter_maps;
-static average_filter_t         filter_temp;
-static median_filter_t          filter_batt;
-static kalman_filter_t          filter_dx;
-static kalman_filter_t          filter_dy;
-static kalman_filter_t          filter_dz;
 
 /* data structures */
 static command_data_t           command_data;
@@ -209,25 +219,29 @@ int control_loop_setup( int period, int control_z, int ubisense )
         perror( "sigaction" );
     }
 
-    controller_init( &ctrl_roll,  "Roll",  CTRL_PIDD_DEF, ms_period );
-    controller_init( &ctrl_pitch, "Pitch", CTRL_PIDD_DEF, ms_period );
-    controller_init( &ctrl_yaw,   "Yaw",   CTRL_PIDD_YAW, ms_period );
-    controller_init( &ctrl_x,     "X",     CTRL_PIDD_X_Y, ms_period );
-    controller_init( &ctrl_y,     "Y",     CTRL_PIDD_X_Y, ms_period );
-    controller_init( &ctrl_z,     "Z",     CTRL_PIDD_DEF, ms_period );
+    outlier_filter_init ( &filter_x,    "X",     FILTER_MDIFF_X_Y, FILTER_LIMIT_X_Y );
+    outlier_filter_init ( &filter_y,    "Y",     FILTER_MDIFF_X_Y, FILTER_LIMIT_X_Y );
+    outlier_filter_init ( &filter_z,    "Z",     FILTER_MDIFF_Z,   FILTER_LIMIT_Z );
+    kalman_filter_init  ( &filter_dx,   "dX",    ms_period );
+    kalman_filter_init  ( &filter_dy,   "dY",    ms_period );
+    kalman_filter_init  ( &filter_dz,   "dZ",    ms_period );
+    low_pass_filter_init( &filter_ddx,  "ddX",   FILTER_GAIN_LACC );
+    low_pass_filter_init( &filter_ddy,  "ddY",   FILTER_GAIN_LACC );
+    low_pass_filter_init( &filter_ddz,  "ddZ",   FILTER_GAIN_LACC );
+    low_pass_filter_init( &filter_cmdr, "cmdR",  FILTER_GAIN_CCMD );
+    low_pass_filter_init( &filter_cmdp, "cmdP",  FILTER_GAIN_CCMD );
+    low_pass_filter_init( &filter_cmdz, "cmdZ",  FILTER_GAIN_CCMD );
+    average_filter_init ( &filter_maps, "MAPS",  FILTER_SIZE_MAPS );
+    average_filter_init ( &filter_temp, "TEMP",  FILTER_SIZE_TEMP );
+    median_filter_init  ( &filter_batt, "BATT",  FILTER_SIZE_BATT );
+    extended_kalman_init( &filter_ekf,  "EKF",   ms_period );
 
-    low_pass_filter_init( &filter_ddx,       FILTER_GAIN_ACC );
-    low_pass_filter_init( &filter_ddy,       FILTER_GAIN_ACC );
-    low_pass_filter_init( &filter_ddz,       FILTER_GAIN_ACC );
-    low_pass_filter_init( &filter_cmd_roll,  FILTER_GAIN_CMD );
-    low_pass_filter_init( &filter_cmd_pitch, FILTER_GAIN_CMD );
-    low_pass_filter_init( &filter_cmd_z,     FILTER_GAIN_CMD );
-    average_filter_init ( &filter_maps,      FILTER_SIZE_MAPS );
-    average_filter_init ( &filter_temp,      FILTER_SIZE_TEMP );
-    median_filter_init  ( &filter_batt,      FILTER_SIZE_BATT );
-    kalman_filter_init  ( &filter_dx,        ms_period );
-    kalman_filter_init  ( &filter_dy,        ms_period );
-    kalman_filter_init  ( &filter_dz,        ms_period );
+    controller_init     ( &ctrl_roll,   "Roll",  CTRL_PIDD_DEF, ms_period );
+    controller_init     ( &ctrl_pitch,  "Pitch", CTRL_PIDD_DEF, ms_period );
+    controller_init     ( &ctrl_yaw,    "Yaw",   CTRL_PIDD_YAW, ms_period );
+    controller_init     ( &ctrl_x,      "X",     CTRL_PIDD_X_Y, ms_period );
+    controller_init     ( &ctrl_y,      "Y",     CTRL_PIDD_X_Y, ms_period );
+    controller_init     ( &ctrl_z,      "Z",     CTRL_PIDD_DEF, ms_period );
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -342,25 +356,6 @@ static void adjust_sensor_data( void )
     }
 }
 
-static int reject_sonar_outliers( int new_value )
-{
-    static int old_value = 13;
-    static int outliers  = 2;
-
-    if( abs( old_value - new_value ) > 20 && outliers < 2 )
-    {
-        new_value = old_value;
-        ++outliers;
-    }
-    else
-    {
-        old_value = new_value;
-        outliers = 0;
-    }
-
-    return( new_value );
-}
-
 static int get_javiator_data( void )
 {
     int res = javiator_port_get_data( &javiator_data );
@@ -394,7 +389,12 @@ static int get_javiator_data( void )
     /* extract/scale positions */
     sensor_data.x       = atoi( (const char *) javiator_data.x_pos );
     sensor_data.y       = atoi( (const char *) javiator_data.y_pos );
-    sensor_data.z       = FACTOR_SONAR * reject_sonar_outliers( javiator_data.sonar );
+    sensor_data.z       = FACTOR_SONAR * javiator_data.sonar;
+
+    /* update and apply filters */
+    sensor_data.x       = outlier_filter_update( &filter_x, sensor_data.x );
+    sensor_data.y       = outlier_filter_update( &filter_y, sensor_data.y );
+    sensor_data.z       = outlier_filter_update( &filter_z, sensor_data.z );
 
     /* transform/rotate positions */
     sensor_data.x       = transformation_rotate_X( X_LASER_POS_ROLL  + sensor_data.x,
@@ -409,34 +409,46 @@ static int get_javiator_data( void )
                                                    Z_SONAR_POS_PITCH,
                                                    Z_SONAR_POS_YAW   + sensor_data.z );
 
-    /* save new linear accelerations */
-    sensor_data.dx      = FACTOR_LINEAR_ACC * javiator_data.ddx;
-    sensor_data.dy      = FACTOR_LINEAR_ACC * javiator_data.ddy;
-    sensor_data.dz      = FACTOR_LINEAR_ACC * javiator_data.ddz;
+    /* scale linear accelerations */
+    sensor_data.ddx     = FACTOR_LINEAR_ACC * javiator_data.ddx;
+    sensor_data.ddy     = FACTOR_LINEAR_ACC * javiator_data.ddy;
+    sensor_data.ddz     = FACTOR_LINEAR_ACC * javiator_data.ddz;
 
-    /* transform/rotate linear accelerations */
+    /* update and apply filters (store temporarily for transformations) */
+    sensor_data.dx      = low_pass_filter_update( &filter_ddx,  sensor_data.ddx );
+    sensor_data.dy      = low_pass_filter_update( &filter_ddy,  sensor_data.ddy );
+    sensor_data.dz      = low_pass_filter_update( &filter_ddz,  sensor_data.ddz + EARTH_GRAVITY );
+
+    /* transform/rotate accelerations */
     sensor_data.ddx     = transformation_rotate_X( sensor_data.dx, sensor_data.dy, sensor_data.dz );
     sensor_data.ddy     = transformation_rotate_Y( sensor_data.dx, sensor_data.dy, sensor_data.dz );
     sensor_data.ddz     = transformation_rotate_Z( sensor_data.dx, sensor_data.dy, sensor_data.dz );
 
-    /* Kalman-estimate linear velocities */
+    /* estimate linear velocities */
     if( enable_ubisense )
     {
-        sensor_data.dx  = kalman_filter_update( &filter_dx, ubisense_data.x, sensor_data.ddx );
-        sensor_data.dy  = kalman_filter_update( &filter_dy, ubisense_data.y, sensor_data.ddy );
+        kalman_filter_update( &filter_dx, ubisense_data.x, sensor_data.ddx );
+        kalman_filter_update( &filter_dy, ubisense_data.y, sensor_data.ddy );
     }
     else
     {
-        sensor_data.dx  = kalman_filter_update( &filter_dx, sensor_data.x, sensor_data.ddx );
-        sensor_data.dy  = kalman_filter_update( &filter_dy, sensor_data.y, sensor_data.ddy );
+        kalman_filter_update( &filter_dx, sensor_data.x, sensor_data.ddx );
+        kalman_filter_update( &filter_dy, sensor_data.y, sensor_data.ddy );
     }
 
-    sensor_data.dz      = kalman_filter_update( &filter_dz, sensor_data.z, -sensor_data.ddz );
+    /* note that the Z-axis is pointing downwards in the aircraft
+       coordinate system, hence the sign of ddZ must be changed */
+    kalman_filter_update( &filter_dz, sensor_data.z, -sensor_data.ddz );
 
-    /* replace positions with Kalman estimates */
-    sensor_data.x       = filter_dx.s;
-    sensor_data.y       = filter_dy.s;
-    sensor_data.z       = filter_dz.s;
+    /* store Kalman-filtered positions */
+    sensor_data.x       = kalman_filter_get_S( &filter_dx );
+    sensor_data.y       = kalman_filter_get_S( &filter_dy );
+    sensor_data.z       = kalman_filter_get_S( &filter_dz );
+
+    /* store Kalman-estimated velocities */
+    sensor_data.dx      = kalman_filter_get_dS( &filter_dx );
+    sensor_data.dy      = kalman_filter_get_dS( &filter_dy );
+    sensor_data.dz      = kalman_filter_get_dS( &filter_dz );
 
     /* scale BMU-specific data */
     sensor_data.maps    = FACTOR_BMU_MAPS * javiator_data.maps;
@@ -444,12 +456,9 @@ static int get_javiator_data( void )
     sensor_data.batt    = FACTOR_BMU_BATT * javiator_data.batt;
 
     /* update and apply filters */
-    sensor_data.ddx     = low_pass_filter_update( &filter_ddx,  sensor_data.ddx );
-    sensor_data.ddy     = low_pass_filter_update( &filter_ddy,  sensor_data.ddy );
-    sensor_data.ddz     = low_pass_filter_update( &filter_ddz,  sensor_data.ddz + EARTH_GRAVITY );
-    sensor_data.maps    = average_filter_update ( &filter_maps, sensor_data.maps );
-    sensor_data.temp    = average_filter_update ( &filter_temp, sensor_data.temp );
-    sensor_data.batt    = median_filter_update  ( &filter_batt, sensor_data.batt );
+    sensor_data.maps    = average_filter_update( &filter_maps, sensor_data.maps );
+    sensor_data.temp    = average_filter_update( &filter_temp, sensor_data.temp );
+    sensor_data.batt    = median_filter_update ( &filter_batt, sensor_data.batt );
 
     return( 0 );
 }
@@ -514,23 +523,32 @@ static int get_command_data( void )
     }
 
     /* update and apply filters */
-    command_data.roll  = low_pass_filter_update( &filter_cmd_roll,  command_data.roll );
-    command_data.pitch = low_pass_filter_update( &filter_cmd_pitch, command_data.pitch );
-    command_data.z     = low_pass_filter_update( &filter_cmd_z,     command_data.z );
+    command_data.roll  = low_pass_filter_update( &filter_cmdr, command_data.roll );
+    command_data.pitch = low_pass_filter_update( &filter_cmdp, command_data.pitch );
+    command_data.z     = low_pass_filter_update( &filter_cmdz, command_data.z );
 
     return( 0 );
 }
 
-static inline void reset_motor_signals( void )
+static int perform_shut_down( void )
 {
+    motor_speed      = 0;
+    base_motor_speed = terminal_port_get_base_motor_speed( );
+    revving_step     = 0;
+
     motor_signals.front = 0;
     motor_signals.right = 0;
     motor_signals.rear  = 0;
     motor_signals.left  = 0;
-}
 
-static inline void reset_controllers( void )
-{
+    low_pass_filter_reset( &filter_ddx );
+    low_pass_filter_reset( &filter_ddy );
+    low_pass_filter_reset( &filter_ddz );
+    low_pass_filter_reset( &filter_cmdr );
+    low_pass_filter_reset( &filter_cmdp );
+    low_pass_filter_reset( &filter_cmdz );
+    extended_kalman_reset( &filter_ekf );
+
     controller_reset_zero( &ctrl_roll );
     controller_reset_zero( &ctrl_pitch );
     controller_reset_zero( &ctrl_yaw );
@@ -538,29 +556,7 @@ static inline void reset_controllers( void )
     controller_reset_zero( &ctrl_y );
     controller_reset_zero( &ctrl_z );
 
-    motor_speed = 0;
-}
-
-static inline void reset_filters( void )
-{
-    low_pass_filter_reset( &filter_ddx );
-    low_pass_filter_reset( &filter_ddy );
-    low_pass_filter_reset( &filter_ddz );
-    low_pass_filter_reset( &filter_cmd_roll );
-    low_pass_filter_reset( &filter_cmd_pitch );
-    low_pass_filter_reset( &filter_cmd_z );
-}
-
-static int perform_shut_down( void )
-{
-    base_motor_speed = terminal_port_get_base_motor_speed( );
-    revving_step     = 0;
-
-    reset_motor_signals( );
-    reset_controllers( );
-    reset_filters( );
-
-    return( 1 );
+    return( 0 );
 }
 
 static int perform_ground_actions( void )
@@ -594,7 +590,7 @@ static int perform_ground_actions( void )
         perform_shut_down( );
     }
 
-    return( 1 );
+    return( 0 );
 }
 
 static int compute_motor_signals( void )
@@ -607,15 +603,23 @@ static int compute_motor_signals( void )
     double u_z     = 0;
     int i, signals[4];
 
+    extended_kalman_update( &filter_ekf, &sensor_data );
+
     if( terminal_port_is_test_mode( ) )
     {
         control_state = CTRL_STATE_TESTING;
 
-        command_data.roll  = -controller_do_control( &ctrl_y, offset_y
-            - command_data.roll, sensor_data.y, sensor_data.dy, sensor_data.ddy );
+        command_data.roll  = -controller_do_control( &ctrl_y,
+            offset_y - command_data.roll,
+            extended_kalman_get_Y( &filter_ekf ),   // sensor_data.y
+            extended_kalman_get_dY( &filter_ekf ),  // sensor_data.dy
+            sensor_data.ddy );
 
-        command_data.pitch =  controller_do_control( &ctrl_x, offset_x
-            + command_data.pitch, sensor_data.x, sensor_data.dx, sensor_data.ddx );
+        command_data.pitch =  controller_do_control( &ctrl_x,
+            offset_x + command_data.pitch,
+            extended_kalman_get_X( &filter_ekf ),   // sensor_data.x
+            extended_kalman_get_dX( &filter_ekf ),  // sensor_data.dx
+            sensor_data.ddx );
 
         if( command_data.roll > MAX_ROLL_PITCH )
         {
@@ -674,19 +678,31 @@ static int compute_motor_signals( void )
             controller_set_integral( &ctrl_z, controller_get_integral( &ctrl_z ) - 10 );
         }
 
-        u_roll  = controller_do_control( &ctrl_roll, command_data.roll,
-            sensor_data.roll, sensor_data.droll, sensor_data.ddroll );
+        u_roll  = controller_do_control( &ctrl_roll,
+            command_data.roll,
+            extended_kalman_get_Roll( &filter_ekf ),    // sensor_data.roll
+            sensor_data.droll,
+            sensor_data.ddroll );
 
-        u_pitch = controller_do_control( &ctrl_pitch, command_data.pitch,
-            sensor_data.pitch, sensor_data.dpitch, sensor_data.ddpitch );
+        u_pitch = controller_do_control( &ctrl_pitch,
+            command_data.pitch,
+            extended_kalman_get_Pitch( &filter_ekf ),   // sensor_data.pitch
+            sensor_data.dpitch,
+            sensor_data.ddpitch );
 
-        u_yaw   = controller_do_control( &ctrl_yaw, command_data.yaw,
-            sensor_data.yaw, sensor_data.dyaw, sensor_data.ddyaw );
+        u_yaw   = controller_do_control( &ctrl_yaw,
+            command_data.yaw,
+            extended_kalman_get_Yaw( &filter_ekf ),     // sensor_data.yaw
+            sensor_data.dyaw,
+            sensor_data.ddyaw );
 
         if( compute_z )
 	    {
-            u_z = base_motor_speed + controller_do_control( &ctrl_z, command_data.z,
-                sensor_data.z, sensor_data.dz, sensor_data.ddz );
+            u_z = base_motor_speed + controller_do_control( &ctrl_z,
+                command_data.z,
+                extended_kalman_get_Z( &filter_ekf ),   // sensor_data.z
+                extended_kalman_get_dZ( &filter_ekf ),  // sensor_data.dz
+                sensor_data.ddz );
 	    }
         else
         {
@@ -959,19 +975,31 @@ int control_loop_run( void )
         }
     }
 
-    controller_destroy( &ctrl_roll );
-    controller_destroy( &ctrl_pitch );
-    controller_destroy( &ctrl_yaw );
-    controller_destroy( &ctrl_x );
-    controller_destroy( &ctrl_y );
-    controller_destroy( &ctrl_z );
+    outlier_filter_destroy ( &filter_x );
+    outlier_filter_destroy ( &filter_y );
+    outlier_filter_destroy ( &filter_z );
+    kalman_filter_destroy  ( &filter_dx );
+    kalman_filter_destroy  ( &filter_dy );
+    kalman_filter_destroy  ( &filter_dz );
+    low_pass_filter_destroy( &filter_ddx );
+    low_pass_filter_destroy( &filter_ddy );
+    low_pass_filter_destroy( &filter_ddz );
+    low_pass_filter_destroy( &filter_cmdr );
+    low_pass_filter_destroy( &filter_cmdp );
+    low_pass_filter_destroy( &filter_cmdz );
+    average_filter_destroy ( &filter_maps );
+    average_filter_destroy ( &filter_temp );
+    median_filter_destroy  ( &filter_batt );
+    extended_kalman_destroy( &filter_ekf );
 
-    average_filter_destroy( &filter_maps );
-    average_filter_destroy( &filter_temp );
-    median_filter_destroy ( &filter_batt );
+    controller_destroy     ( &ctrl_roll );
+    controller_destroy     ( &ctrl_pitch );
+    controller_destroy     ( &ctrl_yaw );
+    controller_destroy     ( &ctrl_x );
+    controller_destroy     ( &ctrl_y );
+    controller_destroy     ( &ctrl_z );
 
     print_stats( );
-
     return( 0 );
 }
 

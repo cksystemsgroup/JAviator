@@ -3,7 +3,7 @@
 /*                                                                           */
 /*   JControlTransceiver.java    Uses a Socket to connect to JControl        */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Harald Roeck, Rainer Trummer                   */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

@@ -18,6 +18,7 @@ control_SOURCES = \
     low_pass_filter.c \
     main.c \
     median_filter.c \
+    outlier_filter.c \
     pidd_controller.c \
     serial_channel.c \
     tcp_socket_channel.c \

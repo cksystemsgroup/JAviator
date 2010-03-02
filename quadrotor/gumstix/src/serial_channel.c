@@ -50,7 +50,7 @@ typedef struct
 static serial_connection_t connection;
 
 
-static inline serial_connection_t *serial_get_connection( const comm_channel_t *channel)
+static inline serial_connection_t *serial_get_connection( const comm_channel_t *channel )
 {
     serial_connection_t *sc = (serial_connection_t *) channel->data;
 

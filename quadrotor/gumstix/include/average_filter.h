@@ -25,32 +25,36 @@
 #ifndef AVERAGE_FILTER
 #define AVERAGE_FILTER
 
-/* Structure for representing average-filter parameters */
+struct af_state;
+typedef struct af_state af_state_t;
+
+/* This filter is designed to compute the average
+   over a circular buffer of user-defined size.
+*/
 typedef struct
 {
-    int     size;
-    double *array;
-    int     index;
+    char *          name;
+    af_state_t *    state;
 
 } average_filter_t;
 
-/* Initializes the average filter.
+/* Initializes an average filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    average_filter_init( average_filter_t *filter, int size );
+int    average_filter_init( average_filter_t *filter, char *name, int size );
 
-/* Resets the average filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int    average_filter_reset( average_filter_t *filter );
-
-/* Destroys the average filter.
+/* Destroys an average filter.
    Returns 0 if successful, -1 otherwise.
 */
 int    average_filter_destroy( average_filter_t *filter );
 
-/* Updates the average filter with the given value.
-   Returns the filtered value.
+/* Resets an average filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    average_filter_reset( average_filter_t *filter );
+
+/* Updates an average filter with the given value.
+   Returns the filtered value if successful, -1 otherwise.
 */
 double average_filter_update( average_filter_t *filter, double update );
 

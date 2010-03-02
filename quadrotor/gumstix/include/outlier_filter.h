@@ -22,43 +22,43 @@
  *
  */
 
-#ifndef LOW_PASS_FILTER
-#define LOW_PASS_FILTER
+#ifndef OUTLIER_FILTER
+#define OUTLIER_FILTER
 
-struct lpf_state;
-typedef struct lpf_state lpf_state_t;
+struct of_state;
+typedef struct of_state of_state_t;
 
-/* This filter is designed to compute the integral
-   over a sequence of values with the update effort
-   controlled by the user-defined gain.
+/* This filter is designed to reject outliers
+   controlled by the user-defined maximum
+   difference and limit of occurrences.
 */
 typedef struct
 {
     char *          name;
-    lpf_state_t *   state;
+    of_state_t *    state;
 
-} low_pass_filter_t;
+} outlier_filter_t;
 
-/* Initializes a low-pass filter.
+/* Initializes an outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain );
+int    outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int limit );
 
-/* Destroys a low-pass filter.
+/* Destroys an outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_destroy( low_pass_filter_t *filter );
+int    outlier_filter_destroy( outlier_filter_t *filter );
 
-/* Resets a low-pass filter.
+/* Resets an outlier filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_reset( low_pass_filter_t *filter );
+int    outlier_filter_reset( outlier_filter_t *filter );
 
-/* Updates a low-pass filter with the given value.
+/* Updates an outlier filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double low_pass_filter_update( low_pass_filter_t *filter, double update );
+double outlier_filter_update( outlier_filter_t *filter, double update );
 
-#endif /* !LOW_PASS_FILTER */
+#endif /* !OUTLIER_FILTER */
 
 /* End of file */

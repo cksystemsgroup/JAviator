@@ -4,7 +4,7 @@
 /*   ParamDialog.java	Constructs a non-modal dialog that allows to change  */
 /*                      the PID/PIDD controller parameters.                  */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

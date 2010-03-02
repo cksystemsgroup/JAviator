@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck                                        */
+/*   Copyright (c) 2006-2010  Harald Roeck                                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,12 +21,6 @@
 
 package javiator.util;
 
-/**
- * Interface for objects that can be send/received by a transceiver
- * 
- * @author hroeck
- *
- */
 public interface Sendable extends java.lang.Cloneable
 {
     /** 

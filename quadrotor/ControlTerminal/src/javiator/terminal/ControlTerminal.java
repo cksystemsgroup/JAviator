@@ -3,7 +3,7 @@
 /*                                                                           */
 /*   ControlTerminal.java	Runs the JAviator Control Terminal application.  */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -48,9 +48,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.IOException;
 
+import javiator.util.CommandData;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
-import javiator.util.CommandData;
+import javiator.util.MotorOffsets;
 import javiator.util.ControlParams;
 import javiator.util.TraceData;
 import javiator.util.Packet;
@@ -322,7 +323,7 @@ public class ControlTerminal extends Frame
     public void writeLogData( CommandData  commandData,
                               SensorData   sensorData,
                               MotorSignals motorSignals,
-                              CommandData  motorOffsets,
+                              MotorOffsets motorOffsets,
                               TraceData    traceData )
     {
         if( logData && logFile != null )

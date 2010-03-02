@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck, Rainer Trummer                        */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,11 +21,6 @@
 
 package javiator.util;
 
-/**
- * Represents the actuator data
- * 
- * @author hroeck
- */
 public class RevvingParams extends NumeratedSendable
 {
 	public static final int PACKET_SIZE = 8;
@@ -50,7 +45,6 @@ public class RevvingParams extends NumeratedSendable
 		result += " control speed: " + ctrlSpeed;
 		result += " rev-up step: "   + revUpStep;
 		result += " rev-down step: " + revDnStep;
-
 		return( result );
 	}
 
@@ -66,7 +60,6 @@ public class RevvingParams extends NumeratedSendable
 	{
 		Packet packet = new Packet( PACKET_SIZE );
 		encode( packet, 0 );
-
 		return( packet );
 	}
 
@@ -87,7 +80,6 @@ public class RevvingParams extends NumeratedSendable
 		Packet packet = toPacket( );
 		packet.type   = type;
 		packet.calcChecksum( );
-
 		return( packet );
 	}
 
@@ -108,7 +100,6 @@ public class RevvingParams extends NumeratedSendable
 	{
 		RevvingParams copy = new RevvingParams( );
 		copyTo( copy );
-
 		return( copy );
 	}
 
@@ -121,10 +112,10 @@ public class RevvingParams extends NumeratedSendable
 	{
 		super.copyTo( to );
 		RevvingParams copy = (RevvingParams) to;
-		copy.idleLimit = idleLimit;
-		copy.ctrlSpeed = ctrlSpeed;
-		copy.revUpStep = revUpStep;
-		copy.revDnStep = revDnStep;
+		copy.idleLimit     = idleLimit;
+		copy.ctrlSpeed     = ctrlSpeed;
+		copy.revUpStep     = revUpStep;
+		copy.revDnStep     = revDnStep;
 	}
 
     public short idleLimit;

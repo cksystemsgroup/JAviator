@@ -22,77 +22,123 @@
  *
  */
 
+#include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "average_filter.h"
 
+/* State of an average filter */
+struct af_state
+{
+    double *array;
+    int     size;
+    int     index;
+};
 
-/* Initializes the average filter.
+
+static inline af_state_t *get_af_state( const average_filter_t *filter )
+{
+    af_state_t *state = (af_state_t *) filter->state;
+
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
+    }
+
+    return( state );
+}
+
+/* Initializes an average filter.
    Returns 0 if successful, -1 otherwise.
 */
-int average_filter_init( average_filter_t *filter, int size )
+int average_filter_init( average_filter_t *filter, char *name, int size )
 {
+    af_state_t *state;
+
     if( size < 1 )
     {
-        fprintf( stderr, "ERROR: invalid average-filter size\n" );
+        fprintf( stderr, "ERROR: invalid %s filter size (%d)\n", name, size );
         return( -1 );
     }
 
-    filter->size  = size;
-    filter->array = malloc( sizeof( *filter->array ) * filter->size );
-    filter->index = 0;
+    state = malloc( sizeof( af_state_t ) );
 
+    if( !state )
+    {
+        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
+        return( -1 );
+    }
+
+    state->array = malloc( sizeof( *state->array ) * size );
+
+    if( !state->array )
+    {
+        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
+        free( state );
+        return( -1 );
+    }
+
+    state->size   = size;
+    filter->name  = name;
+    filter->state = state;
     return average_filter_reset( filter );
 }
 
-/* Resets the average filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int average_filter_reset( average_filter_t *filter )
-{
-    if( filter->array == NULL )
-    {
-        fprintf( stderr, "ERROR: average filter not initialized\n" );
-        return( -1 );
-    }
-
-    memset( filter->array, 0, sizeof( *filter->array ) * filter->size );
-    filter->index = 0;
-    return( 0 );
-}
-
-/* Destroys the average filter.
+/* Destroys an average filter.
    Returns 0 if successful, -1 otherwise.
 */
 int average_filter_destroy( average_filter_t *filter )
 {
-    free( filter->array );
-    filter->array = NULL;
+    free( filter->state->array );
+    free( filter->state );
+    filter->state = NULL;
     return( 0 );
 }
 
-/* Updates the average filter with the given value.
-   Returns the filtered value.
+/* Resets an average filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int average_filter_reset( average_filter_t *filter )
+{
+    af_state_t *state = get_af_state( filter );
+
+    if( !state )
+    {
+        return( -1 );
+    }
+
+    memset( state->array, 0, sizeof( *state->array ) * state->size );
+    state->index = 0;
+    return( 0 );
+}
+
+/* Updates an average filter with the given value.
+   Returns the filtered value if successful, -1 otherwise.
 */
 double average_filter_update( average_filter_t *filter, double update )
 {
+    af_state_t *state = get_af_state( filter );
     int i;
 
-    filter->array[ filter->index ] = update;
-
-    if( ++filter->index == filter->size )
+    if( !state )
     {
-        filter->index = 0;
+        return( -1 );
     }
 
-    for( update = 0, i = 0; i < filter->size; ++i )
+    state->array[ state->index ] = update;
+
+    if( ++state->index == state->size )
     {
-        update += filter->array[i];
+        state->index = 0;
     }
 
-    return( update / filter->size );
+    for( update = 0, i = 0; i < state->size; ++i )
+    {
+        update += state->array[i];
+    }
+
+    return( update / state->size );
 }
 
 /* End of file */

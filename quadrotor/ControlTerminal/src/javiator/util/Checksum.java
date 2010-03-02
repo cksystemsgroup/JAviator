@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   Copyright (c) 2006  Harald Roeck                                        */
+/*   Copyright (c) 2006-2010  Harald Roeck, Rainer Trummer                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -21,10 +21,6 @@
 
 package javiator.util;
 
-/**
- * Static methods to calculate the checksum
- * @author hroeck
- */
 public final class Checksum
 {
     public static int calc( byte id, byte size, byte[] data, int offset )

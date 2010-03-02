@@ -4,7 +4,7 @@
 /*   Transceiver.java    Establishes and runs the serial connection between  */
 /*                       the JAviator and the control terminal.              */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Rainer Trummer, Harald Roeck                   */
+/*   Copyright (c) 2006-2010  Rainer Trummer, Harald Roeck                   */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -27,9 +27,10 @@ package javiator.terminal;
 import java.awt.Color;
 
 import javiator.util.ReportToGround;
+import javiator.util.CommandData;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
-import javiator.util.CommandData;
+import javiator.util.MotorOffsets;
 import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
@@ -92,7 +93,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
     protected CommandData     commandData  = null;
     protected SensorData      sensorData   = null;
     protected MotorSignals    motorSignals = null;
-    protected CommandData     motorOffsets = null;
+    protected MotorOffsets    motorOffsets = null;
     protected TraceData       traceData    = null;
 
     protected Transceiver( ControlTerminal parent )
@@ -103,7 +104,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
         commandData  = new CommandData( );
         sensorData   = new SensorData( );
         motorSignals = new MotorSignals( );
-        motorOffsets = new CommandData( );
+        motorOffsets = new MotorOffsets( );
         traceData    = new TraceData( );
     }
 

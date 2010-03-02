@@ -60,10 +60,11 @@ am_control_OBJECTS = average_filter.$(OBJEXT) communication.$(OBJEXT) \
 	extended_kalman.$(OBJEXT) javiator_port.$(OBJEXT) \
 	kalman_filter.$(OBJEXT) low_pass_filter.$(OBJEXT) \
 	main.$(OBJEXT) median_filter.$(OBJEXT) \
-	pidd_controller.$(OBJEXT) serial_channel.$(OBJEXT) \
-	tcp_socket_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
-	transformation.$(OBJEXT) ubisense_port.$(OBJEXT) \
-	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
+	outlier_filter.$(OBJEXT) pidd_controller.$(OBJEXT) \
+	serial_channel.$(OBJEXT) tcp_socket_channel.$(OBJEXT) \
+	terminal_port.$(OBJEXT) transformation.$(OBJEXT) \
+	ubisense_port.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
+	us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -201,6 +202,7 @@ control_SOURCES = \
     low_pass_filter.c \
     main.c \
     median_filter.c \
+    outlier_filter.c \
     pidd_controller.c \
     serial_channel.c \
     tcp_socket_channel.c \
@@ -294,6 +296,7 @@ include ./$(DEPDIR)/kalman_filter.Po
 include ./$(DEPDIR)/low_pass_filter.Po
 include ./$(DEPDIR)/main.Po
 include ./$(DEPDIR)/median_filter.Po
+include ./$(DEPDIR)/outlier_filter.Po
 include ./$(DEPDIR)/pidd_controller.Po
 include ./$(DEPDIR)/serial_channel.Po
 include ./$(DEPDIR)/tcp_socket_channel.Po

@@ -27,13 +27,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
 #include <math.h>
 
 #include "controller.h"
 #include "motor_signals.h"
 
-/* State of a controller for 1 degree of freedom. */
+/* State of a controller for 1 degree of freedom */
 struct ctrl_state
 {
     double dtime;        /* Control period [s] */
@@ -199,7 +198,9 @@ int pidd_def_controller_init( controller_t *controller, int period )
 
     if( !state )
     {
-        return( ENOMEM );
+        fprintf( stderr, "ERROR: memory allocation for %s controller failed\n",
+            controller->name );
+        return( -1 );
     }
 
     memset( state, 0, sizeof( ctrl_state_t ) );

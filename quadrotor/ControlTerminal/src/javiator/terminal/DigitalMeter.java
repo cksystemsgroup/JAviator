@@ -4,7 +4,7 @@
 /*   DigitalMeter.java  Constructs a digital meter representing altitude     */
 /*                      mode, control state, motor signals and offsets.      */
 /*                                                                           */
-/*   Copyright (c) 2006-2009  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -33,7 +33,7 @@ import java.awt.event.FocusEvent;
 
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
-import javiator.util.CommandData;
+import javiator.util.MotorOffsets;
 import javiator.util.ControllerConstants;
 
 /*****************************************************************************/
@@ -56,7 +56,7 @@ public class DigitalMeter extends Panel
         return( motorSignals );
     }
 
-    public CommandData getMotorOffsets( )
+    public MotorOffsets getMotorOffsets( )
     {
         return( motorOffsets );
     }
@@ -121,6 +121,11 @@ public class DigitalMeter extends Panel
 
     public void setSensorData( SensorData data )
     {
+        positionX.setText( ControlTerminal.NIL + data.x );
+        positionY.setText( ControlTerminal.NIL + data.y );
+        mapsLabel.setText( ControlTerminal.NIL + data.maps );
+        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 100) / 10.0 ) );
+        battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
 
         if( battLabel.getForeground( ) == colorAllRight )
         {
@@ -154,12 +159,6 @@ public class DigitalMeter extends Panel
         {
 	        battLabel.setForeground( colorAlerting );
         }
-
-        mapsLabel.setText( ControlTerminal.NIL + ( (double)(data.maps / 100) / 10.0 ) );
-        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 100) / 10.0 ) );
-        battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
-        positionX.setText( ControlTerminal.NIL + data.x );
-        positionY.setText( ControlTerminal.NIL + data.y );
     }
 
     public void setMotorSignals( MotorSignals signals )
@@ -198,7 +197,7 @@ public class DigitalMeter extends Panel
         }
     }
 
-    public void setMotorOffsets( CommandData offsets )
+    public void setMotorOffsets( MotorOffsets offsets )
     {
         if( motorOffsets.roll != offsets.roll )
         {
@@ -232,11 +231,11 @@ public class DigitalMeter extends Panel
 
         heliMode     .setForeground( colorDefault );
         testMode     .setForeground( colorTestMode );
+        positionX    .setForeground( colorDefault );
+        positionY    .setForeground( colorDefault );
         mapsLabel    .setForeground( colorDefault );
         tempLabel    .setForeground( colorDefault );
         battLabel    .setForeground( colorDefault );
-        positionX    .setForeground( colorDefault );
-        positionY    .setForeground( colorDefault );
 
         signalFront  .setForeground( colorDefault );
         signalRight  .setForeground( colorDefault );
@@ -254,11 +253,11 @@ public class DigitalMeter extends Panel
         offsetAlt    .setForeground( colorOffsets );
 
         heliMode     .setText( ControlTerminal.NIL );
+        positionX    .setText( ControlTerminal.ZERO );
+        positionY    .setText( ControlTerminal.ZERO );
         mapsLabel    .setText( ControlTerminal.ZERO );
         tempLabel    .setText( ControlTerminal.ZERO );
         battLabel    .setText( ControlTerminal.ZERO );
-        positionX    .setText( ControlTerminal.ZERO );
-        positionY    .setText( ControlTerminal.ZERO );
 
         signalFront  .setText( ControlTerminal.ZERO );
         signalRight  .setText( ControlTerminal.ZERO );
@@ -346,15 +345,15 @@ public class DigitalMeter extends Panel
 
     private ControlTerminal parent        = null;
     private MotorSignals    motorSignals  = null;
-    private CommandData     motorOffsets  = null;
+    private MotorOffsets    motorOffsets  = null;
     
     private Label           heliMode      = null;
     private Label           testMode      = null;
+    private Label           positionX     = null;
+    private Label           positionY     = null;
     private Label           mapsLabel     = null;
     private Label           tempLabel     = null;
     private Label           battLabel     = null;
-    private Label           positionX     = null;
-    private Label           positionY     = null;
 
     private Label           signalFront   = null;
     private Label           signalRight   = null;
@@ -385,15 +384,15 @@ public class DigitalMeter extends Panel
     {
         this.parent   = parent;
         motorSignals  = new MotorSignals( );
-        motorOffsets  = new CommandData( );
+        motorOffsets  = new MotorOffsets( );
 
         heliMode      = new Label( ControlTerminal.NIL, Label.CENTER );
         testMode      = new Label( ControlTerminal.TEST, Label.CENTER );
+        positionX     = new Label( ControlTerminal.ZERO, Label.CENTER );
+        positionY     = new Label( ControlTerminal.ZERO, Label.CENTER );
         mapsLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
         tempLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
         battLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        positionX     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        positionY     = new Label( ControlTerminal.ZERO, Label.CENTER );
 
         signalFront   = new Label( ControlTerminal.ZERO, Label.CENTER );
         signalRight   = new Label( ControlTerminal.ZERO, Label.CENTER );
@@ -427,21 +426,21 @@ public class DigitalMeter extends Panel
         controlDisplay.add( new Label( "Mode:" ) );
         controlDisplay.add( heliMode );
         controlDisplay.add( testMode );
-        controlDisplay.add( new Label( "MAPS:" ) );
-        controlDisplay.add( mapsLabel );
-        controlDisplay.add( new Label( "Pa", Label.CENTER ) );
-        controlDisplay.add( new Label( "Temp:" ) );
-        controlDisplay.add( tempLabel );
-        controlDisplay.add( new Label( "C", Label.CENTER ) );
-        controlDisplay.add( new Label( "Power:" ) );
-        controlDisplay.add( battLabel );
-        controlDisplay.add( new Label( "V", Label.CENTER ) );
         controlDisplay.add( new Label( "Pos. X:" ) );
         controlDisplay.add( positionX );
         controlDisplay.add( new Label( "mm", Label.CENTER ) );
         controlDisplay.add( new Label( "Pos. Y:" ) );
         controlDisplay.add( positionY );
         controlDisplay.add( new Label( "mm", Label.CENTER ) );
+        controlDisplay.add( new Label( "MAPS:" ) );
+        controlDisplay.add( mapsLabel );
+        controlDisplay.add( new Label( "mm", Label.CENTER ) );
+        controlDisplay.add( new Label( "Temp:" ) );
+        controlDisplay.add( tempLabel );
+        controlDisplay.add( new Label( "C", Label.CENTER ) );
+        controlDisplay.add( new Label( "Power:" ) );
+        controlDisplay.add( battLabel );
+        controlDisplay.add( new Label( "V", Label.CENTER ) );
 
         Panel signalsDisplay = new Panel( new GridLayout( 3, 3 ) );
         signalsDisplay.add( new Label( ) );

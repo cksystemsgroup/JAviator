@@ -25,31 +25,36 @@
 #ifndef MEDIAN_FILTER
 #define MEDIAN_FILTER
 
-/* Structure for representing median-filter parameters */
+struct mf_state;
+typedef struct mf_state mf_state_t;
+
+/* This filter is designed to compute the median
+   over a sorted buffer of user-defined size.
+*/
 typedef struct
 {
-    int     size;
-    double *array;
+    char *          name;
+    mf_state_t *    state;
 
 } median_filter_t;
 
-/* Initializes the median filter.
+/* Initializes a median filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    median_filter_init( median_filter_t *filter, int size );
+int    median_filter_init( median_filter_t *filter, char *name, int size );
 
-/* Resets the median filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int    median_filter_reset( median_filter_t *filter );
-
-/* Destroys the median filter.
+/* Destroys a median filter.
    Returns 0 if successful, -1 otherwise.
 */
 int    median_filter_destroy( median_filter_t *filter );
 
-/* Updates the median filter with the given value.
-   Returns the filtered value.
+/* Resets a median filter.
+   Returns 0 if successful, -1 otherwise.
+*/
+int    median_filter_reset( median_filter_t *filter );
+
+/* Updates a median filter with the given value.
+   Returns the filtered value if successful, -1 otherwise.
 */
 double median_filter_update( median_filter_t *filter, double update );
 
