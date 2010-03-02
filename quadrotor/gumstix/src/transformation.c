@@ -25,6 +25,8 @@
 #include <math.h>
 #include "transformation.h"
 
+static double c_r, c_p, c_y;
+static double s_r, s_p, s_y;
 static double r11, r12, r13;
 static double r21, r22, r23;
 static double r31, r32, r33;
@@ -32,27 +34,57 @@ static double r31, r32, r33;
 
 void transformation_set_angles( double roll, double pitch, double yaw )
 {
-	/* prepare all cosine and sine values */
-	double cr = cos( roll );
-	double cp = cos( pitch );
-	double cy = cos( yaw );
+    /* compute all cosine and sine values */
+    c_r = cos( roll );
+    c_p = cos( pitch );
+    c_y = cos( yaw );
 
-	double sr = sin( roll );
-	double sp = sin( pitch );
-	double sy = sin( yaw );
+    s_r = sin( roll );
+    s_p = sin( pitch );
+    s_y = sin( yaw );
 
     /* update the rotation matrix entries */
-    r11 = cp * cy;
-    r12 = cy * sr * sp - cr * sy;
-    r13 = cr * cy * sp + sr * sy;
+    r11 = c_p * c_y;
+    r12 = c_y * s_r * s_p - c_r * s_y;
+    r13 = c_r * c_y * s_p + s_r * s_y;
 
-    r21 = cp * sy;
-    r22 = sr * sp * sy + cr * cy;
-    r23 = cr * sp * sy - cy * sr;
+    r21 = c_p * s_y;
+    r22 = s_r * s_p * s_y + c_r * c_y;
+    r23 = c_r * s_p * s_y - c_y * s_r;
 
-    r31 = -sp;
-    r32 = cp * sr;
-    r33 = cr * cp;
+    r31 = -s_p;
+    r32 = c_p * s_r;
+    r33 = c_r * c_p;
+}
+
+double transformation_get_cosR( void )
+{
+    return( c_r );
+}
+
+double transformation_get_cosP( void )
+{
+    return( c_p );
+}
+
+double transformation_get_cosY( void )
+{
+    return( c_y );
+}
+
+double transformation_get_sinR( void )
+{
+    return( s_r );
+}
+
+double transformation_get_sinP( void )
+{
+    return( s_p );
+}
+
+double transformation_get_sinY( void )
+{
+    return( s_y );
 }
 
 double transformation_rotate_X( double x, double y, double z )

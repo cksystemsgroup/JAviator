@@ -27,6 +27,18 @@
 
 void   transformation_set_angles( double roll, double pitch, double yaw );
 
+double transformation_get_cosR( void );
+
+double transformation_get_cosP( void );
+
+double transformation_get_cosY( void );
+
+double transformation_get_sinR( void );
+
+double transformation_get_sinP( void );
+
+double transformation_get_sinY( void );
+
 double transformation_rotate_X( double x, double y, double z );
 
 double transformation_rotate_Y( double x, double y, double z );

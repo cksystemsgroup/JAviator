@@ -88,6 +88,7 @@
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
 #define MAX_ROLL_PITCH          500                 /* [mrad] max allowed roll/pitch angle */
+#define MOTOR_REVVING_STEP      50                  /* inc/dec during motor rev up/down */
 
 /* scaling constants */
 #define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units]    --> [mrad] (2*PI*1000 mrad/2^16) */
@@ -112,11 +113,9 @@ static long long                next_period;
 static double                   offset_x;
 static double                   offset_y;
 
-/* motor speed-up parameters */
-static int                      motor_speed;
-static int                      motor_revving_add;
-static int                      base_motor_speed;
-static int                      revving_step;
+/* motor speed parameters */
+static int                      motor_speed_revving;
+static int                      motor_speed_liftoff;
 
 /* filter objects */
 static outlier_filter_t         filter_x;
@@ -197,22 +196,20 @@ int control_loop_setup( int period, int control_z, int ubisense )
 {
     struct sigaction act;
 
-    running           = 1;
-    ms_period         = period;
-    us_period         = period * 1000;
-    compute_z         = control_z;
-    enable_ubisense   = ubisense;
-    altitude_mode     = CTRL_MODE_SHUTDOWN;
-    control_state     = CTRL_STATE_NORMAL;
-    next_period       = 0;
-    offset_x          = 0;
-    offset_y          = 0;
-    motor_speed       = 0;
-    motor_revving_add = 50;
-    base_motor_speed  = 8000;
-    revving_step      = 0;
-    act.sa_handler    = signal_handler;
-	act.sa_handler    = int_handler;
+    running             = 1;
+    ms_period           = period;
+    us_period           = period * 1000;
+    compute_z           = control_z;
+    enable_ubisense     = ubisense;
+    altitude_mode       = CTRL_MODE_SHUTDOWN;
+    control_state       = CTRL_STATE_NORMAL;
+    next_period         = 0;
+    offset_x            = 0;
+    offset_y            = 0;
+    motor_speed_revving = 0;
+    motor_speed_liftoff = 0;
+    act.sa_handler      = signal_handler;
+	act.sa_handler      = int_handler;
 
     if( sigaction( SIGUSR1, &act, NULL ) || sigaction( SIGINT, &act, NULL ) )
     {
@@ -532,14 +529,12 @@ static int get_command_data( void )
 
 static int perform_shut_down( void )
 {
-    motor_speed      = 0;
-    base_motor_speed = terminal_port_get_base_motor_speed( );
-    revving_step     = 0;
-
     motor_signals.front = 0;
     motor_signals.right = 0;
     motor_signals.rear  = 0;
     motor_signals.left  = 0;
+    motor_speed_revving = 0;
+    motor_speed_liftoff = terminal_port_get_base_motor_speed( );
 
     low_pass_filter_reset( &filter_ddx );
     low_pass_filter_reset( &filter_ddy );
@@ -561,29 +556,13 @@ static int perform_shut_down( void )
 
 static int perform_ground_actions( void )
 {
-    if( revving_step > 0 )
+    if( motor_signals.front > 0 || motor_signals.right > 0 ||
+        motor_signals.rear  > 0 || motor_signals.left  > 0 )
     {
-        if( motor_signals.front > 0 )
-        {
-            motor_signals.front -= motor_revving_add;
-        }
-
-        if( motor_signals.right > 0 )
-        {
-            motor_signals.right -= motor_revving_add;
-        }
-
-        if( motor_signals.rear > 0 )
-        {
-            motor_signals.rear -= motor_revving_add;
-        }
-
-        if( motor_signals.left > 0 )
-        {
-            motor_signals.left -= motor_revving_add;
-        }
-
-        --revving_step;
+        motor_signals.front -= MOTOR_REVVING_STEP;
+        motor_signals.right -= MOTOR_REVVING_STEP;
+        motor_signals.rear  -= MOTOR_REVVING_STEP;
+        motor_signals.left  -= MOTOR_REVVING_STEP;
     }
     else
     {
@@ -665,11 +644,10 @@ static int compute_motor_signals( void )
     command_data.roll  = c_roll;
     command_data.pitch = c_pitch;
 
-    if( revving_step < base_motor_speed / motor_revving_add )
+    if( motor_speed_revving < motor_speed_liftoff )
     {
-        motor_speed += motor_revving_add;
-        u_z = motor_speed;
-        ++revving_step;
+        motor_speed_revving += MOTOR_REVVING_STEP;
+        u_z = motor_speed_revving;
     }
     else
     {
@@ -698,7 +676,9 @@ static int compute_motor_signals( void )
 
         if( compute_z )
 	    {
-            u_z = base_motor_speed + controller_do_control( &ctrl_z,
+            u_z  = motor_speed_liftoff;
+            //u_z /= transformation_get_cosR( ) * transformation_get_cosP( );
+            u_z += controller_do_control( &ctrl_z,
                 command_data.z,
                 extended_kalman_get_Z( &filter_ekf ),   // sensor_data.z
                 extended_kalman_get_dZ( &filter_ekf ),  // sensor_data.dz
