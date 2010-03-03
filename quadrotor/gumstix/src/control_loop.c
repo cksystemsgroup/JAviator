@@ -29,38 +29,38 @@
 #include <signal.h>
 #include <math.h>
 
-#include "protocol.h"
 #include "control_loop.h"
-#include "controller.h"
-#include "comm_channel.h"
 #include "communication.h"
+#include "comm_channel.h"
+#include "protocol.h"
 #include "javiator_port.h"
 #include "terminal_port.h"
 #include "ubisense_port.h"
 #include "command_data.h"
+#include "ctrl_params.h"
 #include "javiator_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "motor_offsets.h"
-#include "ctrl_params.h"
 #include "trace_data.h"
-#include "transformation.h"
+#include "controller.h"
 #include "average_filter.h"
 #include "kalman_filter.h"
 #include "low_pass_filter.h"
 #include "median_filter.h"
 #include "outlier_filter.h"
 #include "extended_kalman.h"
+#include "transformation.h"
 #include "us_timer.h"
 
 /* controller modes */
-#define CTRL_MODE_GROUND        0x00
-#define CTRL_MODE_FLYING        0x01
-#define CTRL_MODE_SHUTDOWN      0x02
+#define CTRL_MODE_GROUND        0x01
+#define CTRL_MODE_FLYING        0x02
+#define CTRL_MODE_SHUTDOWN      0x04
 
 /* controller states */
-#define CTRL_STATE_NORMAL       0x00
-#define CTRL_STATE_TESTING      0x01
+#define CTRL_STATE_NORMAL       0x01
+#define CTRL_STATE_TESTING      0x02
 
 /* filter parameters */
 #define FILTER_MDIFF_X_Y        250                 /* [mm] maximum allowed x/y-difference */
@@ -153,7 +153,6 @@ static motor_offsets_t          motor_offsets;
 static trace_data_t             trace_data;
 
 /* controller statistics */
-#define NUM_STATS               9
 #define STAT_FROM_UBI           0
 #define STAT_TO_JAV             1
 #define STAT_FROM_JAV           2
@@ -163,6 +162,7 @@ static trace_data_t             trace_data;
 #define STAT_SLEEP              6
 #define STAT_READ               7
 #define STAT_ALL                8
+#define NUM_STATS               9
 
 static int                      loop_count = 0;
 static long long                stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
@@ -559,10 +559,25 @@ static int perform_ground_actions( void )
     if( motor_signals.front > 0 || motor_signals.right > 0 ||
         motor_signals.rear  > 0 || motor_signals.left  > 0 )
     {
-        motor_signals.front -= MOTOR_REVVING_STEP;
-        motor_signals.right -= MOTOR_REVVING_STEP;
-        motor_signals.rear  -= MOTOR_REVVING_STEP;
-        motor_signals.left  -= MOTOR_REVVING_STEP;
+        if( motor_signals.front > 0 )
+        {
+            motor_signals.front -= MOTOR_REVVING_STEP;
+        }
+
+        if( motor_signals.right > 0 )
+        {
+            motor_signals.right -= MOTOR_REVVING_STEP;
+        }
+
+        if( motor_signals.rear > 0 )
+        {
+            motor_signals.rear -= MOTOR_REVVING_STEP;
+        }
+
+        if( motor_signals.left > 0 )
+        {
+            motor_signals.left -= MOTOR_REVVING_STEP;
+        }
     }
     else
     {

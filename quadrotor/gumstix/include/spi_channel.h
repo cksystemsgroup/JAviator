@@ -28,19 +28,73 @@
 
 #include "comm_channel.h"
 
-#define SPI_MAX_NAME    32
+/* Emums for indicating a specific SPI type */
+typedef enum
+{
+    SPI_DMA,
+    SPI_DEV
 
-int spi_dma_channel_init( comm_channel_t *channel, char *interface, int baudrate );
+} spi_type_t;
 
 int spi_dma_channel_create( comm_channel_t *channel );
 
-int spi_dma_channel_destroy( comm_channel_t *channel );
+int spi_dma_channel_init( comm_channel_t *channel, char *interface, int baudrate );
 
-int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate );
+int spi_dma_channel_destroy( comm_channel_t *channel );
 
 int spi_dev_channel_create( comm_channel_t *channel );
 
+int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate );
+
 int spi_dev_channel_destroy( comm_channel_t *channel );
+
+static inline
+int spi_channel_create( comm_channel_t *channel, spi_type_t type )
+{
+	switch( type )
+    {
+		case SPI_DMA:
+			return spi_dma_channel_create( channel );
+
+		case SPI_DEV:
+			return spi_dev_channel_create( channel );
+
+		default:
+			return( -1 );
+	}
+}
+
+static inline
+int spi_channel_init( comm_channel_t *channel, spi_type_t type, char *interface, int baudrate );
+{
+	switch( type )
+    {
+		case SPI_DMA:
+			return spi_dma_channel_init( channel, interface, baudrate );
+
+		case SPI_DEV:
+			return spi_dev_channel_init( channel, interface, baudrate );
+
+		default:
+			return( -1 );
+	}
+}
+
+static inline
+int spi_channel_destroy( comm_channel_t *channel, spi_type_t type )
+{
+	switch( type )
+    {
+		case SPI_DMA:
+			return spi_dma_channel_destroy( channel );
+
+		case SPI_DEV:
+			return spi_dev_channel_destroy( channel );
+
+		default:
+			return( -1 );
+	}
+}
 
 #endif /* !SPI_CHANNEL_H */
 

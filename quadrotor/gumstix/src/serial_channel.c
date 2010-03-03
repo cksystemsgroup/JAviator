@@ -30,12 +30,15 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
 #include "serial_channel.h"
+
+#define SERIAL_MAX_NAME     32
 
 typedef struct
 {
@@ -46,8 +49,6 @@ typedef struct
     struct termios oldterm;
 
 } serial_connection_t;
-
-static serial_connection_t connection;
 
 
 static inline serial_connection_t *serial_get_connection( const comm_channel_t *channel )
@@ -221,6 +222,37 @@ static int init_termios( serial_connection_t *sc )
     return( 0 );
 }
 
+int serial_channel_create( comm_channel_t *channel )
+{
+    serial_connection_t *sc;
+
+    if( channel->data != NULL )
+    {
+        fprintf( stderr, "WARNING: serial channel already initialized\n" );
+        return( -1 );
+    }
+
+    sc = malloc( sizeof( serial_connection_t ) );
+
+    if( !sc )
+    {
+        fprintf( stderr, "ERROR in %s %d: memory allocation\n",
+            __FILE__, __LINE__ );
+        return( -1 );
+    }
+
+    memset( sc, 0, sizeof( serial_connection_t ) );
+
+    channel->type     = CH_SERIAL;
+    channel->transmit = serial_transmit;
+    channel->receive  = serial_receive;
+    channel->start    = serial_start;
+    channel->flush    = serial_flush;
+    channel->poll     = serial_poll;
+    channel->data     = sc;
+    return( 0 );
+}
+
 int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate )
 {
     serial_connection_t *sc = serial_get_connection( channel );
@@ -242,27 +274,7 @@ int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate 
     sc->baudrate = baudrate;
     strncpy( sc->device, interface, SERIAL_MAX_NAME );
     tcgetattr( sc->fd, &sc->oldterm );
-
     return init_termios( sc );
-}
-
-int serial_channel_create( comm_channel_t *channel )
-{
-    if( channel->data == NULL )
-    {
-        memset( &connection, 0, sizeof( connection ) );
-        channel->type     = CH_SERIAL;
-        channel->transmit = serial_transmit;
-        channel->receive  = serial_receive;
-        channel->start    = serial_start;
-        channel->flush    = serial_flush;
-        channel->poll     = serial_poll;
-        channel->data     = &connection;
-        return( 0 );
-    }
-
-    fprintf( stderr, "WARNING: serial channel already initialized\n" );
-    return( -1 );
 }
 
 int serial_channel_destroy( comm_channel_t *channel )
@@ -276,6 +288,7 @@ int serial_channel_destroy( comm_channel_t *channel )
 
     tcsetattr( sc->fd, TCSANOW, &sc->oldterm );
     close( sc->fd );
+    free( sc );
     channel->data = NULL;
     return( 0 );
 }

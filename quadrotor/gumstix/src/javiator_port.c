@@ -30,12 +30,12 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "protocol.h"
-#include "controller.h"
-#include "comm_channel.h"
-#include "communication.h"
 #include "javiator_port.h"
 #include "terminal_port.h"
+#include "communication.h"
+#include "comm_channel.h"
+#include "protocol.h"
+#include "controller.h"
 #include "us_timer.h"
 
 #ifdef SHORT_JAVIATOR_DATA

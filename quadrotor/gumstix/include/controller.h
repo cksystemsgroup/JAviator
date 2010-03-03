@@ -75,19 +75,22 @@ double controller_get_integral( controller_t *controller );
 
 void   controller_set_integral( controller_t *controller, double value );
 
-static inline double controller_do_control(
-    controller_t *ctrl, double desired, double current, double velocity, double acceleration )
+static inline
+double controller_do_control( controller_t *ctrl,
+    double desired, double current, double velocity, double acceleration )
 {
     return ctrl->do_control( ctrl, desired, current, velocity, acceleration );
 }
 
-static inline int controller_set_params(
-    controller_t *ctrl, double kp, double ki, double kd, double kdd )
+static inline
+int controller_set_params( controller_t *ctrl,
+    double kp, double ki, double kd, double kdd )
 {
     return ctrl->set_params( ctrl, kp, ki, kd, kdd );
 }
 
-static inline int controller_reset_zero( controller_t *ctrl )
+static inline
+int controller_reset_zero( controller_t *ctrl )
 {
     return ctrl->reset_zero( ctrl );
 }

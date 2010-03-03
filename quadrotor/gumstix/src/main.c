@@ -28,7 +28,6 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "protocol.h"
 #include "comm_channel.h"
 #include "serial_channel.h"
 #include "socket_channel.h"
@@ -42,8 +41,6 @@
 #define Z_AXIS_CONTROLLER   1   /* enable z-axis controller */
 #define EXEC_CONTROL_LOOP   1   /* execute control loop */
 #define ENABLE_UBISENSE     0   /* setup Ubisense socket */
-#define SPI_DEVICE          "/dev/mem"
-#define SPI_BAUDRATE        115200
 #define SERIAL_DEVICE       "/dev/ttyS2"
 #define SERIAL_BAUDRATE     115200
 #define TERMINAL_PORT       7000
@@ -81,8 +78,6 @@ static int setup_javiator_port( char *device, int baudrate )
 
 static int setup_terminal_port( int listen_port, int type, int multiplier )
 {
-    memset( &terminal_channel, 0, sizeof( terminal_channel ) );
-
     if( socket_channel_create( &terminal_channel, type ) )
     {
         fprintf( stderr, "ERROR: unable to create socket channel\n" );
@@ -107,8 +102,6 @@ static int setup_terminal_port( int listen_port, int type, int multiplier )
 
 static int setup_ubisense_port( int type, char *addr, int port, int tag )
 {
-    memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
-
     if( socket_channel_create( &ubisense_channel, type ) )
     {
         fprintf( stderr, "ERROR: unable to create socket channel\n" );
@@ -153,6 +146,10 @@ int main( int argc, char **argv )
     int ubisense   = ENABLE_UBISENSE;
 	int conn_type  = SOCK_UDP;
 	int opt;
+
+    memset( &javiator_channel, 0, sizeof( javiator_channel ) );
+    memset( &terminal_channel, 0, sizeof( terminal_channel ) );
+    memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
 
 	while( (opt = getopt( argc, argv, "chm:st:uz" )) != -1 )
     {
@@ -200,26 +197,31 @@ int main( int argc, char **argv )
 	}
 
     printf( "setting up JAviator port ... " );
+
     if( setup_javiator_port( SERIAL_DEVICE, SERIAL_BAUDRATE ) )
     {
         printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the JAviator port\n" );
         exit( 1 );
     }
+
     printf( "ok\n" );
 
 	printf( "setting up Terminal port ... " );
+
     if( setup_terminal_port( TERMINAL_PORT, conn_type, multiplier ) )
     {
         printf( "failed\n" );
         fprintf( stderr, "ERROR: could not setup the Terminal port\n" );
         exit( 1 );
     }
+
     printf( "ok\n" );
 
     if( ubisense )
     {
 	    printf( "setting up Ubisense port ... " );
+
         if( setup_ubisense_port( SOCK_CLIENT,
             UBISENSE_ADDR, UBISENSE_PORT, UBISENSE_TAG ) )
         {
@@ -227,6 +229,7 @@ int main( int argc, char **argv )
             fprintf( stderr, "ERROR: could not setup the Ubisense port\n" );
             exit( 1 );
         }
+
         printf( "ok\n" );
     }
 
@@ -236,6 +239,27 @@ int main( int argc, char **argv )
         control_loop_setup( period, control_z, ubisense );
         printf( "starting control loop\n" );
         control_loop_run( );
+    }
+
+    if( javiator_channel.data )
+    {
+	    printf( "destroying JAviator port ... " );
+        serial_channel_destroy( &javiator_channel );
+        printf( "ok\n" );
+    }
+
+    if( terminal_channel.data )
+    {
+	    printf( "destroying Terminal port ... " );
+        socket_channel_destroy( &terminal_channel, conn_type );
+        printf( "ok\n" );
+    }
+
+    if( ubisense_channel.data )
+    {
+	    printf( "destroying Ubisense port ... " );
+        socket_channel_destroy( &ubisense_channel, SOCK_CLIENT );
+        printf( "ok\n" );
     }
 
     return( 0 );

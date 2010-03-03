@@ -24,13 +24,6 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-
-/*****************************************************************************/
-/*                                                                           */
-/*   Communication Protocol                                                  */
-/*                                                                           */
-/*****************************************************************************/
-
 /* Communication overhead:
    2 packet mark bytes + 2 header bytes + 2 checksum bytes
 */
@@ -38,8 +31,12 @@
 
 /* Communication buffer size:
    recommended size for holding largest data packet
+
+   E.g., sending the ground report (see gumstix/src/terminal_port.c):
+   COMM_OVERHEAD + SENSOR_DATA_SIZE + MOTOR_SIGNALS_SIZE +
+   MOTOR_OFFSETS_SIZE + MODE_STATE_SIZE  >  64 (!)
 */
-#define COMM_BUF_SIZE       64
+#define COMM_BUF_SIZE       128
 
 /* Packet identifiers
 */
@@ -65,7 +62,6 @@
 #define COMM_EN_SENSORS     0x14    /* request to enable/disable senors */
 #define COMM_PACKET_LIMIT   0x14    /* limit of valid packet identifiers */
 #define COMM_PACKET_MARK    0xFF    /* used to mark a packet's begin */
-
 
 #endif /* !PROTOCOL_H */
 

@@ -39,14 +39,12 @@ struct af_state
 
 static inline af_state_t *get_af_state( const average_filter_t *filter )
 {
-    af_state_t *state = (af_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes an average filter.

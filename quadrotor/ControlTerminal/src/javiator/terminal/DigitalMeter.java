@@ -78,12 +78,12 @@ public class DigitalMeter extends Panel
             switch( mode )
             {
                 case ControllerConstants.ALT_MODE_GROUND:
-                    heliMode.setForeground( colorDefault );
+                    heliMode.setForeground( colorOffsets );
                     heliMode.setText( "Ground" );
                     break;
 
                 case ControllerConstants.ALT_MODE_FLYING:
-                	heliMode.setForeground( colorDefault );
+                	heliMode.setForeground( colorOffsets );
                     heliMode.setText( "Flying" );
                     break;
 
@@ -102,10 +102,10 @@ public class DigitalMeter extends Panel
 
         if( javiatorState != state )
         {
-            if( ( javiatorState & ControllerConstants.STATE_TEST_MODE ) !=
-                ( state & ControllerConstants.STATE_TEST_MODE ) )
+            if( ( javiatorState & ControllerConstants.CTRL_STATE_TESTING ) !=
+                ( state & ControllerConstants.CTRL_STATE_TESTING ) )
             {
-                if( ( state & ControllerConstants.STATE_TEST_MODE ) != 0 )
+                if( ( state & ControllerConstants.CTRL_STATE_TESTING ) != 0 )
                 {
                     testMode.setForeground( colorAlerting );
                 }

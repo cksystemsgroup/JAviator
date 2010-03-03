@@ -44,14 +44,12 @@ struct kf_state
 
 static inline kf_state_t *get_kf_state( const kalman_filter_t *filter )
 {
-    kf_state_t *state = (kf_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes a Kalman filter with the given period.

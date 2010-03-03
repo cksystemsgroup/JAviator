@@ -29,6 +29,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,39 +38,37 @@
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
+
+#include "spi_channel.h"
+#include "protocol.h"
 #include "us_timer.h"
 
-#define DEV_NAME "/dev/javiator-spi2.0"
-#define BUF_SIZE 64
-#define N_BUF    16
+#define NUM_SPI_DATA    16
 
-#include "protocol.h"
-#include "spi_channel.h"
-
-struct spi_data;
-struct spi_data
+typedef struct
 {
-	uint8_t rx_buf[BUF_SIZE];
+	uint8_t rx_buf[COMM_BUF_SIZE];
 	int r_idx;
 	int data_ready;
-	struct spi_data *next;
-};
+	spi_data_t *next;
 
-struct spi_connection
+} spi_data_t;
+
+typedef struct
 {
 	int  fd;
 	pthread_t thread;
-
-	struct spi_data *active;
-	struct spi_data data[N_BUF];
-	struct spi_data *list_free;
-	struct spi_data *list_pending;
+	spi_data_t *active;
+	spi_data_t data[NUM_SPI_DATA];
+	spi_data_t *list_free;
+	spi_data_t *list_pending;
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
-};
 
-static void print_data(struct spi_data *data) __attribute__((used));
-static void print_data(struct spi_data *data)
+} spi_connection_t;
+
+static void print_data(spi_data_t *data) __attribute__((used));
+static void print_data(spi_data_t *data)
 {
 	int i;
 
@@ -79,55 +78,55 @@ static void print_data(struct spi_data *data)
 	printf("\n");
 }
 
-static inline void lock(struct spi_connection *sc)
+static inline void lock(spi_connection_t *sc)
 {
 	pthread_mutex_lock(&sc->lock);
 }
 
-static inline void unlock(struct spi_connection *sc)
+static inline void unlock(spi_connection_t *sc)
 {
 	pthread_mutex_unlock(&sc->lock);
 }
 
-#define make_helper(name)                                                \
-static inline struct spi_data *__get_##name(struct spi_connection *sc)   \
-{                                                                        \
-	struct spi_data *data = sc->list_##name;                             \
-	if (data)                                                            \
-		sc->list_##name = data->next;                                    \
-                                                                         \
-	return data;                                                         \
-}                                                                        \
-                                                                         \
-static inline struct spi_data *get_##name(struct spi_connection *sc)     \
-{                                                                        \
-	struct spi_data *data;                                               \
-	lock(sc);                                                            \
-	data = __get_##name(sc);                                             \
-	unlock(sc);                                                          \
-	return data;                                                         \
-}                                                                        \
-                                                                         \
-static inline void __put_##name(struct spi_connection *sc, struct spi_data *data) \
-{                                                                                 \
-	data->next = sc->list_##name;                                                 \
-	sc->list_##name = data;                                                       \
-}                                                                                 \
-                                                                                  \
-static inline void put_##name(struct spi_connection *sc, struct spi_data *data)   \
-{                                                                                 \
-	lock(sc);                                                                     \
-	__put_##name(sc, data);                                                       \
-	unlock(sc);                                                                   \
-}                                                                                 \
+#define make_helper(name)                                               \
+static inline spi_data_t *__get_##name(spi_connection_t *sc)            \
+{                                                                       \
+	spi_data_t *data = sc->list_##name;                                 \
+	if (data)                                                           \
+		sc->list_##name = data->next;                                   \
+                                                                        \
+	return data;                                                        \
+}                                                                       \
+                                                                        \
+static inline spi_data_t *get_##name(spi_connection_t *sc)              \
+{                                                                       \
+	spi_data_t *data;                                                   \
+	lock(sc);                                                           \
+	data = __get_##name(sc);                                            \
+	unlock(sc);                                                         \
+	return data;                                                        \
+}                                                                       \
+                                                                        \
+static inline void __put_##name(spi_connection_t *sc, spi_data_t *data) \
+{                                                                       \
+	data->next = sc->list_##name;                                       \
+	sc->list_##name = data;                                             \
+}                                                                       \
+                                                                        \
+static inline void put_##name(spi_connection_t *sc, spi_data_t *data)   \
+{                                                                       \
+	lock(sc);                                                           \
+	__put_##name(sc, data);                                             \
+	unlock(sc);                                                         \
+}                                                                       \
 
 make_helper(free);
 make_helper(pending);
 
 
-static inline struct spi_data *get_active_pending(struct spi_connection *sc)
+static inline spi_data_t *get_active_pending(spi_connection_t *sc)
 {
-	struct spi_data *data;
+	spi_data_t *data;
 	lock(sc);
 	if(sc->active) {
 		data = sc->active;
@@ -139,7 +138,7 @@ static inline struct spi_data *get_active_pending(struct spi_connection *sc)
 	return data;
 }
 
-static inline void put_active_pending(struct spi_connection *sc, struct spi_data *data)
+static inline void put_active_pending(spi_connection_t *sc, spi_data_t *data)
 {
 	assert(data == sc->active);
 	assert(data->r_idx <= data->data_ready);
@@ -154,10 +153,10 @@ static inline void put_active_pending(struct spi_connection *sc, struct spi_data
 	}
 }
 
-static inline void put_pending_delete(struct spi_connection *sc, struct spi_data *data)
+static inline void put_pending_delete(spi_connection_t *sc, spi_data_t *data)
 {
-	struct spi_data *next;
-	struct spi_data *to_free;
+	spi_data_t *next;
+	spi_data_t *to_free;
 	lock(sc);
 	__put_pending(sc, data);
 	/* look for an old packet of the same type */
@@ -175,9 +174,9 @@ static inline void put_pending_delete(struct spi_connection *sc, struct spi_data
 	unlock(sc);
 }
 
-static inline struct spi_connection *spi_get_connection(const comm_channel_t *channel)
+static inline spi_connection_t *spi_get_connection(const comm_channel_t *channel)
 {
-    struct spi_connection *sc = (struct spi_connection *)channel->data;
+    spi_connection_t *sc = (spi_connection_t *)channel->data;
 
     if (!sc) {
         fprintf( stderr, "ERROR in %s %d: SPI channel not correctly initialized\n",
@@ -189,9 +188,9 @@ static inline struct spi_connection *spi_get_connection(const comm_channel_t *ch
 
 static int spi_transmit(comm_channel_t *channel, const char *tx_buf, int tx_items)
 {
-    struct spi_connection *sc = spi_get_connection( channel );
+    spi_connection_t *sc = spi_get_connection( channel );
 	int sent, ret;
-    if (!sc || tx_items < COMM_OVERHEAD || tx_items > COMM_BUF_SIZE) {
+    if (!sc || tx_items < COMM_OVERHEAD || tx_items > COMM_COMM_BUF_SIZE) {
         return( -1 );
     }
 
@@ -213,8 +212,8 @@ static int spi_transmit(comm_channel_t *channel, const char *tx_buf, int tx_item
 #define min(a, b) (a<b?a:b)
 static int spi_receive( comm_channel_t *channel, char *buf, int len )
 {
-    struct spi_connection *sc = spi_get_connection( channel );
-	struct spi_data *data;
+    spi_connection_t *sc = spi_get_connection( channel );
+	spi_data_t *data;
 	int count;
 	data = get_active_pending(sc);
 	if (data) {
@@ -232,8 +231,8 @@ static int spi_receive( comm_channel_t *channel, char *buf, int len )
 
 static void *spi_thread(void *arg)
 {
-	struct spi_connection *sc = (struct spi_connection *)arg;
-	struct spi_data *data;
+	spi_connection_t *sc = (spi_connection_t *)arg;
+	spi_data_t *data;
 	int res, data_read;
 	uint64_t start, end;
 
@@ -250,14 +249,14 @@ static void *spi_thread(void *arg)
 		 */
 		start = get_utime();
 again:
-		res = read(sc->fd, data->rx_buf + data_read, BUF_SIZE - data_read);
+		res = read(sc->fd, data->rx_buf + data_read, COMM_BUF_SIZE - data_read);
 		if (res <= 0) {
-			printf("res %d, data_read %d, BUF_SIZE %d\n", res, data_read, BUF_SIZE);
+			printf("res %d, data_read %d, COMM_BUF_SIZE %d\n", res, data_read, COMM_BUF_SIZE);
 			perror("read spi device");
 			put_free(sc, data);
 		} else {
 			data_read += res;
-			if (data_read < data->rx_buf[3] + 6 && data_read < BUF_SIZE)
+			if (data_read < data->rx_buf[3] + 6 && data_read < COMM_BUF_SIZE)
 				goto again;
 
 			end = get_utime();
@@ -284,7 +283,7 @@ static int spi_flush( comm_channel_t *channel )
 
 static int spi_poll( comm_channel_t *channel, long timeout )
 {
-	struct spi_connection *sc = spi_get_connection( channel );
+	spi_connection_t *sc = spi_get_connection( channel );
 	struct timeval tv;
 	fd_set readfs;
 	int maxfd;
@@ -307,15 +306,55 @@ static int spi_poll( comm_channel_t *channel, long timeout )
 	return select(maxfd, &readfs, NULL, NULL, timeout?&tv:0);
 }
 
+int spi_dev_channel_create( comm_channel_t *channel )
+{
+    spi_connection_t *sc;
+	int i;
+
+    if( channel->data != NULL )
+    {
+        fprintf( stderr, "WARNING: SPI channel already initialized\n" );
+        return( -1 );
+    }
+
+    sc = malloc( sizeof( spi_connection_t ) );
+
+    if( !sc )
+    {
+        fprintf( stderr, "ERROR in %s %d: memory allocation\n",
+            __FILE__, __LINE__ );
+        return( -1 );
+    }
+
+    memset( sc, 0, sizeof( spi_connection_t ) );
+
+    pthread_mutex_init(&connection.lock, NULL);
+    pthread_cond_init(&connection.cond, NULL);
+
+    for( i = 0; i < NUM_SPI_DATA; ++i )
+    {
+        put_free(sc, sc->data[i]);
+    }
+
+    channel->type     = CH_SPI;
+    channel->transmit = spi_transmit;
+    channel->receive  = spi_receive;
+    channel->start    = spi_start;
+    channel->flush    = spi_flush;
+    channel->poll     = spi_poll;
+    channel->data     = sc;
+    return( 0 );
+}
+
 int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate )
 {
-    struct spi_connection *sc = spi_get_connection( channel );
+    spi_connection_t *sc = spi_get_connection( channel );
 
     if (!sc) {
         return( -1 );
     }
 
-	sc->fd = open(DEV_NAME, O_RDWR);
+	sc->fd = open(interface, O_RDWR);
 	if (sc->fd == -1) {
 		perror("open robostix dev");
 		return -1;
@@ -336,36 +375,9 @@ int spi_dev_channel_init( comm_channel_t *channel, char *interface, int baudrate
     return( 0 );
 }
 
-struct spi_connection connection;
-
-int spi_dev_channel_create( comm_channel_t *channel )
-{
-	int i;
-    if( channel->data == NULL )
-    {
-        memset( &connection, 0, sizeof( connection ) );
-		pthread_mutex_init(&connection.lock, NULL);
-		pthread_cond_init(&connection.cond, NULL);
-		for(i=0;i<N_BUF;++i) {
-			put_free(&connection, &connection.data[i]);
-		}
-        channel->type     = CH_SPI_DEV;
-        channel->transmit = spi_transmit;
-        channel->receive  = spi_receive;
-        channel->start    = spi_start;
-        channel->flush    = spi_flush;
-        channel->poll     = spi_poll;
-        channel->data     = &connection;
-        return( 0 );
-    }
-
-    fprintf( stderr, "WARNING: SPI channel already initialized\n" );
-    return( -1 );
-}
-
 int spi_dev_channel_destroy( comm_channel_t *channel )
 {
-    struct spi_connection *sc = spi_get_connection( channel );
+    spi_connection_t *sc = spi_get_connection( channel );
 
     if( !sc )
     {
@@ -373,6 +385,7 @@ int spi_dev_channel_destroy( comm_channel_t *channel )
     }
 
     close( sc->fd );
+    free( sc );
     channel->data = NULL;
     return( 0 );
 }

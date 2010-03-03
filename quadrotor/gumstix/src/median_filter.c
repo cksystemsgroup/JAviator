@@ -38,14 +38,12 @@ struct mf_state
 
 static inline mf_state_t *get_mf_state( const median_filter_t *filter )
 {
-    mf_state_t *state = (mf_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes a median filter.

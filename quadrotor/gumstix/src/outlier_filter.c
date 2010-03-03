@@ -40,14 +40,12 @@ struct of_state
 
 static inline of_state_t *get_of_state( const outlier_filter_t *filter )
 {
-    of_state_t *state = (of_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes an outlier filter.

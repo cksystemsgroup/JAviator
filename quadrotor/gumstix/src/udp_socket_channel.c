@@ -32,28 +32,28 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
 #include "socket_channel.h"
+#include "protocol.h"
 
-#define MAX_BUF 64
-struct udp_connection
+typedef struct
 {
 	int fd;
 	int connected;
-	uint8_t buf[MAX_BUF];
+	uint8_t buf[COMM_BUF_SIZE];
 	int len;
 	int idx;
-};
 
-static struct udp_connection connection;
+} udp_connection_t;
 
-static inline struct udp_connection *udp_get_connection(const comm_channel_t *
-														 channel)
+
+static inline udp_connection_t *udp_get_connection(const comm_channel_t * channel)
 {
-	struct udp_connection *uc = (struct udp_connection *) channel->data;
+	udp_connection_t *uc = (udp_connection_t *) channel->data;
 
 	if (!uc) {
 		fprintf(stderr,
@@ -64,7 +64,7 @@ static inline struct udp_connection *udp_get_connection(const comm_channel_t *
 	return uc;
 }
 
-static inline void close_connection(struct udp_connection * uc)
+static inline void close_connection(udp_connection_t * uc)
 {
 	/*
 	 * do not close fds 
@@ -124,7 +124,7 @@ static inline int udp_read(int fd, uint8_t *buf, int len)
 
 static int udp_socket_transmit(comm_channel_t * channel, const char *buf, int len)
 {
-	struct udp_connection *uc = udp_get_connection(channel);
+	udp_connection_t *uc = udp_get_connection(channel);
 	int res;
 
 	if (!uc) {
@@ -147,7 +147,7 @@ static int udp_socket_transmit(comm_channel_t * channel, const char *buf, int le
 	return res;
 }
 
-static int udp_connection_connect(struct udp_connection *uc, uint8_t *buf, int len)
+static int udp_connection_connect(udp_connection_t *uc, uint8_t *buf, int len)
 {
 	int res;
 	size_t addrlen;
@@ -172,7 +172,7 @@ static int udp_connection_connect(struct udp_connection *uc, uint8_t *buf, int l
 #define min(a,b) (a)<(b)?(a):(b)
 static int udp_socket_receive(comm_channel_t * channel, char *buf, int len)
 {
-	struct udp_connection *uc = udp_get_connection(channel);
+	udp_connection_t *uc = udp_get_connection(channel);
 	int res;
 
 	if (!uc) {
@@ -184,7 +184,7 @@ static int udp_socket_receive(comm_channel_t * channel, char *buf, int len)
 	} else {
 		int count;
 		if (uc->idx == uc->len) {
-			res = udp_read(uc->fd, uc->buf, MAX_BUF);
+			res = udp_read(uc->fd, uc->buf, COMM_BUF_SIZE);
 			if (res == -1) {
 				perror("udp_read");
 				close_connection(uc);
@@ -202,19 +202,19 @@ static int udp_socket_receive(comm_channel_t * channel, char *buf, int len)
 	return res;
 }
 
-static int udp_start(comm_channel_t * channel)
+static int socket_start(comm_channel_t * channel)
 {
 	return 0;
 }
 
-static int udp_flush(comm_channel_t * channel)
+static int socket_flush(comm_channel_t * channel)
 {
 	return 0;
 }
 
 static int udp_socket_poll(comm_channel_t * channel, long timeout)
 {
-	struct udp_connection *uc = udp_get_connection(channel);
+	udp_connection_t *uc = udp_get_connection(channel);
 	struct timeval tv;
 	fd_set readfs;
 	int maxfd;
@@ -236,7 +236,7 @@ static int udp_socket_poll(comm_channel_t * channel, long timeout)
 	return select(maxfd, &readfs, NULL, NULL, timeout ? &tv : NULL);
 }
 
-static int udp_socket_init(struct udp_connection * uc, int port)
+static int udp_socket_init(udp_connection_t * uc, int port)
 {
 	struct sockaddr_in serverinfo;
 
@@ -258,10 +258,41 @@ static int udp_socket_init(struct udp_connection * uc, int port)
 	return 0;
 }
 
+int udp_socket_channel_create(comm_channel_t * channel)
+{
+    udp_connection_t *uc;
+
+    if( channel->data != NULL )
+    {
+        fprintf( stderr, "WARNING: UDP channel already initialized\n" );
+        return( -1 );
+    }
+
+    uc = malloc( sizeof( udp_connection_t ) );
+
+    if( !uc )
+    {
+        fprintf( stderr, "ERROR in %s %d: memory allocation\n",
+            __FILE__, __LINE__ );
+        return( -1 );
+    }
+
+    memset( uc, 0, sizeof( udp_connection_t ) );
+
+    channel->type     = CH_SOCKET;
+    channel->transmit = udp_socket_transmit;
+    channel->receive  = udp_socket_receive;
+    channel->poll     = udp_socket_poll;
+    channel->start    = socket_start;
+    channel->flush    = socket_flush;
+    channel->data     = uc;
+    return( 0 );
+}
+
 int udp_socket_channel_init(comm_channel_t * channel, socket_type_t type,
 							char *addr, int port)
 {
-	struct udp_connection *uc = udp_get_connection(channel);
+	udp_connection_t *uc = udp_get_connection(channel);
 
 	if (!uc) {
 		return -1;
@@ -270,32 +301,16 @@ int udp_socket_channel_init(comm_channel_t * channel, socket_type_t type,
 	return udp_socket_init(uc, port);
 }
 
-int udp_socket_channel_create(comm_channel_t * channel)
-{
-	if (channel->data == NULL) {
-		channel->type = CH_SOCKET;
-		channel->transmit = udp_socket_transmit;
-		channel->receive = udp_socket_receive;
-		channel->poll = udp_socket_poll;
-		channel->start = udp_start;
-		channel->flush = udp_flush;
-		channel->data = &connection;
-		return 0;
-	}
-
-	fprintf(stderr, "WARNING: udp channel already initialized\n");
-	return -1;
-}
-
 int udp_socket_channel_destroy(comm_channel_t * channel)
 {
-	struct udp_connection *uc = udp_get_connection(channel);
+	udp_connection_t *uc = udp_get_connection(channel);
 
 	if (!uc) {
 		return -1;
 	}
 
 	close(uc->fd);
+    free( uc );
 	channel->data = NULL;
 	return 0;
 }

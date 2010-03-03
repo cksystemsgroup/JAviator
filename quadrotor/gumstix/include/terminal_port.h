@@ -26,13 +26,14 @@
 #ifndef TERMINAL_PORT_H
 #define TERMINAL_PORT_H
 
+#include "communication.h"
 #include "comm_channel.h"
 #include "command_data.h"
+#include "ctrl_params.h"
 #include "javiator_data.h"
 #include "sensor_data.h"
 #include "motor_signals.h"
 #include "motor_offsets.h"
-#include "ctrl_params.h"
 #include "trace_data.h"
 
 int terminal_port_tick( void );

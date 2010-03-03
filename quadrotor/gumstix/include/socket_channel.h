@@ -37,35 +37,17 @@ typedef enum
 
 } socket_type_t;
 
-int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
-
 int tcp_socket_channel_create( comm_channel_t *channel ); 
+
+int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
 
 int tcp_socket_channel_destroy( comm_channel_t *channel );
 
-int udp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
-
 int udp_socket_channel_create( comm_channel_t *channel ); 
 
+int udp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port ); 
+
 int udp_socket_channel_destroy( comm_channel_t *channel );
-
-
-static inline
-int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port )
-{
-	switch( type )
-    {
-		case SOCK_SERVER:
-		case SOCK_CLIENT:
-			return tcp_socket_channel_init( channel, type, addr, port );
-
-		case SOCK_UDP:
-			return udp_socket_channel_init( channel, type, addr, port );
-
-		default:
-			return( -1 );
-	}
-}
 
 static inline
 int socket_channel_create( comm_channel_t *channel, socket_type_t type )
@@ -78,6 +60,23 @@ int socket_channel_create( comm_channel_t *channel, socket_type_t type )
 
 		case SOCK_UDP:
 			return udp_socket_channel_create( channel );
+
+		default:
+			return( -1 );
+	}
+}
+
+static inline
+int socket_channel_init( comm_channel_t *channel, socket_type_t type, char *addr, int port )
+{
+	switch( type )
+    {
+		case SOCK_SERVER:
+		case SOCK_CLIENT:
+			return tcp_socket_channel_init( channel, type, addr, port );
+
+		case SOCK_UDP:
+			return udp_socket_channel_init( channel, type, addr, port );
 
 		default:
 			return( -1 );

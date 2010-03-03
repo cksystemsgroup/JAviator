@@ -23,6 +23,7 @@
  */
 
 #include <math.h>
+
 #include "transformation.h"
 
 static double c_r, c_p, c_y;

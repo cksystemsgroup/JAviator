@@ -28,7 +28,6 @@
 
 #include <stdint.h>
 
-
 /* Structure for short JAviator data */
 typedef struct
 {
@@ -70,7 +69,6 @@ typedef struct
 
 #define JAVIATOR_LDAT_SIZE  48      /* byte size of javiator_ldat_t */
 
-
 static inline
 int javiator_sdat_to_stream( const javiator_sdat_t *data, uint8_t *buf, uint8_t len )
 {
@@ -80,22 +78,16 @@ int javiator_sdat_to_stream( const javiator_sdat_t *data, uint8_t *buf, uint8_t 
         buf[1]  = (uint8_t)( data->maps >> 16 );
         buf[2]  = (uint8_t)( data->maps >> 8 );
         buf[3]  = (uint8_t)( data->maps );
-
         buf[4]  = (uint8_t)( data->temp >> 8 );
         buf[5]  = (uint8_t)( data->temp );
-
         buf[6]  = (uint8_t)( data->batt >> 8 );
         buf[7]  = (uint8_t)( data->batt );
-
         buf[8]  = (uint8_t)( data->sonar >> 8 );
         buf[9]  = (uint8_t)( data->sonar );
-
         buf[10] = (uint8_t)( data->state >> 8 );
         buf[11] = (uint8_t)( data->state );
-
         buf[12] = (uint8_t)( data->id >> 8 );
         buf[13] = (uint8_t)( data->id );
-
         buf[14] = (uint8_t)( data->x_pos[0] );
         buf[15] = (uint8_t)( data->x_pos[1] );
         buf[16] = (uint8_t)( data->x_pos[2] );
@@ -104,7 +96,6 @@ int javiator_sdat_to_stream( const javiator_sdat_t *data, uint8_t *buf, uint8_t 
         buf[19] = (uint8_t)( data->x_pos[5] );
         buf[20] = (uint8_t)( data->x_pos[6] );
         buf[21] = (uint8_t)( data->x_pos[7] );
-
         buf[22] = (uint8_t)( data->y_pos[0] );
         buf[23] = (uint8_t)( data->y_pos[1] );
         buf[24] = (uint8_t)( data->y_pos[2] );
@@ -113,7 +104,6 @@ int javiator_sdat_to_stream( const javiator_sdat_t *data, uint8_t *buf, uint8_t 
         buf[27] = (uint8_t)( data->y_pos[5] );
         buf[28] = (uint8_t)( data->y_pos[6] );
         buf[29] = (uint8_t)( data->y_pos[7] );
-
         return( 0 );
     }
 
@@ -132,27 +122,21 @@ int javiator_sdat_from_stream( javiator_sdat_t *data, const uint8_t *buf, uint8_
 		data->maps    |= buf[2];
 		data->maps   <<= 8;
 		data->maps    |= buf[3];
-
 		data->temp     = buf[4];
 		data->temp   <<= 8;
 		data->temp    |= buf[5];
-
 		data->batt     = buf[6];
 		data->batt   <<= 8;
 		data->batt    |= buf[7];
-
 		data->sonar    = buf[8];
 		data->sonar  <<= 8;
 		data->sonar   |= buf[9];
-
 		data->state    = buf[10];
 		data->state  <<= 8;
 		data->state   |= buf[11];
-
 		data->id       = buf[12];
 		data->id     <<= 8;
 		data->id      |= buf[13];
-
         data->x_pos[0] = buf[14];
         data->x_pos[1] = buf[15];
         data->x_pos[2] = buf[16];
@@ -161,7 +145,6 @@ int javiator_sdat_from_stream( javiator_sdat_t *data, const uint8_t *buf, uint8_
         data->x_pos[5] = buf[19];
         data->x_pos[6] = buf[20];
         data->x_pos[7] = buf[21];
-
         data->y_pos[0] = buf[22];
         data->y_pos[1] = buf[23];
         data->y_pos[2] = buf[24];
@@ -170,7 +153,6 @@ int javiator_sdat_from_stream( javiator_sdat_t *data, const uint8_t *buf, uint8_
         data->y_pos[5] = buf[27];
         data->y_pos[6] = buf[28];
         data->y_pos[7] = buf[29];
-		
         return( 0 );
     }
 
@@ -186,22 +168,16 @@ int javiator_ldat_to_stream( const javiator_ldat_t *data, uint8_t *buf, uint8_t 
         buf[1]  = (uint8_t)( data->maps >> 16 );
         buf[2]  = (uint8_t)( data->maps >> 8 );
         buf[3]  = (uint8_t)( data->maps );
-
         buf[4]  = (uint8_t)( data->temp >> 8 );
         buf[5]  = (uint8_t)( data->temp );
-
         buf[6]  = (uint8_t)( data->batt >> 8 );
         buf[7]  = (uint8_t)( data->batt );
-
         buf[8]  = (uint8_t)( data->sonar >> 8 );
         buf[9]  = (uint8_t)( data->sonar );
-
         buf[10] = (uint8_t)( data->state >> 8 );
         buf[11] = (uint8_t)( data->state );
-
         buf[12] = (uint8_t)( data->id >> 8 );
         buf[13] = (uint8_t)( data->id );
-
         buf[14] = (uint8_t)( data->x_pos[0] );
         buf[15] = (uint8_t)( data->x_pos[1] );
         buf[16] = (uint8_t)( data->x_pos[2] );
@@ -210,7 +186,6 @@ int javiator_ldat_to_stream( const javiator_ldat_t *data, uint8_t *buf, uint8_t 
         buf[19] = (uint8_t)( data->x_pos[5] );
         buf[20] = (uint8_t)( data->x_pos[6] );
         buf[21] = (uint8_t)( data->x_pos[7] );
-
         buf[22] = (uint8_t)( data->y_pos[0] );
         buf[23] = (uint8_t)( data->y_pos[1] );
         buf[24] = (uint8_t)( data->y_pos[2] );
@@ -219,7 +194,6 @@ int javiator_ldat_to_stream( const javiator_ldat_t *data, uint8_t *buf, uint8_t 
         buf[27] = (uint8_t)( data->y_pos[5] );
         buf[28] = (uint8_t)( data->y_pos[6] );
         buf[29] = (uint8_t)( data->y_pos[7] );
-
         buf[30] = (uint8_t)( data->roll >> 8 );
         buf[31] = (uint8_t)( data->roll );
         buf[32] = (uint8_t)( data->pitch >> 8 );
@@ -238,7 +212,6 @@ int javiator_ldat_to_stream( const javiator_ldat_t *data, uint8_t *buf, uint8_t 
         buf[45] = (uint8_t)( data->ddy );
         buf[46] = (uint8_t)( data->ddz >> 8 );
         buf[47] = (uint8_t)( data->ddz );
-
         return( 0 );
     }
 
@@ -257,27 +230,21 @@ int javiator_ldat_from_stream( javiator_ldat_t *data, const uint8_t *buf, uint8_
 		data->maps    |= buf[2];
 		data->maps   <<= 8;
 		data->maps    |= buf[3];
-
 		data->temp     = buf[4];
 		data->temp   <<= 8;
 		data->temp    |= buf[5];
-
 		data->batt     = buf[6];
 		data->batt   <<= 8;
 		data->batt    |= buf[7];
-
 		data->sonar    = buf[8];
 		data->sonar  <<= 8;
 		data->sonar   |= buf[9];
-
 		data->state    = buf[10];
 		data->state  <<= 8;
 		data->state   |= buf[11];
-
 		data->id       = buf[12];
 		data->id     <<= 8;
 		data->id      |= buf[13];
-
         data->x_pos[0] = buf[14];
         data->x_pos[1] = buf[15];
         data->x_pos[2] = buf[16];
@@ -286,7 +253,6 @@ int javiator_ldat_from_stream( javiator_ldat_t *data, const uint8_t *buf, uint8_
         data->x_pos[5] = buf[19];
         data->x_pos[6] = buf[20];
         data->x_pos[7] = buf[21];
-
         data->y_pos[0] = buf[22];
         data->y_pos[1] = buf[23];
         data->y_pos[2] = buf[24];
@@ -295,7 +261,6 @@ int javiator_ldat_from_stream( javiator_ldat_t *data, const uint8_t *buf, uint8_
         data->y_pos[5] = buf[27];
         data->y_pos[6] = buf[28];
         data->y_pos[7] = buf[29];
-
         data->roll     = buf[30];
         data->roll   <<= 8;
         data->roll    |= buf[31];
@@ -323,13 +288,11 @@ int javiator_ldat_from_stream( javiator_ldat_t *data, const uint8_t *buf, uint8_
         data->ddz      = buf[46];
         data->ddz    <<= 8;
         data->ddz     |= buf[47];
-		
         return( 0 );
     }
 
     return( -1 );
 }
-
 
 #endif /* !JAVIATOR_DATA_H */
 

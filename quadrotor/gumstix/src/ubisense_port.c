@@ -27,9 +27,9 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "protocol.h"
-#include "communication.h"
 #include "ubisense_port.h"
+#include "communication.h"
+#include "protocol.h"
 
 static ubisense_data_t  ubisense_data;
 static comm_channel_t * comm_channel;

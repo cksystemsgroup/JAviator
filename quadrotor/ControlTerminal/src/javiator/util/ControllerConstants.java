@@ -24,13 +24,14 @@ package javiator.util;
 public class ControllerConstants
 {
     /* Altitude modes */
-    public static final int ALT_MODE_GROUND   = 0x00;
-    public static final int ALT_MODE_FLYING   = 0x01;
-    public static final int ALT_MODE_SHUTDOWN = 0x02;
+    public static final int ALT_MODE_GROUND    = 0x01;
+    public static final int ALT_MODE_FLYING    = 0x02;
+    public static final int ALT_MODE_SHUTDOWN  = 0x04;
 
     /* State flags */
-    public static final int STATE_TEST_MODE   = 0x01;
+    public static final int CTRL_STATE_NORMAL  = 0x01;
+    public static final int CTRL_STATE_TESTING = 0x02;
 
     /* Max motor signal */
-    public static final int MOTOR_MAX         = 16000;
+    public static final int MOTOR_MAX          = 16000;
 }

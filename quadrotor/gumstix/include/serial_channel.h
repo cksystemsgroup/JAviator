@@ -28,11 +28,9 @@
 
 #include "comm_channel.h"
 
-#define SERIAL_MAX_NAME     32
+int serial_channel_create( comm_channel_t *channel );
 
 int serial_channel_init( comm_channel_t *channel, char *interface, int baudrate );
-
-int serial_channel_create( comm_channel_t *channel );
 
 int serial_channel_destroy( comm_channel_t *channel );
 

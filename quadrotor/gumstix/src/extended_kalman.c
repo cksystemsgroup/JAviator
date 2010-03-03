@@ -50,14 +50,12 @@ struct ekf_state
 
 static inline ekf_state_t *get_ekf_state( const extended_kalman_t *filter )
 {
-    ekf_state_t *state = (ekf_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes an extended Kalman filter.

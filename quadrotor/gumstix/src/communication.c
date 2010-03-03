@@ -27,10 +27,10 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include "communication.h"
+#include "comm_channel.h"
 #include "protocol.h"
 #include "controller.h"
-#include "comm_channel.h"
-#include "communication.h"
 
 typedef enum
 {

@@ -28,11 +28,11 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "protocol.h"
-#include "controller.h"
-#include "serial_channel.h"
 #include "inertial_port.h"
 #include "inertial_data.h"
+#include "comm_channel.h"
+#include "protocol.h"
+#include "controller.h"
 #include "us_timer.h"
 
 #define CMD_CONFIRMATION    0x00    /* null-byte confirmation */

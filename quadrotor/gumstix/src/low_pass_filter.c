@@ -37,14 +37,12 @@ struct lpf_state
 
 static inline lpf_state_t *get_lpf_state( const low_pass_filter_t *filter )
 {
-    lpf_state_t *state = (lpf_state_t *) filter->state;
-
-    if( !state )
+    if( !filter->state )
     {
         fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
     }
 
-    return( state );
+    return( filter->state );
 }
 
 /* Initializes a low-pass filter.

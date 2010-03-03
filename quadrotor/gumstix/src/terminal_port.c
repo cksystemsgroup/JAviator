@@ -28,11 +28,11 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include "terminal_port.h"
+#include "javiator_port.h"
+#include "communication.h"
 #include "protocol.h"
 #include "controller.h"
-#include "communication.h"
-#include "javiator_port.h"
-#include "terminal_port.h"
 
 static command_data_t   command_data;
 static ctrl_params_t    r_p_params;

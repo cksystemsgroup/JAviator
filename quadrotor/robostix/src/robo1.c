@@ -64,6 +64,7 @@ void process_mode_switch    ( void );
 void process_shut_down      ( void );
 void check_receive_delay    ( void );
 void send_javiator_data     ( void );
+void enable_sensors         ( uint8_t );
 
 
 /*****************************************************************************/
@@ -190,8 +191,7 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
     flag_new_signals = 1;
 
     /* check for correct data size before setting motor signals */
-    if( !motor_signals_from_stream( &motor_signals, data, size ) &&
-        !flag_shut_down )
+    if( !motor_signals_from_stream( &motor_signals, data, size ) && !flag_shut_down )
     {
         /* set new motor signals */
         pwm_set_signals( &motor_signals );
@@ -290,6 +290,9 @@ void check_receive_delay( )
         LED_ON( BLUE );
     }
 
+    /* update sensor status */
+    enable_sensors( flag_new_signals );
+
     flag_check_delay = 0;
     flag_new_signals = 0;
     flag_new_sensors = 0;
@@ -320,15 +323,35 @@ void send_javiator_data( void )
     parallel_send_data( COMM_SENSOR_DATA, data, 3 );
 }
 
+/* Enables/disables specific sensors
+*/
+void enable_sensors( uint8_t enable )
+{
+    static uint8_t sensors_enabled = 0;
+
+    /* check for changed sensor status */
+    if( sensors_enabled != enable )
+    {
+        if( enable )
+        {
+            dm3gx1_start( );
+        }
+        else
+        {
+            dm3gx1_stop( );
+        }
+
+        /* store new sensor status */
+        sensors_enabled = enable;
+    }
+}
+
 /* Runs the control loop
 */
 int main( void )
 {
     /* initialize Robostix 1 */
     controller_init( );
-
-    /* start IMU in continuous mode */
-    dm3gx1_start( );
 
     while( 1 )
     {

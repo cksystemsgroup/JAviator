@@ -34,16 +34,15 @@ typedef struct channel comm_channel_t;
 
 /* Function pointers used by a communication channel */
 typedef int (*transmit)( comm_channel_t *channel, const char *buf, int len );
-typedef int (*receive) ( comm_channel_t *channel, char *buf, int len );
-typedef int (*start)   ( comm_channel_t *channel );
-typedef int (*flush)   ( comm_channel_t *channel );
-typedef int (*poll)    ( comm_channel_t *channel, long poll );
+typedef int  (*receive)( comm_channel_t *channel, char *buf, int len );
+typedef int    (*start)( comm_channel_t *channel );
+typedef int    (*flush)( comm_channel_t *channel );
+typedef int     (*poll)( comm_channel_t *channel, long poll );
 
 /* Enums for indicating a specific channel type */
 typedef enum
 {
-    CH_SPI_DMA = 1,
-    CH_SPI_DEV,
+    CH_SPI = 1,
     CH_SERIAL,
     CH_SOCKET,
 	CH_MAX_TYPE,
@@ -59,7 +58,7 @@ struct channel
     start           start;
     flush           flush;
     poll            poll;
-    void            *data;
+    void *          data;
 };
 
 #endif /* !COMM_CHANNEL_H */

@@ -30,13 +30,14 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 
-#include "protocol.h"
 #include "spi_channel.h"
+#include "protocol.h"
 
 /* Base clock rate */
 #define PXA270_CLOCK    13000000    /* 13-MHz PXA270 on-chip clock */
@@ -109,6 +110,8 @@
 */
 #define SSCR1_2_BASE    0x00001CC0
 
+#define SPI_MAX_NAME    32
+
 typedef struct
 {
     int  fd;
@@ -123,8 +126,6 @@ typedef struct
     void *map_reg;
 
 } spi_connection_t;
-
-static spi_connection_t connection;
 
 /* Macro for reading registers */
 #define GET_REG( name ) \
@@ -314,7 +315,38 @@ static int spi_poll( comm_channel_t *channel, long timeout )
     return( 0 );
 }
 
-int spi_channel_init( comm_channel_t *channel, char *interface, int baudrate )
+int spi_dma_channel_create( comm_channel_t *channel )
+{
+    spi_connection_t *sc;
+
+    if( channel->data != NULL )
+    {
+        fprintf( stderr, "WARNING: SPI channel already initialized\n" );
+        return( -1 );
+    }
+
+    sc = malloc( sizeof( spi_connection_t ) );
+
+    if( !sc )
+    {
+        fprintf( stderr, "ERROR in %s %d: memory allocation\n",
+            __FILE__, __LINE__ );
+        return( -1 );
+    }
+
+    memset( sc, 0, sizeof( spi_connection_t ) );
+
+    channel->type     = CH_SPI;
+    channel->transmit = spi_transmit;
+    channel->receive  = spi_receive;
+    channel->start    = spi_start;
+    channel->flush    = spi_flush;
+    channel->poll     = spi_poll;
+    channel->data     = sc;
+    return( 0 );
+}
+
+int spi_dma_channel_init( comm_channel_t *channel, char *interface, int baudrate )
 {
     spi_connection_t *sc = spi_get_connection( channel );
     int scr = (PXA270_CLOCK / baudrate) - 1;
@@ -391,26 +423,7 @@ int spi_channel_init( comm_channel_t *channel, char *interface, int baudrate )
     return( 0 );
 }
 
-int spi_channel_create( comm_channel_t *channel )
-{
-    if( channel->data == NULL )
-    {
-        memset( &connection, 0, sizeof( connection ) );
-        channel->type     = CH_SPI;
-        channel->transmit = spi_transmit;
-        channel->receive  = spi_receive;
-        channel->start    = spi_start;
-        channel->flush    = spi_flush;
-        channel->poll     = spi_poll;
-        channel->data     = &connection;
-        return( 0 );
-    }
-
-    fprintf( stderr, "WARNING: SPI channel already initialized\n" );
-    return( -1 );
-}
-
-int spi_channel_destroy( comm_channel_t *channel )
+int spi_dma_channel_destroy( comm_channel_t *channel )
 {
     spi_connection_t *sc = spi_get_connection( channel );
 
@@ -426,6 +439,7 @@ int spi_channel_destroy( comm_channel_t *channel )
     set_clkm( sc, CKEN, get_clkm( sc, CKEN ) & ~CKEN3 );
 
     close( sc->fd );
+    free( sc );
     channel->data = NULL;
     return( 0 );
 }

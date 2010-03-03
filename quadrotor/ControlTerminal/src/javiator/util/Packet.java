@@ -42,7 +42,16 @@ package javiator.util;
 
 public class Packet
 {
-	public static final int MAX_SIZE = 64;
+   /**
+    * Recommended size for holding largest data packet.
+    * 
+	* E.g., receiving the ground report (see javiator.util.ReportToGround):
+	* communication overhead (2 packet mark bytes + 2 header bytes +
+	* 2 checksum bytes) + SensorData.PACKET_SIZE + MotorSignals.PACKET_SIZE +
+	* MotorOffsets.PACKET_SIZE + ModeAndState.PACKET_SIZE  >  64 (!)
+	*/
+	public static final int MAX_SIZE = 128;
+
   /** 
    * generates a packet that can hold size bytes.
    * allocates the byte array for payload with new byte[size]

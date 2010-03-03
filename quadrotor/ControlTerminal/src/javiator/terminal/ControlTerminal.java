@@ -30,7 +30,7 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Color;
-import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.GraphicsEnvironment;
 import java.awt.MediaTracker;
 import java.awt.AWTEvent;
@@ -871,8 +871,8 @@ public class ControlTerminal extends Frame
         }
 
         enableEvents( AWTEvent.WINDOW_EVENT_MASK | AWTEvent.FOCUS_EVENT_MASK | AWTEvent.KEY_EVENT_MASK );
-        Point center = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getCenterPoint( );
-        setLocation( center.x - ( getWidth( ) >> 1 ), center.y - ( getHeight( ) >> 1 ) );
+        Rectangle bounds = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getMaximumWindowBounds( );
+        setLocation( bounds.width - getWidth( ), 0 );
         setVisible( true );
 
         motion = new MotionThread( );
