@@ -35,9 +35,9 @@ typedef struct kf_state kf_state_t;
    some environmental object and is therefore assumed to have always
    a positive value.  Passing a negative value to the update function
    causes the filter to reset, indicated by returning -1 instead of 0.
-   In addition to estimating velocity ds, the passed-in distance s is
-   filtered, and therefore, the filter's internal s-component should
-   be accessed and used in subsequent computations.
+   In addition to estimating velocity ds, distance s is propagated to
+   obtain an improved estimate, and therefore, the filter's internal
+   s-component should be accessed and used in subsequent computations.
 */
 typedef struct
 {

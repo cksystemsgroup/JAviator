@@ -27,76 +27,72 @@
 
 #include "sensor_data.h"
 
-struct ekf_state;
-typedef struct ekf_state ekf_state_t;
-
 /* This extended Kalman filter is designed to estimate
    attitude (Roll, Pitch, Yaw), position (X, Y, Z), and
-   velocity (dX, dY, dZ) based on a fusion of attitude
-   measurements with position measurements.
+   velocity (dRoll, dPitch, dYaw, dX, dY, dZ) by fusing
+   attitude measurements with position measurements.
 */
-typedef struct
-{
-    char *          name;
-    ekf_state_t *   state;
 
-} extended_kalman_t;
-
-/* Initializes an extended Kalman filter.
+/* Initializes the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    extended_kalman_init( extended_kalman_t *filter, char *name, int period );
+int    extended_kalman_init( int period );
 
-/* Destroys an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
+/* Resets the extended Kalman filter
 */
-int    extended_kalman_destroy( extended_kalman_t *filter );
+void   extended_kalman_reset( void );
 
-/* Resets an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
+/* Updates the extended Kalman filter
 */
-int    extended_kalman_reset( extended_kalman_t *filter );
+void   extended_kalman_update( sensor_data_t *data );
 
-/* Updates an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
+/* Returns the estimated Roll angle in [mrad]
 */
-int    extended_kalman_update( extended_kalman_t *filter, sensor_data_t *data );
+double extended_kalman_get_Roll( void );
 
-/* Returns the estimated Roll angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Pitch angle in [mrad]
 */
-double extended_kalman_get_Roll( extended_kalman_t *filter );
+double extended_kalman_get_Pitch( void );
 
-/* Returns the estimated Pitch angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Yaw angle in [mrad]
 */
-double extended_kalman_get_Pitch( extended_kalman_t *filter );
+double extended_kalman_get_Yaw( void );
 
-/* Returns the estimated Yaw angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Roll velocity in [mrad/s]
 */
-double extended_kalman_get_Yaw( extended_kalman_t *filter );
+double extended_kalman_get_dRoll( void );
 
-/* Returns the estimated X position in [mm] if successful, -1 otherwise.
+/* Returns the estimated Pitch velocity in [mrad/s]
 */
-double extended_kalman_get_X( extended_kalman_t *filter );
+double extended_kalman_get_dPitch( void );
 
-/* Returns the estimated Y position in [mm] if successful, -1 otherwise.
+/* Returns the estimated Yaw velocity in [mrad/s]
 */
-double extended_kalman_get_Y( extended_kalman_t *filter );
+double extended_kalman_get_dYaw( void );
 
-/* Returns the estimated Z position in [mm] if successful, -1 otherwise.
+/* Returns the estimated X position in [mm]
 */
-double extended_kalman_get_Z( extended_kalman_t *filter );
+double extended_kalman_get_X( void );
 
-/* Returns the estimated X velocity in [mm/s] if successful, -1 otherwise.
+/* Returns the estimated Y position in [mm]
 */
-double extended_kalman_get_dX( extended_kalman_t *filter );
+double extended_kalman_get_Y( void );
 
-/* Returns the estimated Y velocity in [mm/s]] if successful, -1 otherwise.
+/* Returns the estimated Z position in [mm]
 */
-double extended_kalman_get_dY( extended_kalman_t *filter );
+double extended_kalman_get_Z( void );
 
-/* Returns the estimated Z velocity in [mm/s]] if successful, -1 otherwise.
+/* Returns the estimated X velocity in [mm/s]
 */
-double extended_kalman_get_dZ( extended_kalman_t *filter );
+double extended_kalman_get_dX( void );
+
+/* Returns the estimated Y velocity in [mm/s]
+*/
+double extended_kalman_get_dY( void );
+
+/* Returns the estimated Z velocity in [mm/s]
+*/
+double extended_kalman_get_dZ( void );
 
 #endif /* !EXTENDED_KALMAN */
 

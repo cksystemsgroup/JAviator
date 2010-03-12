@@ -34,6 +34,34 @@
 /*                                                                           */
 /*****************************************************************************/
 
+/* Validation and selection of sampling rate
+*/
+#if( BMU09A_100 == 1 )
+
+#define LTC2440_OSR         0x30    /* 110Hz */
+
+#elif( BMU09A_55 == 1 )
+
+#define LTC2440_OSR         0x38    /* 55Hz */
+
+#elif( BMU09A_27 == 1 )
+
+#define LTC2440_OSR         0x40    /* 27.5Hz */
+
+#elif( BMU09A_13 == 1 )
+
+#define LTC2440_OSR         0x48    /* 13.8Hz */
+
+#elif( BMU09A_6 == 1 )
+
+#define LTC2440_OSR         0x78    /* 6.9Hz */
+
+#else /* BMU09A_n */
+
+#error No valid sampling rate for the BMU-09A sensor defined.
+
+#endif /* BMU09A_n */
+
 /* EOC polling IDs */
 #define EOC_MAPS            1       /* EOC ID assigned to pressure ADC */
 #define EOC_TEMP            2       /* EOC ID assigned to temperature ADC */
@@ -43,9 +71,6 @@
 #define RX_MAPS_SIZE        4       /* size of received pressure data */
 #define RX_TEMP_SIZE        2       /* size of received temperature data */
 #define RX_BATT_SIZE        2       /* size of received battery data */
-
-/* Over-Sample Ratio */
-#define LTC2440_OSR         0x30    /* 110Hz pressure conversion rate */
 
 /* Global variables */
 static          uint8_t     rx_buf[ RX_MAPS_SIZE + RX_TEMP_SIZE + RX_BATT_SIZE ];

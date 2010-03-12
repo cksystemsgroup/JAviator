@@ -79,10 +79,15 @@
 #define BMU09A_PORT         PORTA   /* port exploited for BMU chip-select signals */
 #define BMU09A_DDR          DDRA    /* data direction register associated with port */
 #define BMU09A_REG          PINA    /* control register associated with port pins */
-#define BMU09A_BSY          PA0     /* pin where the LTC2440-BUSY signal connects to */
+#define BMU09A_BSY          PA0     /* pin where the BMU's BUSY signal connects to */
 #define BMU09A_PCS          PA1     /* pin where the pressure CS signal connects to */
 #define BMU09A_TCS          PA2     /* pin where the temperature CS signal connects to */
 #define BMU09A_BCS          PA3     /* pin where the battery CS signal connects to */
+#define BMU09A_110          0       /* enables a sampling rate of 110Hz */
+#define BMU09A_55           0       /* enables a sampling rate of 55Hz */
+#define BMU09A_27           1       /* enables a sampling rate of 27.5Hz */
+#define BMU09A_13           0       /* enables a sampling rate of 13.8Hz */
+#define BMU09A_6            0       /* enables a sampling rate of 6.9Hz */
 
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
@@ -106,7 +111,7 @@
 #define ROBOSTIX_R790       0       /* must be either 0 to disable or 1 to enable */
 #define ROBOSTIX_R1131      1       /* must be either 0 to disable or 1 to enable */
 
-/* Robostix PWM connecting positions
+/* Robostix PWM Connecting Positions
 
     +-----------+           +-----------+
     |         3A| -----     |         3A| front
@@ -125,11 +130,38 @@
     +-----------+           +-----------+
 */
 
-/* Robostix BMU interface (top side)
+/* BMU 09-A Interface
 
-           S S S C C C C C C
-           C D D S S S S S S
-           K O I 1 2 3 4 5 6
+    Pin     I/O     Description                 Color
+    --------------------------------------------------
+    VCC     Pwr     Positive supply voltage     red
+    VSS     Pwr     Negative supply voltage     black
+    GND     Pwr     Ground for interface        brown
+    SCK     In      Serial Clock (SCK)          white
+    SDO     Out     Serial Data Out (MISO)      orange
+    SDI     In      Serial Data In (MOSI)       white
+    BSY     Out     Busy (from Pressure ADC)    orange
+    PCS     In      Pressure Chip Select        white
+    TCS     In      Temperature Chip Select     white
+    BCS     In      Battery Chip Select         white
+*/
+
+/* BMU 09-A Connector (plug-in side)
+
+     SCK SDO SDI GND VSS
+    +---+---+---+---+---+
+    | o | o | o | o | o |
+    +---+---+---+---+---+
+    | o | o | o | o | o |
+    +---+---+---+---+---+
+     BSY PCS TCS BCS VCC
+*/
+
+/* Robostix BMU Interface (top side)
+
+           S S S B P T B
+           C D D S C C C
+           K O I Y S S S
            _____________________
      _____|o_o_o_o_o_o_o_o_o_o_o|____
     |o o o|o o o|o o o o o o o o|o o
@@ -137,17 +169,7 @@
     |o o o|o o o|o o o o o o o o|o o
     |--------------------------------
     |PWM_3 PWM_1 0  A/D PORT   7
-    |*/
-
-/* BMU 09-A connector (plug-in side)
-
-     SCK SDO TCS GND VSS
-    +---+---+---+---+---+
-    | o | o | o | o | o |
-    +---+---+---+---+---+
-    | o | o | o | o | o |
-    +---+---+---+---+---+
-     BCS PCS SDI BSY VCC 
+    |
 */
 
 #endif /* !CONFIG_H */

@@ -26,81 +26,193 @@
 
 #include "transformation.h"
 
-static double c_r, c_p, c_y;
-static double s_r, s_p, s_y;
+static double cr,  cp,  cy;
+static double sr,  sp,  sy;
 static double r11, r12, r13;
 static double r21, r22, r23;
 static double r31, r32, r33;
+static double s11, s12, s13;
+static double s21, s22, s23;
+static double s31, s32, s33;
 
 
+/* Initializes the transformation variables
+*/
+void transformation_init( void )
+{
+    cr  = cp  = cy  = 0;
+    sr  = sp  = sy  = 0;
+
+    r11 = r12 = r13 = 0;
+    r21 = r22 = r23 = 0;
+    r31 = r32 = r33 = 0;
+
+    s11 = s12 = s13 = 0;
+    s21 = s22 = s23 = 0;
+    s31 = s32 = s33 = 0;
+}
+
+/* Sets the rotation matrix to the given angles
+*/
 void transformation_set_angles( double roll, double pitch, double yaw )
 {
-    /* compute all cosine and sine values */
-    c_r = cos( roll );
-    c_p = cos( pitch );
-    c_y = cos( yaw );
+    cr  = cos( roll );
+    cp  = cos( pitch );
+    cy  = cos( yaw );
 
-    s_r = sin( roll );
-    s_p = sin( pitch );
-    s_y = sin( yaw );
+    sr  = sin( roll );
+    sp  = sin( pitch );
+    sy  = sin( yaw );
 
-    /* update the rotation matrix entries */
-    r11 = c_p * c_y;
-    r12 = c_y * s_r * s_p - c_r * s_y;
-    r13 = c_r * c_y * s_p + s_r * s_y;
+    r11 = cp * cy;
+    r12 = cy * sr * sp - cr * sy;
+    r13 = cr * cy * sp + sr * sy;
 
-    r21 = c_p * s_y;
-    r22 = s_r * s_p * s_y + c_r * c_y;
-    r23 = c_r * s_p * s_y - c_y * s_r;
+    r21 = cp * sy;
+    r22 = sr * sp * sy + cr * cy;
+    r23 = cr * sp * sy - cy * sr;
 
-    r31 = -s_p;
-    r32 = c_p * s_r;
-    r33 = c_r * c_p;
+    r31 = -sp;
+    r32 = cp * sr;
+    r33 = cr * cp;
+
+    s11 = 1;
+    s12 = sr * sp / cp;
+    s13 = cr * sp / cp;
+
+    s21 = 0;
+    s22 = cr;
+    s23 = -sr;
+
+    s31 = 0;
+    s32 = sr / cp;
+    s33 = cr / cp;
 }
 
-double transformation_get_cosR( void )
+/* Returns the cosinus of the set Roll angle
+*/
+double transformation_get_cos_R( void )
 {
-    return( c_r );
+    return( cr );
 }
 
-double transformation_get_cosP( void )
+/* Returns the cosinus of the set Pitch angle
+*/
+double transformation_get_cos_P( void )
 {
-    return( c_p );
+    return( cp );
 }
 
-double transformation_get_cosY( void )
+/* Returns the cosinus of the set Yaw angle
+*/
+double transformation_get_cos_Y( void )
 {
-    return( c_y );
+    return( cy );
 }
 
-double transformation_get_sinR( void )
+/* Returns the sinus of the set Roll angle
+*/
+double transformation_get_sin_R( void )
 {
-    return( s_r );
+    return( sr );
 }
 
-double transformation_get_sinP( void )
+/* Returns the sinus of the set Pitch angle
+*/
+double transformation_get_sin_P( void )
 {
-    return( s_p );
+    return( sp );
 }
 
-double transformation_get_sinY( void )
+/* Returns the sinus of the set Yaw angle
+*/
+double transformation_get_sin_Y( void )
 {
-    return( s_y );
+    return( sy );
 }
 
-double transformation_rotate_X( double x, double y, double z )
+/* Returns the X component transformed to the global frame
+*/
+double rotate_local_to_global_X( double x, double y, double z )
 {
     return( x * r11 + y * r12 + z * r13 );
 }
 
-double transformation_rotate_Y( double x, double y, double z )
+/* Returns the Y component transformed to the global frame
+*/
+double rotate_local_to_global_Y( double x, double y, double z )
 {
     return( x * r21 + y * r22 + z * r23 );
 }
 
-double transformation_rotate_Z( double x, double y, double z )
+/* Returns the Z component transformed to the global frame
+*/
+double rotate_local_to_global_Z( double x, double y, double z )
 {
     return( x * r31 + y * r32 + z * r33 );
+}
+
+/* Returns the X component transformed to the local frame
+*/ 
+double rotate_global_to_local_X( double x, double y, double z )
+{
+    return( x * r11 + y * r21 + z * r31 );
+}
+
+/* Returns the Y component transformed to the local frame
+*/ 
+double rotate_global_to_local_Y( double x, double y, double z )
+{
+    return( x * r12 + y * r22 + z * r32 );
+}
+
+/* Returns the Z component transformed to the local frame
+*/ 
+double rotate_global_to_local_Z( double x, double y, double z )
+{
+    return( x * r13 + y * r23 + z * r33 );
+}
+
+/* Returns the dRoll component transformed to the global frame
+*/ 
+double rotate_local_to_global_dR( double dr, double dp, double dy )
+{
+    return( dr * s11 + dp * s12 + dy * s13 );
+}
+
+/* Returns the dPitch component transformed to the global frame
+*/ 
+double rotate_local_to_global_dP( double dr, double dp, double dy )
+{
+    return( dr * s21 + dp * s22 + dy * s23 );
+}
+
+/* Returns the dYaw component transformed to the global frame
+*/ 
+double rotate_local_to_global_dY( double dr, double dp, double dy )
+{
+    return( dr * s31 + dp * s32 + dy * s33 );
+}
+
+/* Returns the dRoll component transformed to the local frame
+*/ 
+double rotate_global_to_local_dR( double dr, double dp, double dy )
+{
+    return( dr * s11 + dp * s21 + dy * s31 );
+}
+
+/* Returns the dPitch component transformed to the local frame
+*/ 
+double rotate_global_to_local_dP( double dr, double dp, double dy )
+{
+    return( dr * s12 + dp * s22 + dy * s32 );
+}
+
+/* Returns the dYaw component transformed to the local frame
+*/ 
+double rotate_global_to_local_dY( double dr, double dp, double dy )
+{
+    return( dr * s13 + dp * s23 + dy * s33 );
 }
 
 /* End of file */

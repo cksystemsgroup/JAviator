@@ -121,10 +121,10 @@ public class DigitalMeter extends Panel
 
     public void setSensorData( SensorData data )
     {
-        positionX.setText( ControlTerminal.NIL + data.x );
-        positionY.setText( ControlTerminal.NIL + data.y );
-        mapsLabel.setText( ControlTerminal.NIL + data.maps );
-        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 100) / 10.0 ) );
+        positionX.setText( ControlTerminal.NIL + ( (double)(data.x / 100) / 10.0 ) );
+        positionY.setText( ControlTerminal.NIL + ( (double)(data.y / 100) / 10.0 ) );
+        mapsLabel.setText( ControlTerminal.NIL + ( (double)(data.maps / 100) / 10.0 ) );
+        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 10) / 10.0 ) );
         battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
 
         if( battLabel.getForeground( ) == colorAllRight )
@@ -386,7 +386,7 @@ public class DigitalMeter extends Panel
         motorSignals  = new MotorSignals( );
         motorOffsets  = new MotorOffsets( );
 
-        heliMode      = new Label( ControlTerminal.NIL, Label.CENTER );
+        heliMode      = new Label( ControlTerminal.NIL,  Label.CENTER );
         testMode      = new Label( ControlTerminal.TEST, Label.CENTER );
         positionX     = new Label( ControlTerminal.ZERO, Label.CENTER );
         positionY     = new Label( ControlTerminal.ZERO, Label.CENTER );
@@ -423,22 +423,22 @@ public class DigitalMeter extends Panel
         offsetAlt   .setForeground( colorOffsets );
 
         Panel controlDisplay = new Panel( new GridLayout( 6, 3 ) );
-        controlDisplay.add( new Label( "Mode:" ) );
+        controlDisplay.add( new Label( "Mode:", Label.LEFT ) );
         controlDisplay.add( heliMode );
         controlDisplay.add( testMode );
-        controlDisplay.add( new Label( "Pos. X:" ) );
+        controlDisplay.add( new Label( "Pos. X:", Label.LEFT ) );
         controlDisplay.add( positionX );
-        controlDisplay.add( new Label( "mm", Label.CENTER ) );
-        controlDisplay.add( new Label( "Pos. Y:" ) );
+        controlDisplay.add( new Label( "cm", Label.CENTER ) );
+        controlDisplay.add( new Label( "Pos. Y:", Label.LEFT ) );
         controlDisplay.add( positionY );
-        controlDisplay.add( new Label( "mm", Label.CENTER ) );
-        controlDisplay.add( new Label( "MAPS:" ) );
+        controlDisplay.add( new Label( "cm", Label.CENTER ) );
+        controlDisplay.add( new Label( "Pos. Z:", Label.LEFT ) );
         controlDisplay.add( mapsLabel );
-        controlDisplay.add( new Label( "mm", Label.CENTER ) );
-        controlDisplay.add( new Label( "Temp:" ) );
+        controlDisplay.add( new Label( "cm", Label.CENTER ) );
+        controlDisplay.add( new Label( "Temp:", Label.LEFT ) );
         controlDisplay.add( tempLabel );
         controlDisplay.add( new Label( "C", Label.CENTER ) );
-        controlDisplay.add( new Label( "Power:" ) );
+        controlDisplay.add( new Label( "Power:", Label.LEFT ) );
         controlDisplay.add( battLabel );
         controlDisplay.add( new Label( "V", Label.CENTER ) );
 

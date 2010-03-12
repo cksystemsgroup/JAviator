@@ -23,251 +23,143 @@
  */
 
 #include <stdio.h>
-#include <malloc.h>
+#include <string.h>
 
 #include "extended_kalman.h"
 
-#define KALMAN_STATES   2       /* number of extended Kalman states */
-#define KALMAN_P        4       /* elements in covariance matrix */
-#define KALMAN_Q        10000.0
-#define KALMAN_R        0.01
-
-/* State of an extended Kalman filter */
-struct ekf_state
-{
-    double dtime;
-    double roll;
-    double pitch;
-    double yaw;
-    double x;
-    double y;
-    double z;
-    double dx;
-    double dy;
-    double dz;
-};
+static sensor_data_t    ekf_data;
+static double           dtime;
 
 
-static inline ekf_state_t *get_ekf_state( const extended_kalman_t *filter )
-{
-    if( !filter->state )
-    {
-        fprintf( stderr, "ERROR: null pointer to %s filter state\n", filter->name );
-    }
-
-    return( filter->state );
-}
-
-/* Initializes an extended Kalman filter.
+/* Initializes the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int extended_kalman_init( extended_kalman_t *filter, char *name, int period )
+int extended_kalman_init( int period )
 {
-    ekf_state_t *state;
-
     if( period < 1 )
     {
-        fprintf( stderr, "ERROR: invalid %s filter period (%d)\n", name, period );
+        fprintf( stderr, "ERROR: invalid EKF period (%d)\n", period );
         return( -1 );
     }
 
-    state = malloc( sizeof( ekf_state_t ) );
-
-    if( !state )
-    {
-        fprintf( stderr, "ERROR: memory allocation for %s filter failed\n", name );
-        return( -1 );
-    }
-
-    state->dtime  = period / 1000.0; /* filter uses period in seconds */
-    filter->name  = name;
-    filter->state = state;
-    return extended_kalman_reset( filter );
-}
-
-/* Destroys an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
-*/
-int extended_kalman_destroy( extended_kalman_t *filter )
-{
-    free( filter->state );
-    filter->state = NULL;
+    dtime = period / 1000.0; /* filter uses period in seconds */
+    extended_kalman_reset( );
     return( 0 );
 }
 
-/* Resets an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
+/* Resets the extended Kalman filter
 */
-int extended_kalman_reset( extended_kalman_t *filter )
+void extended_kalman_reset( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    state->roll  = 0;
-    state->pitch = 0;
-    state->yaw   = 0;
-    state->x     = 0;
-    state->y     = 0;
-    state->z     = 0;
-    state->dx    = 0;
-    state->dy    = 0;
-    state->dz    = 0;
-    return( 0 );
+    memset( &ekf_data, 0, sizeof( ekf_data ) );
 }
 
-/* Updates an extended Kalman filter.
-   Returns 0 if successful, -1 otherwise.
+/* Updates the extended Kalman filter
 */
-int extended_kalman_update( extended_kalman_t *filter, sensor_data_t *data )
+void extended_kalman_update( sensor_data_t *data )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    /* dummy assignments */
-    state->roll  = data->roll;
-    state->pitch = data->pitch;
-    state->yaw   = data->yaw;
-    state->x     = data->x;
-    state->y     = data->y;
-    state->z     = data->z;
-    state->dx    = data->dx;
-    state->dy    = data->dy;
-    state->dz    = data->dz;
-    return( 0 );
+    ekf_data.roll    = data->roll;
+    ekf_data.pitch   = data->pitch;
+    ekf_data.yaw     = data->yaw;
+    ekf_data.droll   = data->droll;
+    ekf_data.dpitch  = data->dpitch;
+    ekf_data.dyaw    = data->dyaw;
+    ekf_data.ddroll  = data->ddroll;
+    ekf_data.ddpitch = data->ddpitch;
+    ekf_data.ddyaw   = data->ddyaw;
+    ekf_data.x       = data->x;
+    ekf_data.y       = data->y;
+    ekf_data.z       = data->z;
+    ekf_data.dx      = data->dx;
+    ekf_data.dy      = data->dy;
+    ekf_data.dz      = data->dz;
+    ekf_data.ddx     = data->dx;
+    ekf_data.ddy     = data->dy;
+    ekf_data.ddz     = data->dz;
 }
 
-/* Returns the estimated Roll angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Roll angle in [mrad]
 */
-double extended_kalman_get_Roll( extended_kalman_t *filter )
+double extended_kalman_get_Roll( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->roll );
+    return( ekf_data.roll );
 }
 
-/* Returns the estimated Pitch angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Pitch angle in [mrad]
 */
-double extended_kalman_get_Pitch( extended_kalman_t *filter )
+double extended_kalman_get_Pitch( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->pitch );
+    return( ekf_data.pitch );
 }
 
-/* Returns the estimated Yaw angle in [mrad] if successful, -1 otherwise.
+/* Returns the estimated Yaw angle in [mrad]
 */
-double extended_kalman_get_Yaw( extended_kalman_t *filter )
+double extended_kalman_get_Yaw( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->yaw );
+    return( ekf_data.yaw );
 }
 
-/* Returns the estimated X position in [mm] if successful, -1 otherwise.
+/* Returns the estimated Roll velocity in [mrad/s]
 */
-double extended_kalman_get_X( extended_kalman_t *filter )
+double extended_kalman_get_dRoll( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->x );
+    return( ekf_data.droll );
 }
 
-/* Returns the estimated Y position in [mm] if successful, -1 otherwise.
+/* Returns the estimated Pitch velocity in [mrad/s]
 */
-double extended_kalman_get_Y( extended_kalman_t *filter )
+double extended_kalman_get_dPitch( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->y );
+    return( ekf_data.dpitch );
 }
 
-/* Returns the estimated Z position in [mm] if successful, -1 otherwise.
+/* Returns the estimated Yaw velocity in [mrad/s]
 */
-double extended_kalman_get_Z( extended_kalman_t *filter )
+double extended_kalman_get_dYaw( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->z );
+    return( ekf_data.dyaw );
 }
 
-/* Returns the estimated X velocity in [mm/s] if successful, -1 otherwise.
+/* Returns the estimated X position in [mm]
 */
-double extended_kalman_get_dX( extended_kalman_t *filter )
+double extended_kalman_get_X( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->dx );
+    return( ekf_data.x );
 }
 
-/* Returns the estimated Y velocity in [mm/s]] if successful, -1 otherwise.
+/* Returns the estimated Y position in [mm]
 */
-double extended_kalman_get_dY( extended_kalman_t *filter )
+double extended_kalman_get_Y( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
-
-    if( !state )
-    {
-        return( -1 );
-    }
-
-    return( state->dy );
+    return( ekf_data.y );
 }
 
-/* Returns the estimated Z velocity in [mm/s]] if successful, -1 otherwise.
+/* Returns the estimated Z position in [mm]
 */
-double extended_kalman_get_dZ( extended_kalman_t *filter )
+double extended_kalman_get_Z( void )
 {
-    ekf_state_t *state = get_ekf_state( filter );
+    return( ekf_data.z );
+}
 
-    if( !state )
-    {
-        return( -1 );
-    }
+/* Returns the estimated X velocity in [mm/s]
+*/
+double extended_kalman_get_dX( void )
+{
+    return( ekf_data.dx );
+}
 
-    return( state->dz );
+/* Returns the estimated Y velocity in [mm/s]
+*/
+double extended_kalman_get_dY( void )
+{
+    return( ekf_data.dy );
+}
+
+/* Returns the estimated Z velocity in [mm/s]
+*/
+double extended_kalman_get_dZ( void )
+{
+    return( ekf_data.dz );
 }
 
 /* End of file */

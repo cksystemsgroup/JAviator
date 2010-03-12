@@ -77,7 +77,7 @@ public class ControlTerminal extends Frame
     private static final boolean SHOW_3DWINDOW = false;
     private boolean show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/bmu_test_.csv";
+    public static final String  LOG_FILE_NAME = "traces/new_bmu_test_.csv";
 
     public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
 											    "roll,pitch,yaw," +

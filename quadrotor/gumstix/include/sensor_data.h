@@ -68,7 +68,7 @@ typedef struct
 
     /* BMU-specific data
     */
-    double  maps;       /* [Pa] */
+    double  maps;       /* [mm] */
     double  temp;       /* [cC] */
     double  batt;       /* [mV] */
 
