@@ -28,6 +28,12 @@
 
 #include <stdint.h>
 
+/* State definitions */
+#define ST_NEW_DATA_BMU     0x01
+#define ST_NEW_DATA_SONAR   0x02
+#define ST_NEW_DATA_POS_X   0x04
+#define ST_NEW_DATA_POS_Y   0x08
+
 /* Structure for short JAviator data */
 typedef struct
 {

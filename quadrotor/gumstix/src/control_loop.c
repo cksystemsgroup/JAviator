@@ -63,58 +63,54 @@
 #define CTRL_STATE_TESTING      0x02
 
 /* filter parameters */
-#define FILTER_MDIFF_X_Y        250                 /* [mm] maximum allowed x/y-difference */
-#define FILTER_LIMIT_X_Y        2                   /* limit for counting x/y-outliers */
-#define FILTER_MDIFF_Z          50                  /* [mm] maximum allowed z-difference */
-#define FILTER_LIMIT_Z          2                   /* limit for counting z-outliers */
-#define FILTER_GAIN_LACC        0.1                 /* gain for linear accelerations */
-#define FILTER_GAIN_CCMD        0.1                 /* gain for control commands */
-#define FILTER_SIZE_MAPS        1                   /* buffer size for pressure data */
-#define FILTER_SIZE_TEMP        15                   /* buffer size for temperature data */
-#define FILTER_SIZE_BATT        15                  /* buffer size for battery data */
+#define FILTER_MDIFF_X_Y        250                     /* [mm] maximum allowed x/y-difference */
+#define FILTER_LIMIT_X_Y        2                       /* limit for counting x/y-outliers */
+#define FILTER_MDIFF_Z          50                      /* [mm] maximum allowed z-difference */
+#define FILTER_LIMIT_Z          2                       /* limit for counting z-outliers */
+#define FILTER_GAIN_LACC        0.1                     /* gain for linear accelerations */
+#define FILTER_GAIN_CCMD        0.1                     /* gain for control commands */
+#define FILTER_SIZE_MAPS        1                       /* buffer size for pressure data */
+#define FILTER_SIZE_TEMP        15                      /* buffer size for temperature data */
+#define FILTER_SIZE_BATT        15                      /* buffer size for battery data */
 
 /* plant parameters */
-#define X_LASER_POS_ROLL        60                  /* [mm] x-laser position on roll axis */
-#define X_LASER_POS_PITCH      -75                  /* [mm] x-laser position on pitch axis */
-#define X_LASER_POS_YAW        -80                  /* [mm] x-laser position on yaw axis */
-#define Y_LASER_POS_ROLL       -55                  /* [mm] y-laser position on roll axis */
-#define Y_LASER_POS_PITCH       80                  /* [mm] y-laser position on pitch axis */
-#define Y_LASER_POS_YAW        -80                  /* [mm] y-laser position on yaw axis */
-#define Z_SONAR_POS_ROLL       -95                  /* [mm] z-sonar position on roll axis */
-#define Z_SONAR_POS_PITCH      -95                  /* [mm] z-sonar position on pitch axis */
-#define Z_SONAR_POS_YAW         55                  /* [mm] z-sonar position on yaw axis */
-#define EARTH_GRAVITY           9810                /* [mm/s^2] gravitational acceleration */
+#define X_LASER_POS_ROLL        60                      /* [mm] x-laser position on roll axis */
+#define X_LASER_POS_PITCH      -75                      /* [mm] x-laser position on pitch axis */
+#define X_LASER_POS_YAW        -80                      /* [mm] x-laser position on yaw axis */
+#define Y_LASER_POS_ROLL       -55                      /* [mm] y-laser position on roll axis */
+#define Y_LASER_POS_PITCH       80                      /* [mm] y-laser position on pitch axis */
+#define Y_LASER_POS_YAW        -80                      /* [mm] y-laser position on yaw axis */
+#define Z_SONAR_POS_ROLL       -95                      /* [mm] z-sonar position on roll axis */
+#define Z_SONAR_POS_PITCH      -95                      /* [mm] z-sonar position on pitch axis */
+#define Z_SONAR_POS_YAW         55                      /* [mm] z-sonar position on yaw axis */
+#define EARTH_GRAVITY           9810                    /* [mm/s^2] gravitational acceleration */
 
 /* controller parameters */
-#define COMMAND_THRESHOLD       35                  /* [iterations] max iterations to wait */
-#define ROLL_PITCH_LIMIT        500                 /* [mrad] max allowed roll/pitch angle */
-#define OFFSET_TEMPERATURE      700                 /* [mC] temperature calibration */
-#define MOTOR_REVVING_STEP      50                  /* inc/dec for motor revving up/down */
+#define COMMAND_THRESHOLD       35                      /* [iterations] max iterations to wait */
+#define ROLL_PITCH_LIMIT        500                     /* [mrad] max allowed roll/pitch angle */
+#define OFFSET_TEMPERATURE      700                     /* [mC] temperature calibration */
+#define MOTOR_REVVING_STEP      50                      /* inc/dec for motor revving up/down */
 
 /* scaling constants */
-#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0 /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
-#define FACTOR_ANGULAR_VEL      8500.0/32768.0      /* [units] --> [mrad/s] */
-#define FACTOR_ANGULAR_ACC      8500.0/32768.0*76.3 /* [units] --> [mrad/s^2] */
-#define FACTOR_LINEAR_ACC       9810.0/4681.0       /* [units] --> [mm/s^2] (4681=32768000/7000) */
-
-#define FACTOR_BMU_MAPS         5.0/16777216.0      /* [0-5V]  --> [?-?Pa] */
-
-#define FACTOR_BMU_TEMP         10000.0/4096.0      /* [0-1V]  --> [0-10000cC] */
-#define FACTOR_BMU_BATT         18000.0/1024.0      /* [0-5V]  --> [0-18000mV] */
-#define FACTOR_SONAR            2000.0/1024.0       /* [0-5V]  --> [0-2000mm] */
-#define FACTOR_PARAMETER        0.001               /* [mrad]  --> [rad] */
+#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0     /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
+#define FACTOR_ANGULAR_VEL      8500.0/32768.0          /* [units] --> [mrad/s] */
+#define FACTOR_ANGULAR_ACC      8500.0/32768.0*76.3     /* [units] --> [mrad/s^2] */
+#define FACTOR_LINEAR_ACC       9810.0/4681.0           /* [units] --> [mm/s^2] (4681=32768000/7000) */
+#define FACTOR_BMU_MAPS         115000000.0/16777216.0  /* [0-5V]  --> [115000000mPa] */
+#define FACTOR_BMU_TEMP         10000.0/4096.0          /* [0-1V]  --> [0-10000cC] */
+#define FACTOR_BMU_BATT         18000.0/1024.0          /* [0-5V]  --> [0-18000mV] */
+#define FACTOR_SONAR            2000.0/1024.0           /* [0-5V]  --> [0-2000mm] */
+#define FACTOR_PARAMETER        0.001                   /* [mrad]  --> [rad] */
 
 /* control loop parameters */
 static volatile int             running;
-static int                      ms_period;
+static double                   period;
 static int                      us_period;
 static int                      compute_z;
 static int                      enable_ubisense;
 static int                      altitude_mode;
 static int                      control_state;
 static long long                next_period;
-static double                   offset_x;
-static double                   offset_y;
 
 /* motor speed parameters */
 static int                      motor_speed_revving;
@@ -124,8 +120,6 @@ static int                      motor_speed_liftoff;
 static outlier_filter_t         filter_x;
 static outlier_filter_t         filter_y;
 static outlier_filter_t         filter_z;
-static kalman_filter_t          filter_dx;
-static kalman_filter_t          filter_dy;
 static kalman_filter_t          filter_dz;
 static low_pass_filter_t        filter_ddx;
 static low_pass_filter_t        filter_ddy;
@@ -194,20 +188,18 @@ static void                     print_stats( void );
  *          Control Loop Code           *
  ****************************************/
 
-int control_loop_setup( int period, int control_z, int ubisense )
+int control_loop_setup( int ms_period, int control_z, int ubisense )
 {
     struct sigaction act;
 
     running             = 1;
-    ms_period           = period;
-    us_period           = period * 1000;
+    period              = ms_period / 1000.0;
+    us_period           = ms_period * 1000;
     compute_z           = control_z;
     enable_ubisense     = ubisense;
     altitude_mode       = CTRL_MODE_SHUTDOWN;
     control_state       = CTRL_STATE_NORMAL;
     next_period         = 0;
-    offset_x            = 0;
-    offset_y            = 0;
     motor_speed_revving = 0;
     motor_speed_liftoff = 0;
     act.sa_handler      = signal_handler;
@@ -221,9 +213,7 @@ int control_loop_setup( int period, int control_z, int ubisense )
     outlier_filter_init ( &filter_x,    "X",     FILTER_MDIFF_X_Y, FILTER_LIMIT_X_Y );
     outlier_filter_init ( &filter_y,    "Y",     FILTER_MDIFF_X_Y, FILTER_LIMIT_X_Y );
     outlier_filter_init ( &filter_z,    "Z",     FILTER_MDIFF_Z,   FILTER_LIMIT_Z );
-    kalman_filter_init  ( &filter_dx,   "dX",    ms_period );
-    kalman_filter_init  ( &filter_dy,   "dY",    ms_period );
-    kalman_filter_init  ( &filter_dz,   "dZ",    ms_period );
+    kalman_filter_init  ( &filter_dz,   "dZ",    period );
     low_pass_filter_init( &filter_ddx,  "ddX",   FILTER_GAIN_LACC );
     low_pass_filter_init( &filter_ddy,  "ddY",   FILTER_GAIN_LACC );
     low_pass_filter_init( &filter_ddz,  "ddZ",   FILTER_GAIN_LACC );
@@ -233,13 +223,13 @@ int control_loop_setup( int period, int control_z, int ubisense )
     average_filter_init ( &filter_maps, "MAPS",  FILTER_SIZE_MAPS );
     median_filter_init  ( &filter_temp, "TEMP",  FILTER_SIZE_TEMP );
     median_filter_init  ( &filter_batt, "BATT",  FILTER_SIZE_BATT );
-    controller_init     ( &ctrl_roll,   "Roll",  CTRL_PIDD_DEF, ms_period );
-    controller_init     ( &ctrl_pitch,  "Pitch", CTRL_PIDD_DEF, ms_period );
-    controller_init     ( &ctrl_yaw,    "Yaw",   CTRL_PIDD_YAW, ms_period );
-    controller_init     ( &ctrl_x,      "X",     CTRL_PIDD_X_Y, ms_period );
-    controller_init     ( &ctrl_y,      "Y",     CTRL_PIDD_X_Y, ms_period );
-    controller_init     ( &ctrl_z,      "Z",     CTRL_PIDD_DEF, ms_period );
-    extended_kalman_init( ms_period );
+    controller_init     ( &ctrl_roll,   "Roll",  CTRL_PIDD_DEF, period );
+    controller_init     ( &ctrl_pitch,  "Pitch", CTRL_PIDD_DEF, period );
+    controller_init     ( &ctrl_yaw,    "Yaw",   CTRL_PIDD_YAW, period );
+    controller_init     ( &ctrl_x,      "X",     CTRL_PIDD_X_Y, period );
+    controller_init     ( &ctrl_y,      "Y",     CTRL_PIDD_X_Y, period );
+    controller_init     ( &ctrl_z,      "Z",     CTRL_PIDD_DEF, period );
+    extended_kalman_init( period );
     transformation_init ( );
 
     memset( &command_data,  0, sizeof( command_data ) );
@@ -327,36 +317,38 @@ static void get_control_params( void )
 static void adjust_sensor_data( void )
 {
     static double offset_yaw = 0;
+    static double offset_x   = 0;
+    static double offset_y   = 0;
     static double offset_z   = 0;
 
     if( motor_signals.front == 0 && motor_signals.right == 0 &&
         motor_signals.rear  == 0 && motor_signals.left  == 0 )
     {
         offset_yaw      = sensor_data.yaw;
+        offset_x        = sensor_data.x;
+        offset_y        = sensor_data.y;
         offset_z        = sensor_data.z;
         sensor_data.yaw = 0;
+        sensor_data.x   = 0;
+        sensor_data.y   = 0;
         sensor_data.z   = 0;
-
-        if( enable_ubisense )
-        {
-            offset_x = ubisense_data.x;
-            offset_y = ubisense_data.y;
-        }
-        else
-        {
-            offset_x = sensor_data.x;
-            offset_y = sensor_data.y;
-        }
     }
     else
     {
         sensor_data.yaw -= offset_yaw;
+        sensor_data.x   -= offset_x;
+        sensor_data.y   -= offset_y;
         sensor_data.z   -= offset_z;
     }
 }
 
 static int get_javiator_data( void )
 {
+    static double data_delay_x = 0;
+    static double data_delay_y = 0;
+    static double old_sensor_x = 0;
+    static double old_sensor_y = 0;
+
     int res = javiator_port_get_data( &javiator_data );
 
     if( res )
@@ -384,8 +376,6 @@ static int get_javiator_data( void )
     sensor_data.ddroll  = FACTOR_ANGULAR_ACC * ( sensor_data.droll  - sensor_data.ddroll );
     sensor_data.ddpitch = FACTOR_ANGULAR_ACC * ( sensor_data.dpitch - sensor_data.ddpitch );
     sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * ( sensor_data.dyaw   - sensor_data.ddyaw );
-
-
 
 #if 0
 /*
@@ -417,8 +407,6 @@ static int get_javiator_data( void )
     sensor_data.yaw     = FACTOR_EULER_ANGLE * javiator_data.yaw;
 #endif
 
-
-
     /* extract/scale positions */
     sensor_data.x       = atoi( (const char *) javiator_data.x_pos );
     sensor_data.y       = atoi( (const char *) javiator_data.y_pos );
@@ -429,14 +417,22 @@ static int get_javiator_data( void )
     sensor_data.y       = outlier_filter_update( &filter_y, sensor_data.y );
     sensor_data.z       = outlier_filter_update( &filter_z, sensor_data.z );
 
+    if( enable_ubisense )
+    {
+        sensor_data.x   = ubisense_data.x;
+        sensor_data.y   = ubisense_data.y;
+    }
+    else
     /* transform positions */
-    sensor_data.x       = rotate_local_to_global_X( X_LASER_POS_ROLL  + sensor_data.x,
+    {
+        sensor_data.x   = rotate_local_to_global_X( X_LASER_POS_ROLL  + sensor_data.x,
                                                     X_LASER_POS_PITCH,
                                                     X_LASER_POS_YAW );
 
-    sensor_data.y       = rotate_local_to_global_Y( Y_LASER_POS_ROLL,
+        sensor_data.y   = rotate_local_to_global_Y( Y_LASER_POS_ROLL,
                                                     Y_LASER_POS_PITCH + sensor_data.y,
                                                     Y_LASER_POS_YAW );
+    }
 
     sensor_data.z       = rotate_local_to_global_Z( Z_SONAR_POS_ROLL,
                                                     Z_SONAR_POS_PITCH,
@@ -457,30 +453,29 @@ static int get_javiator_data( void )
     sensor_data.ddy     = low_pass_filter_update( &filter_ddy,  sensor_data.ddy );
     sensor_data.ddz     = low_pass_filter_update( &filter_ddz,  sensor_data.ddz + EARTH_GRAVITY );
 
-    /* estimate linear velocities */
-    if( enable_ubisense )
+    /* compute horizontal velocities */
+    data_delay_x       += period;
+    data_delay_y       += period;
+
+    if( (javiator_data.state & ST_NEW_DATA_POS_X) )
     {
-        kalman_filter_update( &filter_dx, ubisense_data.x, sensor_data.ddx );
-        kalman_filter_update( &filter_dy, ubisense_data.y, sensor_data.ddy );
-    }
-    else
-    {
-        kalman_filter_update( &filter_dx, sensor_data.x, sensor_data.ddx );
-        kalman_filter_update( &filter_dy, sensor_data.y, sensor_data.ddy );
+        sensor_data.dx  = ( sensor_data.x - old_sensor_x ) / data_delay_x;
+        old_sensor_x    = sensor_data.x;
+        data_delay_x    = 0;
     }
 
-    /* note that the Z-axis is pointing downwards in the aircraft
-       coordinate system, hence the sign of ddZ must be changed */
+    if( (javiator_data.state & ST_NEW_DATA_POS_Y) )
+    {
+        sensor_data.dy  = ( sensor_data.y - old_sensor_y ) / data_delay_y;
+        old_sensor_y    = sensor_data.y;
+        data_delay_y    = 0;
+    }
+
+    /* estimate altitude and vertical velocity
+       (note that the Z-axis is pointing downwards in the aircraft
+       coordinate system, hence the sign of ddZ must be changed) */
     kalman_filter_update( &filter_dz, sensor_data.z, -sensor_data.ddz );
-
-    /* store estimated positions */
-    sensor_data.x       = kalman_filter_get_S( &filter_dx );
-    sensor_data.y       = kalman_filter_get_S( &filter_dy );
     sensor_data.z       = kalman_filter_get_S( &filter_dz );
-
-    /* store estimated velocities */
-    sensor_data.dx      = kalman_filter_get_dS( &filter_dx );
-    sensor_data.dy      = kalman_filter_get_dS( &filter_dy );
     sensor_data.dz      = kalman_filter_get_dS( &filter_dz );
 
     /* scale BMU-specific data */
@@ -645,13 +640,13 @@ static int compute_motor_signals( void )
         control_state = CTRL_STATE_TESTING;
 
         command_data.roll  = -controller_do_control( &ctrl_y,
-            offset_y - command_data.roll,
+            -command_data.roll,
             extended_kalman_get_Y( ),   // sensor_data.y
             extended_kalman_get_dY( ),  // sensor_data.dy
             sensor_data.ddy );
 
         command_data.pitch =  controller_do_control( &ctrl_x,
-            offset_x + command_data.pitch,
+            command_data.pitch,
             extended_kalman_get_X( ),   // sensor_data.x
             extended_kalman_get_dX( ),  // sensor_data.dx
             sensor_data.ddx );
@@ -679,17 +674,6 @@ static int compute_motor_signals( void )
     else
     {
         control_state = CTRL_STATE_NORMAL;
-
-        if( enable_ubisense )
-        {
-            offset_x = ubisense_data.x;
-            offset_y = ubisense_data.y;
-        }
-        else
-        {
-            offset_x = sensor_data.x;
-            offset_y = sensor_data.y;
-        }
     }
 
     /* rotate roll/pitch command depending on yaw angle */
@@ -711,13 +695,13 @@ static int compute_motor_signals( void )
         control_state = CTRL_STATE_TESTING;
 
         command_data.roll  = controller_do_control( &ctrl_y,
-            offset_y + command_data.roll,
+            command_data.roll,
             extended_kalman_get_Y( ),   // sensor_data.y
             extended_kalman_get_dY( ),  // sensor_data.dy
             sensor_data.ddy );
 
         command_data.pitch = controller_do_control( &ctrl_x,
-            offset_x + command_data.pitch,
+            command_data.pitch,
             extended_kalman_get_X( ),   // sensor_data.x
             extended_kalman_get_dX( ),  // sensor_data.dx
             sensor_data.ddx );
@@ -745,17 +729,6 @@ static int compute_motor_signals( void )
     else
     {
         control_state = CTRL_STATE_NORMAL;
-
-        if( enable_ubisense )
-        {
-            offset_x = ubisense_data.x;
-            offset_y = ubisense_data.y;
-        }
-        else
-        {
-            offset_x = sensor_data.x;
-            offset_y = sensor_data.y;
-        }
     }
 
     /* rotate roll/pitch command depending on yaw angle */
@@ -784,30 +757,30 @@ static int compute_motor_signals( void )
         u_roll  = controller_do_control( &ctrl_roll,
             command_data.roll,
             extended_kalman_get_Roll( ),    // sensor_data.roll
-            extended_kalman_get_dRoll( ),   // sensor_data.droll,
+            sensor_data.droll,
             sensor_data.ddroll );
 
         u_pitch = controller_do_control( &ctrl_pitch,
             command_data.pitch,
             extended_kalman_get_Pitch( ),   // sensor_data.pitch
-            extended_kalman_get_dPitch( ),  // sensor_data.dpitch,
+            sensor_data.dpitch,
             sensor_data.ddpitch );
 
         u_yaw   = controller_do_control( &ctrl_yaw,
             command_data.yaw,
             extended_kalman_get_Yaw( ),     // sensor_data.yaw
-            extended_kalman_get_dYaw( ),    // sensor_data.dyaw,
+            sensor_data.dyaw,
             sensor_data.ddyaw );
 
         if( compute_z )
 	    {
-            u_z  = motor_speed_liftoff;
-            //u_z /= transformation_get_cos_R( ) * transformation_get_cos_P( );
-            u_z += controller_do_control( &ctrl_z,
+            u_z  = controller_do_control( &ctrl_z,
                 command_data.z,
-                extended_kalman_get_Z( ),   // sensor_data.z
-                extended_kalman_get_dZ( ),  // sensor_data.dz
+                sensor_data.z,              // extended_kalman_get_Z( )
+                sensor_data.dz,             // extended_kalman_get_dZ( )
                 sensor_data.ddz );
+            //u_z /= transformation_get_cos_Roll( ) * transformation_get_cos_Pitch( );
+            u_z += motor_speed_liftoff;
 	    }
         else
         {
@@ -845,20 +818,20 @@ static int compute_motor_signals( void )
 
     trace_data.value_1  = (int16_t)( command_data.roll );
     trace_data.value_2  = (int16_t)( command_data.pitch );
-    trace_data.value_3  = (int16_t)( ubisense_data.y );
-    trace_data.value_4  = (int16_t)( ubisense_data.x );
-    trace_data.value_5  = (int16_t)( controller_get_term_P ( &ctrl_y ) );
-    trace_data.value_6  = (int16_t)( controller_get_term_I ( &ctrl_y ) );
-    trace_data.value_7  = (int16_t)( controller_get_term_D ( &ctrl_y ) );
-    trace_data.value_8  = (int16_t)( controller_get_term_DD( &ctrl_y ) );
-    trace_data.value_9  = (int16_t)( controller_get_term_P ( &ctrl_x ) );
-    trace_data.value_10 = (int16_t)( controller_get_term_I ( &ctrl_x ) );
-    trace_data.value_11 = (int16_t)( controller_get_term_D ( &ctrl_x ) );
-    trace_data.value_12 = (int16_t)( controller_get_term_DD( &ctrl_x ) );
-    trace_data.value_13 = (int16_t)( controller_get_term_P ( &ctrl_z ) );
-    trace_data.value_14 = (int16_t)( controller_get_term_I ( &ctrl_z ) );
-    trace_data.value_15 = (int16_t)( controller_get_term_D ( &ctrl_z ) );
-    trace_data.value_16 = (int16_t)( controller_get_term_DD( &ctrl_z ) );
+    trace_data.value_3  = (int16_t)( ubisense_data.x );
+    trace_data.value_4  = (int16_t)( ubisense_data.y );
+    trace_data.value_5  = (int16_t)( sensor_data.dx );
+    trace_data.value_6  = (int16_t)( sensor_data.dy );
+    trace_data.value_7  = (int16_t)( sensor_data.dz );
+    trace_data.value_8  = (int16_t)( extended_kalman_get_Roll( ) );
+    trace_data.value_9  = (int16_t)( extended_kalman_get_Pitch( ) );
+    trace_data.value_10 = (int16_t)( extended_kalman_get_Yaw( ) );
+    trace_data.value_11 = (int16_t)( extended_kalman_get_X( ) );
+    trace_data.value_12 = (int16_t)( extended_kalman_get_Y( ) );
+    trace_data.value_13 = (int16_t)( extended_kalman_get_Z( ) );
+    trace_data.value_14 = (int16_t)( extended_kalman_get_dX( ) );
+    trace_data.value_15 = (int16_t)( extended_kalman_get_dY( ) );
+    trace_data.value_16 = (int16_t)( extended_kalman_get_dZ( ) );
 
     return( 0 );
 }
@@ -1083,8 +1056,6 @@ int control_loop_run( void )
     outlier_filter_destroy ( &filter_x );
     outlier_filter_destroy ( &filter_y );
     outlier_filter_destroy ( &filter_z );
-    kalman_filter_destroy  ( &filter_dx );
-    kalman_filter_destroy  ( &filter_dy );
     kalman_filter_destroy  ( &filter_dz );
     low_pass_filter_destroy( &filter_ddx );
     low_pass_filter_destroy( &filter_ddy );

@@ -47,10 +47,10 @@ typedef struct
 } kalman_filter_t;
 
 /* Initializes a Kalman filter with the given period.
-   Parameter <period> is expected to be given in [ms].
+   Parameter <period> is expected to be given in [s].
    Returns 0 if successful, -1 otherwise.
 */
-int    kalman_filter_init( kalman_filter_t *filter, char *name, int period );
+int    kalman_filter_init( kalman_filter_t *filter, char *name, double period );
 
 /* Destroys a Kalman filter.
    Returns 0 if successful, -1 otherwise.

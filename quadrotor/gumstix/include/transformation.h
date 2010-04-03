@@ -35,27 +35,27 @@ void   transformation_set_angles( double roll, double pitch, double yaw );
 
 /* Returns the cosinus of the set Roll angle
 */
-double transformation_get_cos_R( void );
+double transformation_get_cos_Roll( void );
 
 /* Returns the cosinus of the set Pitch angle
 */
-double transformation_get_cos_P( void );
+double transformation_get_cos_Pitch( void );
 
 /* Returns the cosinus of the set Yaw angle
 */
-double transformation_get_cos_Y( void );
+double transformation_get_cos_Yaw( void );
 
 /* Returns the sinus of the set Roll angle
 */
-double transformation_get_sin_R( void );
+double transformation_get_sin_Roll( void );
 
 /* Returns the sinus of the set Pitch angle
 */
-double transformation_get_sin_P( void );
+double transformation_get_sin_Pitch( void );
 
 /* Returns the sinus of the set Yaw angle
 */
-double transformation_get_sin_Y( void );
+double transformation_get_sin_Yaw( void );
 
 /* Returns the X component transformed to the global frame
 */ 
@@ -83,27 +83,27 @@ double rotate_global_to_local_Z( double x, double y, double z );
 
 /* Returns the dRoll component transformed to the global frame
 */ 
-double rotate_local_to_global_dR( double dr, double dp, double dy );
+double rotate_local_to_global_dRoll( double dr, double dp, double dy );
 
 /* Returns the dPitch component transformed to the global frame
 */ 
-double rotate_local_to_global_dP( double dr, double dp, double dy );
+double rotate_local_to_global_dPitch( double dr, double dp, double dy );
 
 /* Returns the dYaw component transformed to the global frame
 */ 
-double rotate_local_to_global_dY( double dr, double dp, double dy );
+double rotate_local_to_global_dYaw( double dr, double dp, double dy );
 
 /* Returns the dRoll component transformed to the local frame
 */ 
-double rotate_global_to_local_dR( double dr, double dp, double dy );
+double rotate_global_to_local_dRoll( double dr, double dp, double dy );
 
 /* Returns the dPitch component transformed to the local frame
 */ 
-double rotate_global_to_local_dP( double dr, double dp, double dy );
+double rotate_global_to_local_dPitch( double dr, double dp, double dy );
 
 /* Returns the dYaw component transformed to the local frame
 */ 
-double rotate_global_to_local_dY( double dr, double dp, double dy );
+double rotate_global_to_local_dYaw( double dr, double dp, double dy );
 
 #endif /* !TRANSFORMATION_H */
 

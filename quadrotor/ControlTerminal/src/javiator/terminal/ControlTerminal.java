@@ -77,7 +77,7 @@ public class ControlTerminal extends Frame
     private static final boolean SHOW_3DWINDOW = false;
     private boolean show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/new_bmu_test_.csv";
+    public static final String  LOG_FILE_NAME = "traces/ekf_test_.csv";
 
     public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
 											    "roll,pitch,yaw," +
@@ -90,10 +90,11 @@ public class ControlTerminal extends Frame
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
 											    "roll,pitch," +
-											    "ubi-y,ubi-x," +
-											    "p(y),i(y),d(y),dd(y)," +
-											    "p(x),i(x),d(x),dd(x)," +
-											    "p(z),i(z),d(z),dd(z)";
+											    "ubi-x,ubi-y," +
+											    "dx, dy, dz," +
+											    "ekf-R,ekf-P,ekf-Y," +
+											    "ekf-x,ekf-y,ekf-z," +
+											    "ekf-dx,ekf-dy,ekf-dz";
 
     public ControlTerminal( )
     {

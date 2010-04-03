@@ -26,7 +26,7 @@
 #ifndef CONTROL_LOOP_H
 #define CONTROL_LOOP_H
 
-int control_loop_setup( int period, int control_z, int ubisense );
+int control_loop_setup( int ms_period, int control_z, int ubisense );
 
 int control_loop_run( void );
 

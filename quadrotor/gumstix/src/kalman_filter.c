@@ -28,17 +28,16 @@
 
 #include "kalman_filter.h"
 
-#define KALMAN_STATES   2       /* number of Kalman states */
-#define KALMAN_P        4       /* elements in covariance matrix */
-#define KALMAN_Q        10000.0
-#define KALMAN_R        0.01
+/* Standard deviations */
+#define KALMAN_Q    10000.0
+#define KALMAN_R    0.01
 
 /* State of a Kalman filter */
 struct kf_state
 {
-    double dtime;
-    double x[ KALMAN_STATES ];
-    double p[ KALMAN_P ];
+    double dt;
+    double x[2];
+    double p[4];
 };
 
 
@@ -53,16 +52,16 @@ static inline kf_state_t *get_kf_state( const kalman_filter_t *filter )
 }
 
 /* Initializes a Kalman filter with the given period.
-   Parameter <period> is expected to be given in [ms].
+   Parameter <period> is expected to be given in [s].
    Returns 0 if successful, -1 otherwise.
 */
-int kalman_filter_init( kalman_filter_t *filter, char *name, int period )
+int kalman_filter_init( kalman_filter_t *filter, char *name, double period )
 {
     kf_state_t *state;
 
-    if( period < 1 )
+    if( period < 0.001 )
     {
-        fprintf( stderr, "ERROR: invalid %s filter period (%d)\n", name, period );
+        fprintf( stderr, "ERROR: invalid %s filter period (%f)\n", name, period );
         return( -1 );
     }
 
@@ -74,7 +73,7 @@ int kalman_filter_init( kalman_filter_t *filter, char *name, int period )
         return( -1 );
     }
 
-    state->dtime  = period / 1000.0; /* filter uses period in seconds */
+    state->dt     = period;
     filter->name  = name;
     filter->state = state;
     return kalman_filter_reset( filter );
@@ -118,7 +117,7 @@ int kalman_filter_reset( kalman_filter_t *filter )
 int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
 {
     kf_state_t *state = get_kf_state( filter );
-    double x1, x2, p11, p12, p21, p22, k1, k2;
+    double dt, x1, x2, p11, p12, p21, p22, k1, k2;
 
     if( !state )
     {
@@ -127,7 +126,8 @@ int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
 
     if( s > 0 )
     {
-        /* update local variables */
+        /* copy state variables */
+        dt  = state->dt;
         x1  = state->x[0];
         x2  = state->x[1];
         p11 = state->p[0];
@@ -138,14 +138,14 @@ int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
         /* TIME UPDATE */
 
         /* project state ahead */
-        x1 = x1 + state->dtime * x2;
-        x2 = x2 + state->dtime * dds;
+        x1 = x1 + x2 * dt;
+        x2 = x2 + dds * dt;
 
         /* project error covariance ahead */
-        p11 = p11 + state->dtime * (p21 + p12) + state->dtime * state->dtime * p22;
-        p12 = p12 + state->dtime * p22;
-        p21 = p21 + state->dtime * p22;
-        p22 = p22 + state->dtime * state->dtime * KALMAN_Q;
+        p11 = p11 + (p21 + p12) * dt + p22 * dt*dt;
+        p12 = p12 + p22 * dt;
+        p21 = p21 + p22 * dt;
+        p22 = p22 + KALMAN_Q * dt*dt;
 
         /* MEASURE UPDATE */
 
@@ -163,7 +163,7 @@ int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
         p12 = (1 - k1) * p12;
         p11 = (1 - k1) * p11;
 
-        /* store local variables */
+        /* update state variables */
         state->x[0] = x1;
         state->x[1] = x2;
         state->p[0] = p11;

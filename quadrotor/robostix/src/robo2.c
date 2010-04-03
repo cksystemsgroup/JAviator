@@ -265,29 +265,41 @@ int main( void )
         /* check if new BMU data available */
         if( bmu09a_is_new_data( ) )
         {
-            bmu09a_get_data( &javiator_data );
-        }
-
-        /* check if new laser x-data available */
-        if( lsm215_is_new_x_data( ) )
-        {
-            lsm215_get_x_data( javiator_data.x_pos );
-
-            LED_OFF( BLUE );
-        }
-
-        /* check if new laser y-data available */
-        if( lsm215_is_new_y_data( ) )
-        {
-            lsm215_get_y_data( javiator_data.y_pos );
-
-            LED_ON( BLUE );
+            if( !bmu09a_get_data( &javiator_data ) )
+            {
+                javiator_data.state |= ST_NEW_DATA_BMU;
+            }
         }
 
         /* check if new sonar data available */
         if( adc_is_new_data( ADC_CH_SONAR ) )
         {
-            adc_get_data( ADC_CH_SONAR, &javiator_data.sonar );
+            if( !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
+            {
+                javiator_data.state |= ST_NEW_DATA_SONAR;
+            }
+        }
+
+        /* check if new laser x-data available */
+        if( lsm215_is_new_x_data( ) )
+        {
+            if( !lsm215_get_x_data( javiator_data.x_pos ) )
+            {
+                javiator_data.state |= ST_NEW_DATA_POS_X;
+
+                LED_OFF( BLUE );
+            }
+        }
+
+        /* check if new laser y-data available */
+        if( lsm215_is_new_y_data( ) )
+        {
+            if( !lsm215_get_y_data( javiator_data.y_pos ) )
+            {
+                javiator_data.state |= ST_NEW_DATA_POS_Y;
+
+                LED_ON( BLUE );
+            }
         }
     }
 

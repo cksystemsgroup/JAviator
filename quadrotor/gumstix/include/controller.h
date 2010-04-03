@@ -59,7 +59,8 @@ struct controller
     ctrl_state_t *  state;
 };
 
-int    controller_init( controller_t *controller, char *name, ctrl_type_t type, int period );
+int    controller_init( controller_t *controller,
+    char *name, ctrl_type_t type, double period );
 
 int    controller_destroy( controller_t *controller );
 

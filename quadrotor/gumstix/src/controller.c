@@ -29,13 +29,13 @@
 #define NULL 0
 #endif
 
-extern int pidd_def_controller_init( controller_t *, int );
-extern int pidd_yaw_controller_init( controller_t *, int );
-extern int pidd_x_y_controller_init( controller_t *, int );
+extern int pidd_def_controller_init( controller_t *, double );
+extern int pidd_yaw_controller_init( controller_t *, double );
+extern int pidd_x_y_controller_init( controller_t *, double );
 extern int pidd_all_controller_destroy( controller_t * );
 
 int controller_init( controller_t *controller,
-    char *name, ctrl_type_t type, int period )
+    char *name, ctrl_type_t type, double period )
 {
     int res = -1;
 

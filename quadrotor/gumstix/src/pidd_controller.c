@@ -35,7 +35,7 @@
 /* State of a controller for 1 degree of freedom */
 struct ctrl_state
 {
-    double dtime;        /* Control period [s] */
+    double dt;           /* Control period [s] */
     double kp;           /* Gain for tracking error [PWM/mrad] */
     double ki;           /* Gain for integral of tracking error [PWM/(mrad*s)] */
     double kd;           /* Gain for derivative of tracking error [PWM/(mrad/s)] */
@@ -68,7 +68,7 @@ static double pidd_compute( ctrl_state_t *state,
     double s_error, double v_error, double acceleration )
 {
     /* Compute integral of error */
-    state->integral += s_error * state->dtime;
+    state->integral += s_error * state->dt;
     saturate_integral( state );
 
     /* Compute the contribution of each metric of the angle error */
@@ -132,7 +132,7 @@ static double pidd_do_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
+    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
     state->last_desired = desired;
 
@@ -145,7 +145,7 @@ static double pidd_yaw_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_yaw_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
+    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
     state->last_desired = desired;
 
@@ -158,7 +158,7 @@ static double pidd_x_y_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dtime );
+    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
     state->last_desired = desired;
 
@@ -189,10 +189,10 @@ static int pidd_reset_zero( controller_t *controller )
  *
  * Allocate memory for the state, set constants for the state and for the controller.
  * \param controller *controller, pointer to the controller to be created
- * \param period int, control loop period [ms]
+ * \param period double, control loop period [s]
  * \return If allocation succeeds, returns 0, otherwise returns -1.
  */
-int pidd_def_controller_init( controller_t *controller, int period )
+int pidd_def_controller_init( controller_t *controller, double period )
 {
     ctrl_state_t *state = malloc( sizeof( ctrl_state_t ) );
 
@@ -205,9 +205,9 @@ int pidd_def_controller_init( controller_t *controller, int period )
 
     memset( state, 0, sizeof( ctrl_state_t ) );
 
-    state->dtime           = period / 1000.0; /* controller uses period in seconds */
-    state->int_limit       = MOTOR_MAX;
-    state->last_desired    = 0;
+    state->dt           = period;
+    state->int_limit    = MOTOR_MAX;
+    state->last_desired = 0;
 
     controller->do_control = pidd_do_control;
     controller->set_params = pidd_set_params;
@@ -217,7 +217,7 @@ int pidd_def_controller_init( controller_t *controller, int period )
     return( 0 );
 }
 
-int pidd_yaw_controller_init( controller_t *controller, int period )
+int pidd_yaw_controller_init( controller_t *controller, double period )
 {
     int res = pidd_def_controller_init( controller, period );
 
@@ -226,7 +226,7 @@ int pidd_yaw_controller_init( controller_t *controller, int period )
     return( res );
 }
 
-int pidd_x_y_controller_init( controller_t *controller, int period )
+int pidd_x_y_controller_init( controller_t *controller, double period )
 {
     int res = pidd_def_controller_init( controller, period );
 

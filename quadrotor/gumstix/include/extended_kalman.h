@@ -36,7 +36,7 @@
 /* Initializes the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    extended_kalman_init( int period );
+int    extended_kalman_init( double period );
 
 /* Resets the extended Kalman filter
 */
@@ -57,18 +57,6 @@ double extended_kalman_get_Pitch( void );
 /* Returns the estimated Yaw angle in [mrad]
 */
 double extended_kalman_get_Yaw( void );
-
-/* Returns the estimated Roll velocity in [mrad/s]
-*/
-double extended_kalman_get_dRoll( void );
-
-/* Returns the estimated Pitch velocity in [mrad/s]
-*/
-double extended_kalman_get_dPitch( void );
-
-/* Returns the estimated Yaw velocity in [mrad/s]
-*/
-double extended_kalman_get_dYaw( void );
 
 /* Returns the estimated X position in [mm]
 */
