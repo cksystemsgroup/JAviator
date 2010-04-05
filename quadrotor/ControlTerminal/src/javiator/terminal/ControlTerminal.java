@@ -83,18 +83,18 @@ public class ControlTerminal extends Frame
 											    "roll,pitch,yaw," +
 											    "droll,dpitch,dyaw," +
 											    "ddroll,ddpitch,ddyaw," +
-											    "x,y,z," +
-											    "dx,dy,dz," +
+											    "x,y,kf-z," +
+											    "dx,dy,kf-dz," +
 											    "ddx,ddy,ddz," +
 											    "maps,temp,batt," +
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
-											    "roll,pitch," +
-											    "ubi-x,ubi-y," +
-											    "dx, dy, dz," +
+											    "z,dz,period," +
 											    "ekf-R,ekf-P,ekf-Y," +
 											    "ekf-x,ekf-y,ekf-z," +
-											    "ekf-dx,ekf-dy,ekf-dz";
+											    "ekf-dx,ekf-dy,ekf-dz," +
+                                                "fil-R,fil-P," +
+                                                "rot-R,rot-P";
 
     public ControlTerminal( )
     {

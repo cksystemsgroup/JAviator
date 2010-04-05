@@ -149,28 +149,26 @@ static motor_offsets_t          motor_offsets;
 static trace_data_t             trace_data;
 
 /* controller statistics */
-#define STAT_FROM_UBI           0
-#define STAT_TO_JAV             1
-#define STAT_FROM_JAV           2
-#define STAT_FROM_TERM          3
-#define STAT_TO_TERM            4
-#define STAT_CONTROL            5
-#define STAT_SLEEP              6
-#define STAT_READ               7
-#define STAT_ALL                8
-#define NUM_STATS               9
+#define STAT_TO_JAV             0
+#define STAT_FROM_JAV           1
+#define STAT_FROM_TERM          2
+#define STAT_TO_TERM            3
+#define STAT_CONTROL            4
+#define STAT_SLEEP              5
+#define STAT_READ               6
+#define STAT_ALL                7
+#define NUM_STATS               8
 
 static int                      loop_count = 0;
-static long long                stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
-static long long                max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0,0};
+static long long                stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0};
+static long long                max_stats[ NUM_STATS ] = {0,0,0,0,0,0,0,0};
 static char *                   stats_name[ NUM_STATS ] =
 {
-    "from Ubisense ",
     "to JAviator   ",
     "from JAviator ",
     "from Terminal ",
     "to Terminal   ",
-    "control       ",
+    "control loop  ",
     "sleep time    ",
     "read time     ",
     "complete loop "
@@ -243,6 +241,214 @@ int control_loop_setup( int ms_period, int control_z, int ubisense )
     return( 0 );
 }
 
+static int get_javiator_data( void )
+{
+    static double sensor_delay_x  = 0;
+    static double sensor_delay_y  = 0;
+    static double sensor_delay_z  = 0;
+    static double old_pos_data_x  = 0;
+    static double old_pos_data_y  = 0;
+    static double old_pos_data_z  = 0;
+    static double data_offset_yaw = 0;
+    static double data_offset_x   = 0;
+    static double data_offset_y   = 0;
+    static double data_offset_z   = 0;
+    double tmp1, tmp2, tmp3;
+
+    int grounded = motor_signals.front == 0 &&
+                   motor_signals.right == 0 &&
+                   motor_signals.rear  == 0 &&
+                   motor_signals.left  == 0;
+
+    int res = javiator_port_get_data( &javiator_data );
+
+    if( res )
+    {
+        fprintf( stderr, "ERROR: data from JAviator not available\n" );
+        return( res );
+    }
+
+    /* scale Euler angles */
+    sensor_data.roll  = FACTOR_EULER_ANGLE * javiator_data.roll;
+    sensor_data.pitch = FACTOR_EULER_ANGLE * javiator_data.pitch;
+
+	/* IMPORTANT: yaw angle must be zero-adjusted BEFORE
+	   updating the angles of the transformation matrices */
+    if( grounded )
+    {
+        data_offset_yaw = FACTOR_EULER_ANGLE * javiator_data.yaw;
+        sensor_data.yaw = 0;
+    }
+    else
+    {
+        sensor_data.yaw = FACTOR_EULER_ANGLE * javiator_data.yaw - data_offset_yaw;
+    }
+
+	/* IMPORTANT: all angles must be given in radians */
+    transformation_set_angles( sensor_data.roll  / 1000,
+                               sensor_data.pitch / 1000,
+                               sensor_data.yaw   / 1000 );
+
+    /* save old angular velocities */
+    sensor_data.ddroll  = sensor_data.droll;
+    sensor_data.ddpitch = sensor_data.dpitch;
+    sensor_data.ddyaw   = sensor_data.dyaw;
+
+    /* scale angular velocities */
+    tmp1 = FACTOR_ANGULAR_VEL * javiator_data.droll;
+    tmp2 = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
+    tmp3 = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
+
+    /* transform angular velocities */
+    sensor_data.droll  = rotate_local_to_global_dRoll ( tmp1, tmp2, tmp3 );
+    sensor_data.dpitch = rotate_local_to_global_dPitch( tmp1, tmp2, tmp3 );
+    sensor_data.dyaw   = rotate_local_to_global_dYaw  ( tmp1, tmp2, tmp3 );
+
+    /* compute angular accelerations */
+    sensor_data.ddroll  = FACTOR_ANGULAR_ACC * ( sensor_data.droll  - sensor_data.ddroll );
+    sensor_data.ddpitch = FACTOR_ANGULAR_ACC * ( sensor_data.dpitch - sensor_data.ddpitch );
+    sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * ( sensor_data.dyaw   - sensor_data.ddyaw );
+
+    /* increment position data delays */
+    sensor_delay_x += period;
+    sensor_delay_y += period;
+    sensor_delay_z += period;
+
+    if( enable_ubisense )
+    {
+        /* extract/compute x-y-position/x-y-velocity */
+        if( ubisense_port_is_new_data( ) )
+        {
+            ubisense_port_get_data( &ubisense_data );
+
+            if( grounded )
+            {
+                data_offset_x  = outlier_filter_update( &filter_x, ubisense_data.x );
+                data_offset_y  = outlier_filter_update( &filter_y, ubisense_data.y );
+                sensor_data.x  = 0;
+                sensor_data.y  = 0;
+                sensor_data.dx = 0;
+                sensor_data.dy = 0;
+            }
+            else
+            {
+                sensor_data.x  = outlier_filter_update( &filter_x, ubisense_data.x ) - data_offset_x;
+                sensor_data.y  = outlier_filter_update( &filter_y, ubisense_data.y ) - data_offset_y;
+                sensor_data.dx = ( sensor_data.x - old_pos_data_x ) / sensor_delay_x;
+                sensor_data.dy = ( sensor_data.y - old_pos_data_y ) / sensor_delay_y;
+            }
+
+            old_pos_data_x = sensor_data.x;
+            old_pos_data_y = sensor_data.y;
+            sensor_delay_x = 0;
+            sensor_delay_y = 0;
+        }
+    }
+    else
+    {
+        /* extract/compute x-position/x-velocity */
+        if( (javiator_data.state & ST_NEW_DATA_POS_X) )
+        {
+            sensor_data.x = atoi( (const char *) javiator_data.x_pos );
+
+            if( grounded )
+            {
+                data_offset_x  = outlier_filter_update( &filter_x, sensor_data.x );
+                sensor_data.x  = 0;
+                sensor_data.dx = 0;
+            }
+            else
+            {
+                sensor_data.x  = outlier_filter_update( &filter_x, sensor_data.x ) - data_offset_x;
+                sensor_data.x  = rotate_local_to_global_X(
+                    X_LASER_POS_ROLL + sensor_data.x, X_LASER_POS_PITCH, X_LASER_POS_YAW );
+                sensor_data.dx = ( sensor_data.x - old_pos_data_x ) / sensor_delay_x;
+            }
+
+            old_pos_data_x = sensor_data.x;
+            sensor_delay_x = 0;
+        }
+
+        /* extract/compute y-position/y-velocity */
+        if( (javiator_data.state & ST_NEW_DATA_POS_Y) )
+        {
+            sensor_data.y = atoi( (const char *) javiator_data.y_pos );
+
+            if( grounded )
+            {
+                data_offset_y  = outlier_filter_update( &filter_y, sensor_data.y );
+                sensor_data.y  = 0;
+                sensor_data.dy = 0;
+            }
+            else
+            {
+                sensor_data.y  = outlier_filter_update( &filter_y, sensor_data.y ) - data_offset_y;
+                sensor_data.y  = rotate_local_to_global_Y(
+                    Y_LASER_POS_ROLL, Y_LASER_POS_PITCH + sensor_data.y, Y_LASER_POS_YAW );
+                sensor_data.dy = ( sensor_data.y - old_pos_data_y ) / sensor_delay_y;
+            }
+
+            old_pos_data_y = sensor_data.y;
+            sensor_delay_y = 0;
+        }
+    }
+
+    /* extract/compute z-position/z-velocity */
+    if( (javiator_data.state & ST_NEW_DATA_SONAR) )
+    {
+        sensor_data.z = FACTOR_SONAR * javiator_data.sonar;
+
+        if( grounded )
+        {
+            data_offset_z  = outlier_filter_update( &filter_z, sensor_data.z );
+            sensor_data.z  = 0;
+            sensor_data.dz = 0;
+        }
+        else
+        {
+            sensor_data.z  = outlier_filter_update( &filter_z, sensor_data.z ) - data_offset_z;
+            sensor_data.z  = rotate_local_to_global_Z(
+                Z_SONAR_POS_ROLL, Z_SONAR_POS_PITCH, Z_SONAR_POS_YAW + sensor_data.z );
+            sensor_data.dz = ( sensor_data.z - old_pos_data_z ) / sensor_delay_z;
+        }
+
+        old_pos_data_z = sensor_data.z;
+        sensor_delay_z = 0;
+    }
+
+    /* scale linear accelerations */
+    tmp1 = FACTOR_LINEAR_ACC * javiator_data.ddx;
+    tmp2 = FACTOR_LINEAR_ACC * javiator_data.ddy;
+    tmp3 = FACTOR_LINEAR_ACC * javiator_data.ddz;
+
+    /* transform linear accelerations */
+    sensor_data.ddx = rotate_local_to_global_X( tmp1, tmp2, tmp3 );
+    sensor_data.ddy = rotate_local_to_global_Y( tmp1, tmp2, tmp3 );
+    sensor_data.ddz = rotate_local_to_global_Z( tmp1, tmp2, tmp3 );
+
+    /* add gravity vector [0 0 g]^T and apply low-pass filters */
+    sensor_data.ddx = low_pass_filter_update( &filter_ddx, sensor_data.ddx );
+    sensor_data.ddy = low_pass_filter_update( &filter_ddy, sensor_data.ddy );
+    sensor_data.ddz = low_pass_filter_update( &filter_ddz, sensor_data.ddz + EARTH_GRAVITY );
+
+    /* scale BMU-specific data and subtract offsets */
+    sensor_data.maps = FACTOR_BMU_MAPS * javiator_data.maps;
+    sensor_data.temp = FACTOR_BMU_TEMP * javiator_data.temp - OFFSET_TEMPERATURE;
+    sensor_data.batt = FACTOR_BMU_BATT * javiator_data.batt;
+
+    /* apply smoothing filters */
+    sensor_data.maps = average_filter_update( &filter_maps, sensor_data.maps );
+    sensor_data.temp = median_filter_update ( &filter_temp, sensor_data.temp );
+    sensor_data.batt = median_filter_update ( &filter_batt, sensor_data.batt );
+
+    //fprintf( stdout, "  \t%10u\t%1.5f\t\r", javiator_data.maps, sensor_data.maps );
+    //fprintf( stdout, "  \t%4u\t%1.2f\t\r", javiator_data.temp, sensor_data.temp / 100 );
+    //fprintf( stdout, "  \t%4u\t%1.2f\t\r", javiator_data.batt, sensor_data.batt / 1000 );
+    //fflush( stdout );
+
+    return( 0 );
+}
+
 static int check_terminal_connection( void )
 {
     static int command_data_delay = 0;
@@ -255,6 +461,55 @@ static int check_terminal_connection( void )
     if( ++command_data_delay > COMMAND_THRESHOLD )
     {
         return( -1 );
+    }
+
+    return( 0 );
+}
+
+static int get_command_data( void )
+{
+    if( terminal_port_is_shut_down( ) )
+    {
+        altitude_mode = CTRL_MODE_SHUTDOWN;
+        terminal_port_reset_shut_down( );
+    }
+    else
+    if( terminal_port_is_mode_switch( ) )
+    {
+		printf( "Mode Switch...\n" );
+		print_stats( );
+
+		loop_count = 0;
+		memset( stats, 0, sizeof( stats ) );
+		memset( max_stats, 0, sizeof( max_stats ) );
+
+        switch( altitude_mode )
+        {
+            case CTRL_MODE_GROUND:
+                altitude_mode = CTRL_MODE_FLYING;
+                break;
+
+            case CTRL_MODE_FLYING:
+                altitude_mode = CTRL_MODE_GROUND;
+                break;
+
+            case CTRL_MODE_SHUTDOWN:
+                altitude_mode = CTRL_MODE_GROUND;
+                break;
+
+            default:
+                altitude_mode = CTRL_MODE_SHUTDOWN;
+        }
+    }
+    else
+    if( terminal_port_is_new_command_data( ) )
+    {
+        terminal_port_get_command_data( &command_data );
+
+        /* apply low-pass filters */
+        command_data.roll  = low_pass_filter_update( &filter_cmdr, command_data.roll );
+        command_data.pitch = low_pass_filter_update( &filter_cmdp, command_data.pitch );
+        command_data.z     = low_pass_filter_update( &filter_cmdz, command_data.z );
     }
 
     return( 0 );
@@ -314,255 +569,6 @@ static void get_control_params( void )
     }
 }
 
-static void adjust_sensor_data( void )
-{
-    static double offset_yaw = 0;
-    static double offset_x   = 0;
-    static double offset_y   = 0;
-    static double offset_z   = 0;
-
-    if( motor_signals.front == 0 && motor_signals.right == 0 &&
-        motor_signals.rear  == 0 && motor_signals.left  == 0 )
-    {
-        offset_yaw      = sensor_data.yaw;
-        offset_x        = sensor_data.x;
-        offset_y        = sensor_data.y;
-        offset_z        = sensor_data.z;
-        sensor_data.yaw = 0;
-        sensor_data.x   = 0;
-        sensor_data.y   = 0;
-        sensor_data.z   = 0;
-    }
-    else
-    {
-        sensor_data.yaw -= offset_yaw;
-        sensor_data.x   -= offset_x;
-        sensor_data.y   -= offset_y;
-        sensor_data.z   -= offset_z;
-    }
-}
-
-static int get_javiator_data( void )
-{
-    static double data_delay_x = 0;
-    static double data_delay_y = 0;
-    static double old_sensor_x = 0;
-    static double old_sensor_y = 0;
-
-    int res = javiator_port_get_data( &javiator_data );
-
-    if( res )
-    {
-        fprintf( stderr, "ERROR: data from JAviator not available\n" );
-        return( res );
-    }
-
-    /* scale Euler angles */
-    sensor_data.roll    = FACTOR_EULER_ANGLE * javiator_data.roll;
-    sensor_data.pitch   = FACTOR_EULER_ANGLE * javiator_data.pitch;
-    sensor_data.yaw     = FACTOR_EULER_ANGLE * javiator_data.yaw;
-
-    /* save old angular velocities */
-    sensor_data.ddroll  = sensor_data.droll;
-    sensor_data.ddpitch = sensor_data.dpitch;
-    sensor_data.ddyaw   = sensor_data.dyaw;
-
-    /* scale angular velocities */
-    sensor_data.droll   = FACTOR_ANGULAR_VEL * javiator_data.droll;
-    sensor_data.dpitch  = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
-    sensor_data.dyaw    = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
-
-    /* compute angular accelerations */
-    sensor_data.ddroll  = FACTOR_ANGULAR_ACC * ( sensor_data.droll  - sensor_data.ddroll );
-    sensor_data.ddpitch = FACTOR_ANGULAR_ACC * ( sensor_data.dpitch - sensor_data.ddpitch );
-    sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * ( sensor_data.dyaw   - sensor_data.ddyaw );
-
-#if 0
-/*
-    TODO: must be tested: rotations to angular velocities applied
-*/
-    /* save old angular velocities */
-    sensor_data.ddroll  = sensor_data.droll;
-    sensor_data.ddpitch = sensor_data.dpitch;
-    sensor_data.ddyaw   = sensor_data.dyaw;
-
-    /* scale angular velocities (store temporarily for transformations) */
-    sensor_data.roll    = FACTOR_ANGULAR_VEL * javiator_data.droll;
-    sensor_data.pitch   = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
-    sensor_data.yaw     = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
-
-    /* transform angular velocities */
-    sensor_data.droll   = rotate_local_to_global_dR( sensor_data.roll, sensor_data.pitch, sensor_data.yaw );
-    sensor_data.dpitch  = rotate_local_to_global_dP( sensor_data.roll, sensor_data.pitch, sensor_data.yaw );
-    sensor_data.dyaw    = rotate_local_to_global_dY( sensor_data.roll, sensor_data.pitch, sensor_data.yaw );
-
-    /* compute angular accelerations */
-    sensor_data.ddroll  = FACTOR_ANGULAR_ACC * ( sensor_data.droll  - sensor_data.ddroll );
-    sensor_data.ddpitch = FACTOR_ANGULAR_ACC * ( sensor_data.dpitch - sensor_data.ddpitch );
-    sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * ( sensor_data.dyaw   - sensor_data.ddyaw );
-
-    /* scale Euler angles */
-    sensor_data.roll    = FACTOR_EULER_ANGLE * javiator_data.roll;
-    sensor_data.pitch   = FACTOR_EULER_ANGLE * javiator_data.pitch;
-    sensor_data.yaw     = FACTOR_EULER_ANGLE * javiator_data.yaw;
-#endif
-
-    /* extract/scale positions */
-    sensor_data.x       = atoi( (const char *) javiator_data.x_pos );
-    sensor_data.y       = atoi( (const char *) javiator_data.y_pos );
-    sensor_data.z       = FACTOR_SONAR * javiator_data.sonar;
-
-    /* update and apply filters */
-    sensor_data.x       = outlier_filter_update( &filter_x, sensor_data.x );
-    sensor_data.y       = outlier_filter_update( &filter_y, sensor_data.y );
-    sensor_data.z       = outlier_filter_update( &filter_z, sensor_data.z );
-
-    if( enable_ubisense )
-    {
-        sensor_data.x   = ubisense_data.x;
-        sensor_data.y   = ubisense_data.y;
-    }
-    else
-    /* transform positions */
-    {
-        sensor_data.x   = rotate_local_to_global_X( X_LASER_POS_ROLL  + sensor_data.x,
-                                                    X_LASER_POS_PITCH,
-                                                    X_LASER_POS_YAW );
-
-        sensor_data.y   = rotate_local_to_global_Y( Y_LASER_POS_ROLL,
-                                                    Y_LASER_POS_PITCH + sensor_data.y,
-                                                    Y_LASER_POS_YAW );
-    }
-
-    sensor_data.z       = rotate_local_to_global_Z( Z_SONAR_POS_ROLL,
-                                                    Z_SONAR_POS_PITCH,
-                                                    Z_SONAR_POS_YAW   + sensor_data.z );
-
-    /* scale linear accelerations (store temporarily for transformations) */
-    sensor_data.dx      = FACTOR_LINEAR_ACC * javiator_data.ddx;
-    sensor_data.dy      = FACTOR_LINEAR_ACC * javiator_data.ddy;
-    sensor_data.dz      = FACTOR_LINEAR_ACC * javiator_data.ddz;
-
-    /* transform linear accelerations */
-    sensor_data.ddx     = rotate_local_to_global_X( sensor_data.dx, sensor_data.dy, sensor_data.dz );
-    sensor_data.ddy     = rotate_local_to_global_Y( sensor_data.dx, sensor_data.dy, sensor_data.dz );
-    sensor_data.ddz     = rotate_local_to_global_Z( sensor_data.dx, sensor_data.dy, sensor_data.dz );
-
-    /* update and apply filters */
-    sensor_data.ddx     = low_pass_filter_update( &filter_ddx,  sensor_data.ddx );
-    sensor_data.ddy     = low_pass_filter_update( &filter_ddy,  sensor_data.ddy );
-    sensor_data.ddz     = low_pass_filter_update( &filter_ddz,  sensor_data.ddz + EARTH_GRAVITY );
-
-    /* compute horizontal velocities */
-    data_delay_x       += period;
-    data_delay_y       += period;
-
-    if( (javiator_data.state & ST_NEW_DATA_POS_X) )
-    {
-        sensor_data.dx  = ( sensor_data.x - old_sensor_x ) / data_delay_x;
-        old_sensor_x    = sensor_data.x;
-        data_delay_x    = 0;
-    }
-
-    if( (javiator_data.state & ST_NEW_DATA_POS_Y) )
-    {
-        sensor_data.dy  = ( sensor_data.y - old_sensor_y ) / data_delay_y;
-        old_sensor_y    = sensor_data.y;
-        data_delay_y    = 0;
-    }
-
-    /* estimate altitude and vertical velocity
-       (note that the Z-axis is pointing downwards in the aircraft
-       coordinate system, hence the sign of ddZ must be changed) */
-    kalman_filter_update( &filter_dz, sensor_data.z, -sensor_data.ddz );
-    sensor_data.z       = kalman_filter_get_S( &filter_dz );
-    sensor_data.dz      = kalman_filter_get_dS( &filter_dz );
-
-    /* scale BMU-specific data */
-    sensor_data.maps    = FACTOR_BMU_MAPS * javiator_data.maps;
-    sensor_data.temp    = FACTOR_BMU_TEMP * javiator_data.temp - OFFSET_TEMPERATURE;
-    sensor_data.batt    = FACTOR_BMU_BATT * javiator_data.batt;
-
-    //fprintf( stdout, "  \t%10u\t%1.5f\t\r", javiator_data.maps, sensor_data.maps );
-    //fprintf( stdout, "  \t%4u\t%1.2f\t\r", javiator_data.temp, sensor_data.temp / 100 );
-    //fprintf( stdout, "  \t%4u\t%1.2f\t\r", javiator_data.batt, sensor_data.batt / 1000 );
-    //fflush( stdout );
-
-    /* update and apply filters */
-    sensor_data.maps    = average_filter_update( &filter_maps, sensor_data.maps );
-    sensor_data.temp    = median_filter_update ( &filter_temp, sensor_data.temp );
-    sensor_data.batt    = median_filter_update ( &filter_batt, sensor_data.batt );
-
-    return( 0 );
-}
-
-static int get_ubisense_data( void )
-{
-    int res = ubisense_port_get_data( &ubisense_data );
-
-    if( res == -1 )
-    {
-        return( 0 );
-    }
-
-    if( res )
-    {
-        fprintf( stderr, "ERROR: data from Ubisense not available\n" );
-        return( res );
-    }
-
-    return( 0 );
-}
-
-static int get_command_data( void )
-{
-    if( terminal_port_is_shut_down( ) )
-    {
-        altitude_mode = CTRL_MODE_SHUTDOWN;
-        terminal_port_reset_shut_down( );
-    }
-    else
-    if( terminal_port_is_mode_switch( ) )
-    {
-		printf( "Mode Switch...\n" );
-		print_stats( );
-
-		loop_count = 0;
-		memset( stats, 0, sizeof( stats ) );
-		memset( max_stats, 0, sizeof( max_stats ) );
-
-        switch( altitude_mode )
-        {
-            case CTRL_MODE_GROUND:
-                altitude_mode = CTRL_MODE_FLYING;
-                break;
-
-            case CTRL_MODE_FLYING:
-                altitude_mode = CTRL_MODE_GROUND;
-                break;
-
-            case CTRL_MODE_SHUTDOWN:
-                altitude_mode = CTRL_MODE_GROUND;
-                break;
-
-            default:
-                altitude_mode = CTRL_MODE_SHUTDOWN;
-        }
-    }
-    else
-    if( terminal_port_is_new_command_data( ) )
-    {
-        terminal_port_get_command_data( &command_data );
-    }
-
-    /* update and apply filters */
-    command_data.roll  = low_pass_filter_update( &filter_cmdr, command_data.roll );
-    command_data.pitch = low_pass_filter_update( &filter_cmdp, command_data.pitch );
-    command_data.z     = low_pass_filter_update( &filter_cmdz, command_data.z );
-
-    return( 0 );
-}
-
 static int perform_shut_down( void )
 {
     motor_signals.front = 0;
@@ -578,6 +584,7 @@ static int perform_shut_down( void )
     low_pass_filter_reset( &filter_cmdr );
     low_pass_filter_reset( &filter_cmdp );
     low_pass_filter_reset( &filter_cmdz );
+    kalman_filter_reset  ( &filter_dz );
     extended_kalman_reset( );
 
     controller_reset_zero( &ctrl_roll );
@@ -633,8 +640,39 @@ static int compute_motor_signals( void )
     double u_z     = 0;
     int i, signals[4];
 
+    /* pre-estimate altitude and vertical velocity
+       IMPORTANT: the Z-axis is pointing downwards in the aircraft
+       coordinate system, hence the sign of ddZ must be changed */
+    kalman_filter_update( &filter_dz, sensor_data.z, -sensor_data.ddz );
+
+    /* trace original altitude and vertical velocity */
+    trace_data.value_1 = (int16_t)( sensor_data.z );
+    trace_data.value_2 = (int16_t)( sensor_data.dz );
+
+    /* replace original z/dz with Kalman-estimated z/dz */
+    sensor_data.z  = kalman_filter_get_S( &filter_dz );
+    sensor_data.dz = kalman_filter_get_dS( &filter_dz );
+
+    /* EKF-estimate attitude, position, and velocity */
     extended_kalman_update( &sensor_data );
 
+    /* trace period, attitude, position, and velocity */
+    trace_data.value_3  = (int16_t)( period * 1000 ); /* [ms] */
+    trace_data.value_4  = (int16_t)( extended_kalman_get_Roll( ) );
+    trace_data.value_5  = (int16_t)( extended_kalman_get_Pitch( ) );
+    trace_data.value_6  = (int16_t)( extended_kalman_get_Yaw( ) );
+    trace_data.value_7  = (int16_t)( extended_kalman_get_X( ) );
+    trace_data.value_8  = (int16_t)( extended_kalman_get_Y( ) );
+    trace_data.value_9  = (int16_t)( extended_kalman_get_Z( ) );
+    trace_data.value_10 = (int16_t)( extended_kalman_get_dX( ) );
+    trace_data.value_11 = (int16_t)( extended_kalman_get_dY( ) );
+    trace_data.value_12 = (int16_t)( extended_kalman_get_dZ( ) );
+
+    /* trace filtered roll/pitch command BEFORE rotation */
+    trace_data.value_13 = (int16_t)( command_data.roll );
+    trace_data.value_14 = (int16_t)( command_data.pitch );
+
+    /* compute roll/pitch commands based on EKF estimates */
     if( terminal_port_is_test_mode( ) )
     {
         control_state = CTRL_STATE_TESTING;
@@ -684,12 +722,11 @@ static int compute_motor_signals( void )
     command_data.roll  = c_roll;
     command_data.pitch = c_pitch;
 
-
-
 #if 0
 /*
     TODO: must be tested: rotations changed from local-to-global to global-to-local
 */
+    /* compute roll/pitch commands based on EKF estimates */
     if( terminal_port_is_test_mode( ) )
     {
         control_state = CTRL_STATE_TESTING;
@@ -740,8 +777,11 @@ static int compute_motor_signals( void )
     command_data.pitch = c_pitch;
 #endif
 
+    /* trace filtered roll/pitch command AFTER rotation */
+    trace_data.value_15 = (int16_t)( command_data.roll );
+    trace_data.value_16 = (int16_t)( command_data.pitch );
 
-
+    /* compute motor signals based on EKF estimates */
     if( motor_speed_revving < motor_speed_liftoff )
     {
         motor_speed_revving += MOTOR_REVVING_STEP;
@@ -815,23 +855,6 @@ static int compute_motor_signals( void )
     motor_offsets.pitch = (int16_t)( u_pitch );
     motor_offsets.yaw   = (int16_t)( u_yaw );
     motor_offsets.z     = (int16_t)( u_z );
-
-    trace_data.value_1  = (int16_t)( command_data.roll );
-    trace_data.value_2  = (int16_t)( command_data.pitch );
-    trace_data.value_3  = (int16_t)( ubisense_data.x );
-    trace_data.value_4  = (int16_t)( ubisense_data.y );
-    trace_data.value_5  = (int16_t)( sensor_data.dx );
-    trace_data.value_6  = (int16_t)( sensor_data.dy );
-    trace_data.value_7  = (int16_t)( sensor_data.dz );
-    trace_data.value_8  = (int16_t)( extended_kalman_get_Roll( ) );
-    trace_data.value_9  = (int16_t)( extended_kalman_get_Pitch( ) );
-    trace_data.value_10 = (int16_t)( extended_kalman_get_Yaw( ) );
-    trace_data.value_11 = (int16_t)( extended_kalman_get_X( ) );
-    trace_data.value_12 = (int16_t)( extended_kalman_get_Y( ) );
-    trace_data.value_13 = (int16_t)( extended_kalman_get_Z( ) );
-    trace_data.value_14 = (int16_t)( extended_kalman_get_dX( ) );
-    trace_data.value_15 = (int16_t)( extended_kalman_get_dY( ) );
-    trace_data.value_16 = (int16_t)( extended_kalman_get_dZ( ) );
 
     return( 0 );
 }
@@ -914,45 +937,6 @@ static void int_handler( int num )
 	running = 0;
 }
 
-static int read_sensors( void )
-{
-	uint64_t start, end;
-
-	start = get_utime( );
-
-	if( get_javiator_data( ) )
-    {
-        fprintf( stderr, "ERROR: connection to JAviator broken\n" );
-		return( -1 );
-	}
-
-	end = get_utime( );
-	calc_stats( end - start, STAT_FROM_JAV );
-
-	start = get_utime( );
-
-	if( enable_ubisense && get_ubisense_data( ) )
-    {
-        fprintf( stderr, "ERROR: connection to Ubisense broken\n" );
-		return( -1 );
-	}
-
-    end = get_utime( );
-    calc_stats( end - start, STAT_FROM_UBI );
-
-	/* IMPORTANT: yaw angle must be adjusted BEFORE
-	   setting the angles of the rotation matrix */
-	adjust_sensor_data( );
-
-	/* IMPORTANT: all angles must be given in [rad] */
-    transformation_set_angles( sensor_data.roll  / 1000,
-                               sensor_data.pitch / 1000,
-                               sensor_data.yaw   / 1000 );
-
-	return( 0 );
-}
-
-/* the control loop for our helicopter */
 int control_loop_run( void )
 {
     int first_time = 1;
@@ -975,12 +959,18 @@ int control_loop_run( void )
         end = get_utime( );
         calc_stats( end - start, STAT_TO_JAV );
 
-        if( read_sensors( ) )
+	    start = get_utime( );
+
+	    if( get_javiator_data( ) )
         {
+            fprintf( stderr, "ERROR: connection to JAviator broken\n" );
             altitude_mode = CTRL_MODE_SHUTDOWN;
             perform_shut_down( );
             break;
-        }
+	    }
+
+	    end = get_utime( );
+	    calc_stats( end - start, STAT_FROM_JAV );
 
         start = get_utime( );
 

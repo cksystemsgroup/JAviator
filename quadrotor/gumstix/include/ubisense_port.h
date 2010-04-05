@@ -35,7 +35,7 @@ typedef struct
 
 } ubisense_data_t;
 
-#define POSITION_DATA_SIZE  16  /* byte size of ubisense_data_t */
+#define POSITION_DATA_SIZE  8   /* byte size of ubisense_data_t */
 
 int ubisense_port_tick( void );
 
