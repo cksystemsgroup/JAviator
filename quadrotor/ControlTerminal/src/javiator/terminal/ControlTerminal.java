@@ -83,13 +83,13 @@ public class ControlTerminal extends Frame
 											    "roll,pitch,yaw," +
 											    "droll,dpitch,dyaw," +
 											    "ddroll,ddpitch,ddyaw," +
-											    "x,y,kf-z," +
-											    "dx,dy,kf-dz," +
+											    "x,y,z," +
+											    "dx,dy,dz," +
 											    "ddx,ddy,ddz," +
 											    "maps,temp,batt," +
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
-											    "z,dz,period," +
+											    "kf-z,kf-dz,period," +
 											    "ekf-R,ekf-P,ekf-Y," +
 											    "ekf-x,ekf-y,ekf-z," +
 											    "ekf-dx,ekf-dy,ekf-dz," +
@@ -533,6 +533,7 @@ public class ControlTerminal extends Frame
     protected static final String _MODE            = " Mode";
     protected static final String SWITCH           = "Switch";
     protected static final String _HELI            = " Heli";
+    protected static final String _STATE           = " State";
     protected static final String TCP_             = "TCP ";
     protected static final String UDP_             = "UDP ";
     protected static final String CONNECTION       = "Connection";
@@ -549,7 +550,7 @@ public class ControlTerminal extends Frame
     protected static final String KEY_ASSISTANCE   = "Key Assistance";
     protected static final String ABOUT_TERMINAL   = "About Terminal";
     protected static final String DIAGRAMS         = "Diagrams";
-    protected static final String TEST             = "Test";
+    protected static final String POS              = "POS";
 
     protected AnalogMeter         meterRoll        = null;
     protected AnalogMeter         meterPitch       = null;
@@ -559,7 +560,7 @@ public class ControlTerminal extends Frame
     protected HiddenButton        toggleControl    = null;
     protected HiddenButton        toggleConnMode   = null;
     protected HiddenButton        toggleConnect    = null;
-    protected HiddenButton        switchHeliMode   = null;
+    protected HiddenButton        switchHeliState  = null;
     protected HiddenButton        shutDownHeli     = null;
     protected HiddenButton        setPortAndHost   = null;
     protected HiddenButton        setParameters    = null;
@@ -719,7 +720,7 @@ public class ControlTerminal extends Frame
                 break;
 
             case KeyEvent.VK_F8:
-                if( switchHeliMode.isEnabled( ) )
+                if( switchHeliState.isEnabled( ) )
                 {
                     doSwitchHeliMode( );
                 }
@@ -806,7 +807,7 @@ public class ControlTerminal extends Frame
         }
 
         toggleConnMode .setEnabled( !connected );
-        switchHeliMode .setEnabled(  connected );
+        switchHeliState .setEnabled(  connected );
         shutDownHeli   .setEnabled(  connected );
         setPortAndHost .setEnabled( !connected );
     }
@@ -1053,8 +1054,8 @@ public class ControlTerminal extends Frame
             }
         } );
 
-        switchHeliMode = new HiddenButton( SWITCH + _HELI + _MODE );
-        switchHeliMode.addMouseListener( new MouseAdapter( )
+        switchHeliState = new HiddenButton( SWITCH + _HELI + _STATE );
+        switchHeliState.addMouseListener( new MouseAdapter( )
         {
             public void mouseClicked( MouseEvent me )
             {
@@ -1075,7 +1076,7 @@ public class ControlTerminal extends Frame
         buttonPanel.add( toggleControl );
         buttonPanel.add( toggleConnMode );
         buttonPanel.add( toggleConnect );
-        buttonPanel.add( switchHeliMode );
+        buttonPanel.add( switchHeliState );
         buttonPanel.add( shutDownHeli );
 
         Panel northPanel = new Panel( new BorderLayout( ) );
@@ -1221,7 +1222,7 @@ public class ControlTerminal extends Frame
         }
     }
 
-    private Packet switchPacket = new Packet( PacketType.COMM_SWITCH_MODE, null );
+    private Packet switchPacket = new Packet( PacketType.COMM_SWITCH_STATE, null );
     private void doSwitchHeliMode( )
     {
     	meterYaw.setDesired( meterYaw.getCurrent( ) );
@@ -1315,7 +1316,7 @@ public class ControlTerminal extends Frame
         }
     }
 
-    private Packet testModePacket = new Packet( PacketType.COMM_TEST_MODE, null );
+    private Packet testModePacket = new Packet( PacketType.COMM_SWITCH_MODE, null );
     private void doToggleTestMode( )
     {
     	if( remote != null )
@@ -1483,7 +1484,7 @@ public class ControlTerminal extends Frame
                 {
                     alreadyToggledButton10 = true;
 
-					if( switchHeliMode.isEnabled( ) )
+					if( switchHeliState.isEnabled( ) )
                     {
 						doSwitchHeliMode( );
 					}

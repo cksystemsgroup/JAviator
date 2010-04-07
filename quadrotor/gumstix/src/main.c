@@ -36,7 +36,7 @@
 #include "ubisense_port.h"
 #include "control_loop.h"
 
-#define CONTROLLER_PERIOD   14  /* [ms] */
+#define CONTROLLER_PERIOD   15  /* [ms] */
 #define PERIOD_MULTIPLIER   1   /* communicate with terminal every period */
 #define Z_AXIS_CONTROLLER   1   /* enable z-axis controller */
 #define EXEC_CONTROL_LOOP   1   /* execute control loop */

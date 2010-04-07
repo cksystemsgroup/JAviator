@@ -70,7 +70,7 @@ public class UDPTransceiver extends Transceiver
 	    setLinked(true);
 	   
 	    
-	    	Packet packet = new Packet(PacketType.COMM_SWITCH_MODE, 0);
+	    	Packet packet = new Packet(PacketType.COMM_SWITCH_STATE, 0);
 	    	sendPacket(packet);   	
 	    	
 	    	

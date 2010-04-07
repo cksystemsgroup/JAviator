@@ -54,9 +54,9 @@ int terminal_port_is_new_alt_params( void );
 
 int terminal_port_is_new_x_y_params( void );
 
-int terminal_port_is_mode_switch( void );
+int terminal_port_is_state_switch( void );
 
-int terminal_port_is_test_mode( void );
+int terminal_port_is_mode_switch( void );
 
 int terminal_port_is_shut_down( void );
 
@@ -78,11 +78,11 @@ int terminal_port_send_motor_signals( const motor_signals_t *signals );
 
 int terminal_port_send_motor_offsets( const motor_offsets_t *offsets );
 
-int terminal_port_send_mode_and_state( const int mode, const int state );
+int terminal_port_send_mode_and_state( const int state, const int mode );
 
 int terminal_port_send_report( const sensor_data_t *sensors,
     const motor_signals_t *signals, const motor_offsets_t *offsets,
-    const int mode, const int state );
+    const int state, const int mode );
 
 int terminal_port_send_trace_data( const trace_data_t *data );
 

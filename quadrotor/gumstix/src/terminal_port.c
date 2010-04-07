@@ -42,8 +42,8 @@ static ctrl_params_t    x_y_params;
 static comm_channel_t * comm_channel;
 static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
+static volatile int     state_switch;
 static volatile int     mode_switch;
-static volatile int     test_mode;
 static volatile int     shut_down;
 static volatile int     base_motor_speed;
 static volatile int     multiplier = 1;
@@ -105,16 +105,15 @@ static inline int parse_x_y_params_packet( const comm_packet_t *packet )
     return ctrl_params_from_stream( &x_y_params, packet->payload, packet->size );
 }
 
-static inline int set_mode_switch( void )
+static inline int set_state_switch( void )
 {
-    mode_switch = 1;
+    state_switch = 1;
     return( 0 );
 }
 
-static inline int set_test_mode( const comm_packet_t *packet )
+static inline int set_mode_switch( void )
 {
-    char *p = (char *) packet->payload;
-    test_mode = (int) p[0];
+    mode_switch = 1;
     return( 0 );
 }
 
@@ -161,13 +160,12 @@ static int process_data_packet( const comm_packet_t *packet )
             res = set_idle_limit( packet );
 			break;
 
-        case COMM_SWITCH_MODE:
-            set_mode_switch( );
-			unlock( );
-            return javiator_port_forward( packet );
+        case COMM_SWITCH_STATE:
+            res = set_state_switch( );
+			break;
 
-        case COMM_TEST_MODE:
-            res = set_test_mode( packet );
+        case COMM_SWITCH_MODE:
+            res = set_mode_switch( );
 			break;
 
         case COMM_SHUT_DOWN:
@@ -318,16 +316,18 @@ int terminal_port_is_new_x_y_params( void )
     return( new_x_y_params );
 }
 
+int terminal_port_is_state_switch( void )
+{
+    int __state_switch = state_switch;
+    state_switch = 0;
+    return( __state_switch );
+}
+
 int terminal_port_is_mode_switch( void )
 {
     int __mode_switch = mode_switch;
     mode_switch = 0;
     return( __mode_switch );
-}
-
-int terminal_port_is_test_mode( void )
-{
-    return( test_mode );
 }
 
 int terminal_port_is_shut_down( void )
@@ -430,12 +430,12 @@ int terminal_port_send_motor_offsets( const motor_offsets_t *offsets )
     return comm_send_packet( comm_channel, &packet );
 }
 
-int terminal_port_send_mode_and_state( const int mode, const int state )
+int terminal_port_send_mode_and_state( const int state, const int mode )
 {
-    char buf[2] = { (char) mode, (char) state };
+    char buf[2] = { (char) state, (char) mode };
     comm_packet_t packet;
 
-    packet.type     = COMM_MODE_STATE;
+    packet.type     = COMM_STATE_MODE;
     packet.size     = 2;
     packet.buf_size = 2;
     packet.payload  = buf;
@@ -445,13 +445,13 @@ int terminal_port_send_mode_and_state( const int mode, const int state )
 
 int terminal_port_send_report( const sensor_data_t *sensors,
     const motor_signals_t *signals, const motor_offsets_t *offsets,
-    const int mode, const int state )
+    const int state, const int mode )
 {
     static int counter = 1;
     uint8_t buf[ SENSOR_DATA_SIZE
                + MOTOR_SIGNALS_SIZE
                + MOTOR_OFFSETS_SIZE
-               + 2 ]; /* mode and state */
+               + 2 ]; /* state and mode */
     comm_packet_t packet;
     int i = 0;
 
@@ -466,8 +466,8 @@ int terminal_port_send_report( const sensor_data_t *sensors,
         motor_offsets_to_stream( offsets, &buf[i], MOTOR_OFFSETS_SIZE );
         i += MOTOR_OFFSETS_SIZE;
 
-        buf[i++] = (char)( mode );
         buf[i++] = (char)( state );
+        buf[i++] = (char)( mode );
 
         packet.type     = COMM_GROUND_REPORT;
         packet.size     = i;

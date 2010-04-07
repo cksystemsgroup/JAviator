@@ -29,7 +29,7 @@ public final class PacketType
     public static final byte COMM_SENSOR_DATA   = 0x04; /* transmission of sensor data */
     public static final byte COMM_MOTOR_SIGNALS = 0x05; /* transmission of motor signals */
     public static final byte COMM_MOTOR_OFFSETS = 0x06; /* transmission of motor offsets */
-    public static final byte COMM_MODE_STATE    = 0x07; /* transmission of mode and state */
+    public static final byte COMM_STATE_MODE    = 0x07; /* transmission of mode and state */
     public static final byte COMM_GROUND_REPORT = 0x08; /* transmission of ground report */
     public static final byte COMM_TRACE_DATA    = 0x09; /* transmission of trace data */
     public static final byte COMM_COMMAND_DATA  = 0x0A; /* transmission of command data */
@@ -39,8 +39,8 @@ public final class PacketType
     public static final byte COMM_X_Y_PARAMS    = 0x0E; /* transmission of x/y params */
     public static final byte COMM_IDLE_LIMIT    = 0x0F; /* transmission of idle limit */
     public static final byte COMM_STREAM        = 0x10; /* transmission of arbitrary stream */
-    public static final byte COMM_SWITCH_MODE   = 0x11; /* request to perform a mode switch */
-    public static final byte COMM_TEST_MODE     = 0x12; /* request to switch into test mode */
+    public static final byte COMM_SWITCH_STATE  = 0x11; /* request to perform a state switch */
+    public static final byte COMM_SWITCH_MODE   = 0x12; /* request to perform a mode switch */
     public static final byte COMM_SHUT_DOWN     = 0x13; /* request to perform a shut-down */
     public static final byte COMM_EN_SENSORS    = 0x14; /* request to enable/disable senors */
     public static final byte COMM_PACKET_LIMIT  = 0x14; /* limit of valid packet identifiers */

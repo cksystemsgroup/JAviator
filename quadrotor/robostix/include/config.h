@@ -72,7 +72,7 @@
 /* Analog input channels assigned to the Analog-to-Digital Converter
 */
 #define ADC_CH_SONAR        PF7     /* pin where the sonar signal connects to */
-#define ADC_CH_BATT         -1      /* pin where the battery signal connects to */
+#define ADC_CH_BATT         PF6     /* pin where the battery signal connects to */
 
 /* Port, data direction register, and pins used for the BMU 09-A sensor
 */

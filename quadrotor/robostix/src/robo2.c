@@ -93,6 +93,9 @@ void controller_init( void )
     wdog_start( );
 
     /* register ADC channels */
+//////////////////////////////////////////////////////////////////////////
+    adc_add_channel( ADC_CH_BATT );
+//////////////////////////////////////////////////////////////////////////
     adc_add_channel( ADC_CH_SONAR );
 
     /* set Robostix signal LEDs */
@@ -270,6 +273,13 @@ int main( void )
                 javiator_data.state |= ST_NEW_DATA_BMU;
             }
         }
+
+//////////////////////////////////////////////////////////////////////////
+        if( adc_is_new_data( ADC_CH_BATT ) )
+        {
+            adc_get_data( ADC_CH_BATT, &javiator_data.batt );
+        }
+//////////////////////////////////////////////////////////////////////////
 
         /* check if new sonar data available */
         if( adc_is_new_data( ADC_CH_SONAR ) )

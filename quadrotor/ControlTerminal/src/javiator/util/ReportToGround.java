@@ -26,7 +26,7 @@ import javiator.util.ReportToGround;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.MotorOffsets;
-import javiator.util.ModeAndState;
+import javiator.util.StateAndMode;
 import javiator.util.Packet;
 
 /**
@@ -37,34 +37,35 @@ public class ReportToGround extends NumeratedSendable
 	public final SensorData   sensorData;
     public final MotorSignals motorSignals;
     public final MotorOffsets motorOffsets;
-    public final ModeAndState modeAndState;
+    public final StateAndMode stateAndMode;
 
     public final static int PACKET_SIZE =
 	    SensorData   .PACKET_SIZE +
 	    MotorSignals .PACKET_SIZE +
 	    MotorOffsets .PACKET_SIZE +
-	    ModeAndState .PACKET_SIZE;
+	    StateAndMode .PACKET_SIZE;
   
     public ReportToGround( )
     {
 	    sensorData   = new SensorData( );
 	    motorSignals = new MotorSignals( );
 	    motorOffsets = new MotorOffsets( );
-	    modeAndState = new ModeAndState(
-            (byte) ControllerConstants.ALT_MODE_GROUND, (byte) 0 );
+	    stateAndMode = new StateAndMode(
+            (byte) ControllerConstants.HELI_STATE_GROUND,
+            (byte) ControllerConstants.HELI_MODE_MAN_CTRL );
     }
   
     public ReportToGround(
     		SensorData   sensorData,
     		MotorSignals motorSignals, 
     		MotorOffsets motorOffsets,
-    		byte         altitudeMode,
-    		byte         controlState )
+    		byte         heliState,
+    		byte         heliMode )
 	{
 		this.sensorData   = (SensorData) sensorData.clone( );
 		this.motorSignals = (MotorSignals) motorSignals.clone( );
 		this.motorOffsets = (MotorOffsets) motorOffsets.clone( );
-		this.modeAndState = new ModeAndState( altitudeMode, controlState );
+		this.stateAndMode = new StateAndMode( heliState, heliMode );
 	}
 
 	public ReportToGround deepClone( )
@@ -85,7 +86,7 @@ public class ReportToGround extends NumeratedSendable
 	    sensorData   .copyTo( copy.sensorData );
 	    motorSignals .copyTo( copy.motorSignals );
 	    motorOffsets .copyTo( copy.motorOffsets );
-	    modeAndState .copyTo( copy.modeAndState );
+	    stateAndMode .copyTo( copy.stateAndMode );
 	}
 
 	public void fromPacket( Packet packet )
@@ -97,7 +98,7 @@ public class ReportToGround extends NumeratedSendable
 		offset += MotorSignals.PACKET_SIZE;
 		motorOffsets.decode( packet, offset );
 		offset += MotorOffsets.PACKET_SIZE;
-		modeAndState.decode( packet, offset );
+		stateAndMode.decode( packet, offset );
 	}
 
 	public void reset( )
@@ -105,7 +106,7 @@ public class ReportToGround extends NumeratedSendable
 		sensorData   .reset( );
 		motorSignals .reset( );
 		motorOffsets .reset( );
-		modeAndState .reset( );
+		stateAndMode .reset( );
 	}
 
 	public Packet toPacket( )
@@ -114,7 +115,7 @@ public class ReportToGround extends NumeratedSendable
 			SensorData   .PACKET_SIZE +
 			MotorSignals .PACKET_SIZE + 
 			MotorOffsets .PACKET_SIZE +
-			ModeAndState .PACKET_SIZE );
+			StateAndMode .PACKET_SIZE );
 		encode( packet, 0 );
 		return( packet );
 	}
@@ -127,7 +128,7 @@ public class ReportToGround extends NumeratedSendable
 		offset += MotorSignals.PACKET_SIZE;
 		motorOffsets.encode( packet, offset );
 		offset += MotorOffsets.PACKET_SIZE;
-		modeAndState.encode( packet, offset );
+		stateAndMode.encode( packet, offset );
 	}
 
 	public Packet toPacket( byte type )

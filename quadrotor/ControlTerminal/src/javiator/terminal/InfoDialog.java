@@ -79,7 +79,7 @@ public class InfoDialog extends Dialog
         ControlTerminal.YAW + " right",                                          "D",
         "Ascend",                                                                "W",
         "Descend",                                                               "S",
-        ControlTerminal.TOGGLE_ + ControlTerminal.TEST + ControlTerminal._MODE,  "T",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "T",
         ControlTerminal.KEY_ASSISTANCE,                                          "F1",
         ControlTerminal.ABOUT_TERMINAL,                                          "F2",
         ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,                      "F3",
@@ -87,7 +87,7 @@ public class InfoDialog extends Dialog
         ControlTerminal.JOYSTICK + ControlTerminal._MODE,                        "F5",
         ControlTerminal.UDP_ + ControlTerminal.CONNECTION,                       "F6",
         ControlTerminal.CONNECT_TO + ControlTerminal._HELI,                      "F7",
-        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "F8",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._STATE, "F8",
         ControlTerminal.SHUT_DOWN + ControlTerminal._HELI,                       "F9",
         ControlTerminal.PORT_SETTINGS,                                           "F10",
         ControlTerminal.SET_PARAMETERS,                                          "F11",
@@ -102,16 +102,16 @@ public class InfoDialog extends Dialog
         NOT_USED,                                                                "4",
         NOT_USED,                                                                "5",
         NOT_USED,                                                                "6",
-        ControlTerminal.TOGGLE_ + ControlTerminal.TEST + ControlTerminal._MODE,  "7",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "7",
         NOT_USED,                                                                "8",
         ControlTerminal.RESET_NEEDLES,                                           "9",
-        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "10"
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._STATE, "10"
     };
 
     private static final String[] ABOUT_STRINGS =
     {
     	ControlTerminal.NIL,
-        "JAviator Control Terminal version 10.2",
+        "JAviator Control Terminal version 10.4",
         ControlTerminal.NIL,
         "Copyright (c) 2006-2010  Rainer Trummer",
         "Department of Computer Sciences",

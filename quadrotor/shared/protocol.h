@@ -34,7 +34,7 @@
 
    E.g., sending the ground report (see gumstix/src/terminal_port.c):
    COMM_OVERHEAD + SENSOR_DATA_SIZE + MOTOR_SIGNALS_SIZE +
-   MOTOR_OFFSETS_SIZE + MODE_STATE_SIZE  >  64 (!)
+   MOTOR_OFFSETS_SIZE + STATE_MODE_SIZE  >  64 (!)
 */
 #define COMM_BUF_SIZE       128
 
@@ -46,7 +46,7 @@
 #define COMM_SENSOR_DATA    0x04    /* transmission of sensor data */
 #define COMM_MOTOR_SIGNALS  0x05    /* transmission of motor signals */
 #define COMM_MOTOR_OFFSETS  0x06    /* transmission of motor offsets */
-#define COMM_MODE_STATE     0x07    /* transmission of mode and state */
+#define COMM_STATE_MODE     0x07    /* transmission of mode and state */
 #define COMM_GROUND_REPORT  0x08    /* transmission of ground report */
 #define COMM_TRACE_DATA     0x09    /* transmission of trace data */
 #define COMM_COMMAND_DATA   0x0A    /* transmission of command data */
@@ -56,8 +56,8 @@
 #define COMM_X_Y_PARAMS     0x0E    /* transmission of x/y params */
 #define COMM_IDLE_LIMIT     0x0F    /* transmission of idle limit */
 #define COMM_STREAM         0x10    /* transmission of arbitrary stream */
-#define COMM_SWITCH_MODE    0x11    /* request to perform a mode switch */
-#define COMM_TEST_MODE      0x12    /* request to switch into test mode */
+#define COMM_SWITCH_STATE   0x11    /* request to perform a state switch */
+#define COMM_SWITCH_MODE    0x12    /* request to perform a mode switch */
 #define COMM_SHUT_DOWN      0x13    /* request to perform a shut-down */
 #define COMM_EN_SENSORS     0x14    /* request to enable/disable senors */
 #define COMM_PACKET_LIMIT   0x14    /* limit of valid packet identifiers */

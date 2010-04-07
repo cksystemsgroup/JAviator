@@ -23,15 +23,15 @@ package javiator.util;
 
 public class ControllerConstants
 {
-    /* Altitude modes */
-    public static final int ALT_MODE_GROUND    = 0x01;
-    public static final int ALT_MODE_FLYING    = 0x02;
-    public static final int ALT_MODE_SHUTDOWN  = 0x04;
+    /* helicopter states */
+    public static final int HELI_STATE_GROUND   = 0x01;
+    public static final int HELI_STATE_FLYING   = 0x02;
+    public static final int HELI_STATE_SHUTDOWN = 0x04;
 
-    /* State flags */
-    public static final int CTRL_STATE_NORMAL  = 0x01;
-    public static final int CTRL_STATE_TESTING = 0x02;
+    /* helicopter modes */
+    public static final int HELI_MODE_MAN_CTRL  = 0x01;
+    public static final int HELI_MODE_POS_CTRL  = 0x02;
 
-    /* Max motor signal */
-    public static final int MOTOR_MAX          = 16000;
+    /* max motor signal */
+    public static final int MOTOR_MAX           = 16000;
 }
