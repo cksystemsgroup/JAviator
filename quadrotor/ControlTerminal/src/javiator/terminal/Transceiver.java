@@ -26,6 +26,7 @@ package javiator.terminal;
 
 import java.awt.Color;
 
+import javiator.util.ControllerConstants;
 import javiator.util.ReportToGround;
 import javiator.util.CommandData;
 import javiator.util.SensorData;
@@ -154,7 +155,8 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 sendPacket( commandData.toPacket( PacketType.COMM_COMMAND_DATA ) );
                 if( parent.isNewIdlingSpeed( ) )
                 {
-                	byte[] maxIdlingSpeed = { (byte)( parent.idlingSpeed >> 8 ), (byte)( parent.idlingSpeed ) };
+                	byte[] maxIdlingSpeed = { (byte)( ControllerConstants.MAX_IDLING_SPEED >> 8 ),
+                        (byte)( ControllerConstants.MAX_IDLING_SPEED ) };
                 	sendPacket( new Packet( PacketType.COMM_IDLE_LIMIT, maxIdlingSpeed ) );
                 	parent.resetNewIdlingSpeed( );
                 }
@@ -196,10 +198,12 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 break;
 
             case PacketType.COMM_GROUND_REPORT:
+            	parent.getCommandData( ).copyTo( commandData );
                 sendPacket( parent.getCommandData( ).toPacket( PacketType.COMM_COMMAND_DATA ) );
                 if( parent.isNewIdlingSpeed( ) )
                 {
-                	byte[] maxIdlingSpeed = { (byte)( parent.idlingSpeed >> 8 ), (byte)( parent.idlingSpeed ) };
+                	byte[] maxIdlingSpeed = { (byte)( ControllerConstants.MAX_IDLING_SPEED >> 8 ),
+                        (byte)( ControllerConstants.MAX_IDLING_SPEED ) };
                 	sendPacket( new Packet( PacketType.COMM_IDLE_LIMIT, maxIdlingSpeed ) );
                 	parent.resetNewIdlingSpeed( );
                 }

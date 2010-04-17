@@ -24,14 +24,17 @@ package javiator.util;
 public class ControllerConstants
 {
     /* helicopter states */
-    public static final int HELI_STATE_GROUND   = 0x01;
-    public static final int HELI_STATE_FLYING   = 0x02;
-    public static final int HELI_STATE_SHUTDOWN = 0x04;
+    public static final byte HELI_STATE_GROUND   = 0x01;
+    public static final byte HELI_STATE_FLYING   = 0x02;
+    public static final byte HELI_STATE_SHUTDOWN = 0x04;
 
     /* helicopter modes */
-    public static final int HELI_MODE_MAN_CTRL  = 0x01;
-    public static final int HELI_MODE_POS_CTRL  = 0x02;
+    public static final byte HELI_MODE_MAN_CTRL  = 0x01;
+    public static final byte HELI_MODE_POS_CTRL  = 0x02;
 
     /* max motor signal */
-    public static final int MOTOR_MAX           = 16000;
+    public static final int  MOTOR_MAX           = 16000;
+
+    /* max idling speed */
+    public static final int  MAX_IDLING_SPEED    = 8000;
 }

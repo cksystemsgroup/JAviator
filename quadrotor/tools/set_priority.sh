@@ -45,5 +45,7 @@ chrt -p $NET_TX
 
 rm $tmpfile
 
-echo "now start the controller with a priority > 50 (e.g. 60)"
+echo ""
+echo "now start the controller with a priority > 50 (e.g., chrt -f 60 ./control)"
+echo ""
 

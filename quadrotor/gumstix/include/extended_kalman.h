@@ -29,58 +29,22 @@
 
 /* This extended Kalman filter is designed to estimate
    attitude (Roll, Pitch, Yaw), position (X, Y, Z), and
-   velocity (dRoll, dPitch, dYaw, dX, dY, dZ) by fusing
-   attitude measurements with position measurements.
+   velocity (dX, dY, dZ) by fusing attitude measurements
+   with position measurements.
 */
 
 /* Initializes the extended Kalman filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    extended_kalman_init( double period );
+int  extended_kalman_init( double period );
 
 /* Resets the extended Kalman filter
 */
-void   extended_kalman_reset( void );
+void extended_kalman_reset( void );
 
-/* Updates the extended Kalman filter
+/* Updates the EKF as well as the given sensor data
 */
-void   extended_kalman_update( sensor_data_t *data );
-
-/* Returns the estimated Roll angle in [mrad]
-*/
-double extended_kalman_get_Roll( void );
-
-/* Returns the estimated Pitch angle in [mrad]
-*/
-double extended_kalman_get_Pitch( void );
-
-/* Returns the estimated Yaw angle in [mrad]
-*/
-double extended_kalman_get_Yaw( void );
-
-/* Returns the estimated X position in [mm]
-*/
-double extended_kalman_get_X( void );
-
-/* Returns the estimated Y position in [mm]
-*/
-double extended_kalman_get_Y( void );
-
-/* Returns the estimated Z position in [mm]
-*/
-double extended_kalman_get_Z( void );
-
-/* Returns the estimated X velocity in [mm/s]
-*/
-double extended_kalman_get_dX( void );
-
-/* Returns the estimated Y velocity in [mm/s]
-*/
-double extended_kalman_get_dY( void );
-
-/* Returns the estimated Z velocity in [mm/s]
-*/
-double extended_kalman_get_dZ( void );
+void extended_kalman_update( sensor_data_t *data );
 
 #endif /* !EXTENDED_KALMAN */
 

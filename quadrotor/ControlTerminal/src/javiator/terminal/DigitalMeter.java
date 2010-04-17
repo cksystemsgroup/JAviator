@@ -102,10 +102,10 @@ public class DigitalMeter extends Panel
 
         if( javiatorMode != mode )
         {
-            if( ( javiatorMode & ControllerConstants.HELI_MODE_POS_CTRL ) !=
-                ( mode & ControllerConstants.HELI_MODE_POS_CTRL ) )
+            if( (javiatorMode & ControllerConstants.HELI_MODE_POS_CTRL) !=
+                (mode & ControllerConstants.HELI_MODE_POS_CTRL) )
             {
-                if( ( mode & ControllerConstants.HELI_MODE_POS_CTRL ) != 0 )
+                if( (mode & ControllerConstants.HELI_MODE_POS_CTRL) != 0 )
                 {
                     heliMode.setForeground( colorAlerting );
                 }

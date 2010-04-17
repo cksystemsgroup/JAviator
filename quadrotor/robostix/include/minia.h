@@ -35,15 +35,19 @@
 
 /* Initializes Timer T2 for the sonar sensor
 */
-void minia_init( void );
+void    minia_init( void );
 
 /* Starts the sonar sensor in continuous mode
 */
-void minia_start( void );
+void    minia_start( void );
 
 /* Stops the sonar sensor if in continuous mode
 */
-void minia_stop( void );
+void    minia_stop( void );
+
+/* Returns 1 if new data available, 0 otherwise
+*/
+uint8_t minia_is_new_data( void );
 
 
 #endif /* !MINIA_H */

@@ -35,8 +35,8 @@
 /*****************************************************************************/
 
 /* Timer constants */
-#define TCNT2_MS_OFFSET     0x06    /* offset for 1ms interrupts */
-#define TCNT2_US_OFFSET     0x38    /* offset for 100us interrupts */
+#define TCNT2_MS_OFFSET     0x06    /* offset for 1ms interrupt */
+#define TCNT2_US_OFFSET     0x38    /* offset for 100us interrupt */
 #define TCCR2_MS_SCALER     0x03    /* bit-mask for prescaler 64 */
 #define TCCR2_US_SCALER     0x02    /* bit-mask for prescaler 8 */
 
@@ -304,11 +304,11 @@ SIGNAL( SIG_OVERFLOW2 )
 
     if( state == 0x0A || state == 0x0B )
     {
-        TCNT2 = TCNT2_MS_OFFSET; /* load offset for 1ms interrupts */
+        TCNT2 = TCNT2_MS_OFFSET; /* load offset for 1ms interrupt */
     }
     else
     {
-        TCNT2 = TCNT2_US_OFFSET; /* load offset for 100us interrupts */
+        TCNT2 = TCNT2_US_OFFSET; /* load offset for 100us interrupt */
     }
 
     switch( state )
@@ -316,7 +316,7 @@ SIGNAL( SIG_OVERFLOW2 )
         /* set range/gain or pick up ranging result
         */
         case 0x00: /* change timer to count microseconds */
-            TCCR2 = TCCR2_US_SCALER; /* load scaler for 100us interrupts */
+            TCCR2 = TCCR2_US_SCALER; /* load scaler for 100us interrupt */
             ++state;
             break;
 
@@ -424,7 +424,7 @@ SIGNAL( SIG_OVERFLOW2 )
         /* wait selected period for echo
         */
         case 0x0A: /* change timer to count milliseconds */
-            TCCR2 = TCCR2_MS_SCALER; /* load scaler for 1ms interrupts */
+            TCCR2 = TCCR2_MS_SCALER; /* load scaler for 1ms interrupt */
             ++state;
             break;
 

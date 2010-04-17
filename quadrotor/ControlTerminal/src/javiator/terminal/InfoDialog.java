@@ -79,7 +79,7 @@ public class InfoDialog extends Dialog
         ControlTerminal.YAW + " right",                                          "D",
         "Ascend",                                                                "W",
         "Descend",                                                               "S",
-        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "T",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "M",
         ControlTerminal.KEY_ASSISTANCE,                                          "F1",
         ControlTerminal.ABOUT_TERMINAL,                                          "F2",
         ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,                      "F3",

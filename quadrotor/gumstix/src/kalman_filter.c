@@ -28,16 +28,14 @@
 
 #include "kalman_filter.h"
 
-/* Standard deviations */
-#define KALMAN_Q    10000.0
-#define KALMAN_R    0.01
-
 /* State of a Kalman filter */
 struct kf_state
 {
+    double q;
+    double r;
     double dt;
     double x[2];
-    double p[4];
+    double p[2][2];
 };
 
 
@@ -55,7 +53,8 @@ static inline kf_state_t *get_kf_state( const kalman_filter_t *filter )
    Parameter <period> is expected to be given in [s].
    Returns 0 if successful, -1 otherwise.
 */
-int kalman_filter_init( kalman_filter_t *filter, char *name, double period )
+int kalman_filter_init( kalman_filter_t *filter,
+    char *name, double proc_noise, double data_noise, double period )
 {
     kf_state_t *state;
 
@@ -73,6 +72,8 @@ int kalman_filter_init( kalman_filter_t *filter, char *name, double period )
         return( -1 );
     }
 
+    state->q      = proc_noise;
+    state->r      = data_noise;
     state->dt     = period;
     filter->name  = name;
     filter->state = state;
@@ -101,12 +102,12 @@ int kalman_filter_reset( kalman_filter_t *filter )
         return( -1 );
     }
 
-    state->x[0] = 0;
-    state->x[1] = 0;
-    state->p[0] = 0;
-    state->p[1] = 0;
-    state->p[2] = 0;
-    state->p[3] = 0;
+    state->x[0]    = 0;
+    state->x[1]    = 0;
+    state->p[0][0] = 0;
+    state->p[0][1] = 0;
+    state->p[1][0] = 0;
+    state->p[1][1] = state->q;
     return( 0 );
 }
 
@@ -117,64 +118,39 @@ int kalman_filter_reset( kalman_filter_t *filter )
 int kalman_filter_update( kalman_filter_t *filter, double s, double dds )
 {
     kf_state_t *state = get_kf_state( filter );
-    double dt, x1, x2, p11, p12, p21, p22, k1, k2;
+    double k[2];
 
     if( !state )
     {
         return( -1 );
     }
 
-    if( s > 0 )
-    {
-        /* copy state variables */
-        dt  = state->dt;
-        x1  = state->x[0];
-        x2  = state->x[1];
-        p11 = state->p[0];
-        p12 = state->p[1];
-        p21 = state->p[2];
-        p22 = state->p[3];
+    /* project state estimate ahead */
+    state->x[0] += state->x[1] * state->dt;
+    state->x[1] += dds * state->dt;
 
-        /* TIME UPDATE */
+    /* project error covariance ahead */
+    state->p[0][0] += (state->p[1][0] + state->p[0][1]) * state->dt
+        + state->p[1][1] * state->dt * state->dt;
+    state->p[0][1] += state->p[1][1] * state->dt;
+    state->p[1][0] += state->p[1][1] * state->dt;
+    state->p[1][1] += state->q * state->dt * state->dt;
 
-        /* project state ahead */
-        x1 = x1 + x2 * dt;
-        x2 = x2 + dds * dt;
+    /* compute optimal Kalman gain */
+    k[0] = state->p[0][0] / (state->p[0][0] + state->r);
+    k[1] = state->p[1][0] / (state->p[0][0] + state->r);
 
-        /* project error covariance ahead */
-        p11 = p11 + (p21 + p12) * dt + p22 * dt*dt;
-        p12 = p12 + p22 * dt;
-        p21 = p21 + p22 * dt;
-        p22 = p22 + KALMAN_Q * dt*dt;
+    /* update state estimate */
+    state->x[1] += k[1] * (s - state->x[0]);
+    state->x[0] += k[0] * (s - state->x[0]);
 
-        /* MEASURE UPDATE */
+    /* update error covariance */
+    state->p[1][1] -= k[1] * state->p[0][1] ;
+    state->p[1][0] -= k[1] * state->p[0][0];
+    state->p[0][1]  = (1 - k[0]) * state->p[0][1];
+    state->p[0][0]  = (1 - k[0]) * state->p[0][0];
 
-        /* compute Kalman gain */
-        k1 = p11 / (p11 + KALMAN_R);
-        k2 = p21 / (p11 + KALMAN_R);
-
-        /* update estimates */
-        x2 = x2 + k2 * (s - x1);
-        x1 = x1 + k1 * (s - x1);
-
-        /* update error covariance */
-        p22 = p22 - k2 * p12 ;
-        p21 = p21 - k2 * p11;
-        p12 = (1 - k1) * p12;
-        p11 = (1 - k1) * p11;
-
-        /* update state variables */
-        state->x[0] = x1;
-        state->x[1] = x2;
-        state->p[0] = p11;
-        state->p[1] = p12;
-        state->p[2] = p21;
-        state->p[3] = p22;
-        return( 0 );
-    }
-
-    kalman_filter_reset( filter );
-    return( -1 );
+    return( 0 );
 }
 
 /* Returns the filtered distance s in [mm] if successful, -1 otherwise.

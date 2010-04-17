@@ -161,8 +161,9 @@ static int process_data_packet( const comm_packet_t *packet )
 			break;
 
         case COMM_SWITCH_STATE:
-            res = set_state_switch( );
-			break;
+            set_state_switch( );
+			unlock( );
+            return javiator_port_forward( packet );
 
         case COMM_SWITCH_MODE:
             res = set_mode_switch( );
@@ -483,17 +484,24 @@ int terminal_port_send_report( const sensor_data_t *sensors,
 
 int terminal_port_send_trace_data( const trace_data_t *data )
 {
+    static int counter = 1;
     char buf[ TRACE_DATA_SIZE ];
     comm_packet_t packet;
 
-    trace_data_to_stream( data, buf, TRACE_DATA_SIZE );
+    if( --counter == 0 )
+    {
+        trace_data_to_stream( data, buf, TRACE_DATA_SIZE );
 
-    packet.type     = COMM_TRACE_DATA;
-    packet.size     = TRACE_DATA_SIZE;
-    packet.buf_size = TRACE_DATA_SIZE;
-    packet.payload  = buf;
+        packet.type     = COMM_TRACE_DATA;
+        packet.size     = TRACE_DATA_SIZE;
+        packet.buf_size = TRACE_DATA_SIZE;
+        packet.payload  = buf;
+        counter         = multiplier;
 
-    return comm_send_packet( comm_channel, &packet );
+        return comm_send_packet( comm_channel, &packet );
+    }
+
+    return( 0 );
 }
 
 int terminal_port_forward( const comm_packet_t *packet )

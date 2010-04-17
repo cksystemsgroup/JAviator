@@ -50,7 +50,8 @@ typedef struct
    Parameter <period> is expected to be given in [s].
    Returns 0 if successful, -1 otherwise.
 */
-int    kalman_filter_init( kalman_filter_t *filter, char *name, double period );
+int    kalman_filter_init( kalman_filter_t *filter,
+    char *name, double proc_noise, double data_noise, double period );
 
 /* Destroys a Kalman filter.
    Returns 0 if successful, -1 otherwise.

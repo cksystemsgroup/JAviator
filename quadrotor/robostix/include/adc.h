@@ -37,25 +37,20 @@
 */
 void   adc_init( void );
 
-/* Performs a conversion for all registered channels.
+/* Performs a conversion for the given channel.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_convert( void );
+int8_t adc_convert( uint8_t channel );
 
-/* Adds a new channel to the ADC channel list.
-   Returns 0 if successful, -1 otherwise.
+/* Returns -1 if the given channel is invalid,
+   1 if new data available, 0 otherwise.
 */
-int8_t adc_add_channel( int8_t channel );
-
-/* Returns -1 if the given channel is invalid or
-   disabled, 1 if new data available, 0 otherwise
-*/
-int8_t adc_is_new_data( int8_t channel );
+int8_t adc_is_new_data( uint8_t channel );
 
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_get_data( int8_t channel, uint16_t *buf );
+int8_t adc_get_data( uint8_t channel, uint16_t *buf );
 
 
 #endif /* !ADC_H */

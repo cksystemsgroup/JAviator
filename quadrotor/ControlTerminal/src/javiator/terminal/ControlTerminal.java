@@ -49,6 +49,7 @@ import java.io.ObjectOutputStream;
 import java.io.IOException;
 
 import javiator.util.CommandData;
+import javiator.util.ControllerConstants;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.MotorOffsets;
@@ -69,32 +70,31 @@ import com.centralnexus.input.Joystick;
 
 public class ControlTerminal extends Frame
 {
-    public static final long serialVersionUID = 1;
-    
-    protected int idlingSpeed = 8000;
+    public static final long serialVersionUID  = 1;
 
     private static final boolean SMALL_DISPLAY = true;
     private static final boolean SHOW_3DWINDOW = false;
-    private boolean show_diagrams = false;
+    private boolean              show_diagrams = false;
 
-    public static final String  LOG_FILE_NAME = "traces/ekf_test_.csv";
+    public static final String LOG_FILE_NAME   = "traces/ekf_.csv";
 
-    public static final String  LOG_TITLE_STR = "c-roll,c-pitch,c-yaw,c-z," +
-											    "roll,pitch,yaw," +
-											    "droll,dpitch,dyaw," +
-											    "ddroll,ddpitch,ddyaw," +
-											    "x,y,z," +
-											    "dx,dy,dz," +
-											    "ddx,ddy,ddz," +
-											    "maps,temp,batt," +
-											    "front,right,rear,left," +
-											    "u-roll,u-pitch,u-yaw,u-z," +
-											    "kf-z,kf-dz,period," +
-											    "ekf-R,ekf-P,ekf-Y," +
-											    "ekf-x,ekf-y,ekf-z," +
-											    "ekf-dx,ekf-dy,ekf-dz," +
-                                                "fil-R,fil-P," +
-                                                "rot-R,rot-P";
+    public static final String LOG_TITLE_STR   = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
+    	                                         "ekf-roll,ekf-pitch,ekf-yaw," +
+											     "droll,dpitch,dyaw," +
+											     "ddroll,ddpitch,ddyaw," +
+											     "ekf-x,ekf-y,ekf-z," +
+											     "ekf-dx,ekf-dy,ekf-dz," +
+											     "ddx,ddy,ddz," +
+											     "maps,temp,batt," +
+											     "front,right,rear,left," +
+											     "u-roll,u-pitch,u-yaw,u-z," +
+											     "period," +
+											     "true-roll,true-pitch,true-yaw," +
+											     "true-x,true-y,true-z," +
+											     "true-dx,true-dy,true-dz," +
+                                                 "true-c-roll,true-c-pitch," +
+                                                 "ctrl-c-roll,ctrl-c-pitch," +
+                                                 "rotated-roll,rotated-pitch";
 
     public ControlTerminal( )
     {
@@ -672,8 +672,8 @@ public class ControlTerminal extends Frame
                 break;
 
             /* command keys for different purposes */
-            case KeyEvent.VK_T:
-            	doToggleTestMode( );
+            case KeyEvent.VK_M:
+            	doSwitchHeliMode( );
                 break;
 
             case KeyEvent.VK_F1:
@@ -722,7 +722,7 @@ public class ControlTerminal extends Frame
             case KeyEvent.VK_F8:
                 if( switchHeliState.isEnabled( ) )
                 {
-                    doSwitchHeliMode( );
+                    doSwitchHeliState( );
                 }
                 break;
 
@@ -806,10 +806,10 @@ public class ControlTerminal extends Frame
             new_X_Y_Params = true;
         }
 
-        toggleConnMode .setEnabled( !connected );
+        toggleConnMode  .setEnabled( !connected );
         switchHeliState .setEnabled(  connected );
-        shutDownHeli   .setEnabled(  connected );
-        setPortAndHost .setEnabled( !connected );
+        shutDownHeli    .setEnabled(  connected );
+        setPortAndHost  .setEnabled( !connected );
     }
 
     /*************************************************************************/
@@ -1059,7 +1059,7 @@ public class ControlTerminal extends Frame
         {
             public void mouseClicked( MouseEvent me )
             {
-                doSwitchHeliMode( );
+                doSwitchHeliState( );
             }
         } );
 
@@ -1222,14 +1222,14 @@ public class ControlTerminal extends Frame
         }
     }
 
-    private Packet switchPacket = new Packet( PacketType.COMM_SWITCH_STATE, null );
-    private void doSwitchHeliMode( )
+    private Packet switchStatePacket = new Packet( PacketType.COMM_SWITCH_STATE, null );
+    private void doSwitchHeliState( )
     {
     	meterYaw.setDesired( meterYaw.getCurrent( ) );
 
     	if( remote != null )
     	{
-            remote.sendPacket( switchPacket );
+            remote.sendPacket( switchStatePacket );
     	}
     }
 
@@ -1316,12 +1316,12 @@ public class ControlTerminal extends Frame
         }
     }
 
-    private Packet testModePacket = new Packet( PacketType.COMM_SWITCH_MODE, null );
-    private void doToggleTestMode( )
+    private Packet switchModePacket = new Packet( PacketType.COMM_SWITCH_MODE, null );
+    private void doSwitchHeliMode( )
     {
     	if( remote != null )
     	{
-            remote.sendPacket( testModePacket );
+            remote.sendPacket( switchModePacket );
     	}
     }
 
@@ -1471,7 +1471,8 @@ public class ControlTerminal extends Frame
 
 			if( !stick.isButtonDown( Joystick.BUTTON1 ) ) 
             {
-				if( ++buttonNotPressed > 5 )
+				if( ++buttonNotPressed > 5 && (digitalMeter.getHeliState( ) &
+                    ControllerConstants.HELI_STATE_SHUTDOWN) == 0 )
 				{
 					doShutDownHeli( );
 				}
@@ -1486,7 +1487,7 @@ public class ControlTerminal extends Frame
 
 					if( switchHeliState.isEnabled( ) )
                     {
-						doSwitchHeliMode( );
+						doSwitchHeliState( );
 					}
 				}
 
@@ -1518,7 +1519,7 @@ public class ControlTerminal extends Frame
 				if( !alreadyToggledButton7 )
                 {
                     alreadyToggledButton7 = true;
-            	    doToggleTestMode( );
+            	    doSwitchHeliMode( );
                 }
             }
             else

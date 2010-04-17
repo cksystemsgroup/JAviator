@@ -31,11 +31,11 @@
 #include "config.h"
 #include "ports.h"
 #include "wdog.h"
-#include "adc.h"
+//#include "adc.h"
 #include "parallel.h"
 #include "bmu09a.h"
 #include "lsm215.h"
-#include "minia.h"
+//#include "minia.h"
 #include "leds.h"
 
 
@@ -81,23 +81,21 @@ void controller_init( void )
     /* initialize hardware */
     ports_init( );
     wdog_init( );
-    adc_init( );
+    //adc_init( );
     parallel_init( );
     bmu09a_init( );
     lsm215_init( );
-    minia_init( );
+    //minia_init( );
     leds_init( );
 
     /* register watchdog event and start timer */
     wdog_register_flag( (uint8_t *) &flag_check_delay, NOTIFY_PERIOD );
     wdog_start( );
-
+#if 0
     /* register ADC channels */
-//////////////////////////////////////////////////////////////////////////
-    adc_add_channel( ADC_CH_BATT );
-//////////////////////////////////////////////////////////////////////////
     adc_add_channel( ADC_CH_SONAR );
-
+    adc_add_channel( ADC_CH_BATT );
+#endif
     /* set Robostix signal LEDs */
     LED_ON( RED );
     LED_ON( BLUE );
@@ -209,7 +207,7 @@ void send_sensor_data( void )
     javiator_data.state = 0;
 
     /* start next ADC cycle */
-    adc_convert( );
+    //adc_convert( );
 }
 
 /* Enables/disables specific sensors
@@ -225,7 +223,7 @@ void enable_sensors( uint8_t enable )
         {
             bmu09a_start( );
             lsm215_start( );
-            minia_start( );
+            //minia_start( );
 
             LED_OFF( RED );
         }
@@ -233,7 +231,7 @@ void enable_sensors( uint8_t enable )
         {
             bmu09a_stop( );
             lsm215_stop( );
-            minia_stop( );
+            //minia_stop( );
 
             LED_ON( RED );
             LED_ON( BLUE );
@@ -266,50 +264,38 @@ int main( void )
         }
 
         /* check if new BMU data available */
-        if( bmu09a_is_new_data( ) )
+        if( bmu09a_is_new_data( ) &&
+            !bmu09a_get_data( &javiator_data ) )
         {
-            if( !bmu09a_get_data( &javiator_data ) )
-            {
-                javiator_data.state |= ST_NEW_DATA_BMU;
-            }
+            javiator_data.state |= ST_NEW_DATA_BMU;
+        }
+#if 0
+        /* check if new sonar data available */
+        if( adc_is_new_data( ADC_CH_SONAR ) &&
+            !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
+        {
+            javiator_data.state |= ST_NEW_DATA_SONAR;
         }
 
-//////////////////////////////////////////////////////////////////////////
         if( adc_is_new_data( ADC_CH_BATT ) )
         {
             adc_get_data( ADC_CH_BATT, &javiator_data.batt );
         }
-//////////////////////////////////////////////////////////////////////////
-
-        /* check if new sonar data available */
-        if( adc_is_new_data( ADC_CH_SONAR ) )
+#endif
+        /* check if new x-laser data available */
+        if( lsm215_is_new_x_data( ) &&
+            !lsm215_get_x_data( javiator_data.x_pos ) )
         {
-            if( !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
-            {
-                javiator_data.state |= ST_NEW_DATA_SONAR;
-            }
+            javiator_data.state |= ST_NEW_DATA_POS_X;
+            LED_OFF( BLUE );
         }
 
-        /* check if new laser x-data available */
-        if( lsm215_is_new_x_data( ) )
+        /* check if new y-laser data available */
+        if( lsm215_is_new_y_data( ) &&
+            !lsm215_get_y_data( javiator_data.y_pos ) )
         {
-            if( !lsm215_get_x_data( javiator_data.x_pos ) )
-            {
-                javiator_data.state |= ST_NEW_DATA_POS_X;
-
-                LED_OFF( BLUE );
-            }
-        }
-
-        /* check if new laser y-data available */
-        if( lsm215_is_new_y_data( ) )
-        {
-            if( !lsm215_get_y_data( javiator_data.y_pos ) )
-            {
-                javiator_data.state |= ST_NEW_DATA_POS_Y;
-
-                LED_ON( BLUE );
-            }
+            javiator_data.state |= ST_NEW_DATA_POS_Y;
+            LED_ON( BLUE );
         }
     }
 

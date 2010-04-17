@@ -32,9 +32,11 @@
 #include "config.h"
 #include "ports.h"
 #include "wdog.h"
+#include "adc.h"
 #include "serial.h"
-#include "parallel.h"
+//#include "parallel.h"
 #include "dm3gx1.h"
+#include "minia.h"
 #include "pwm.h"
 #include "leds.h"
 
@@ -60,7 +62,7 @@ void controller_init        ( void );
 void process_data_packet    ( void );
 void process_sensor_data    ( const uint8_t *, uint8_t );
 void process_motor_signals  ( const uint8_t *, uint8_t );
-void process_mode_switch    ( void );
+void process_state_switch   ( void );
 void process_shut_down      ( void );
 void check_receive_delay    ( void );
 void send_javiator_data     ( void );
@@ -90,9 +92,11 @@ void controller_init( void )
     /* initialize hardware */
     ports_init( );
     wdog_init( );
+    adc_init( );
 	serial_init( );
-    parallel_init( );
+    //parallel_init( );
     dm3gx1_init( );
+    minia_init( );
     pwm_init( );
     leds_init( );
 
@@ -117,7 +121,7 @@ void process_data_packet( void )
     uint16_t checksum;
 
     /* get data from serial or parallel interface */
-    if( serial_get_data( packet ) && parallel_get_data( packet ) )
+    if( serial_get_data( packet ) )//&& parallel_get_data( packet ) )
     {
         return;
     }
@@ -150,8 +154,8 @@ void process_data_packet( void )
             process_motor_signals( packet + 2, packet[1] );
             break;
 
-        case COMM_SWITCH_MODE:
-            process_mode_switch( );
+        case COMM_SWITCH_STATE:
+            process_state_switch( );
             break;
 
         case COMM_SHUT_DOWN:
@@ -206,9 +210,9 @@ void process_motor_signals( const uint8_t *data, uint8_t size )
     }
 }
 
-/* Processes COMM_SWITCH_MODE messages
+/* Processes COMM_SWITCH_STATE messages
 */
-void process_mode_switch( void )
+void process_state_switch( void )
 {
     if( flag_shut_down )
     {
@@ -217,6 +221,10 @@ void process_mode_switch( void )
 
         LED_OFF( RED );
     }
+
+///////////////////////////////////////////////////////////////////
+    enable_sensors( 1 );
+///////////////////////////////////////////////////////////////////
 }
 
 /* Processes COMM_SHUT_DOWN messages
@@ -236,6 +244,10 @@ void process_shut_down( void )
     flag_shut_down = 1;
 
     LED_ON( RED );
+
+///////////////////////////////////////////////////////////////////
+    enable_sensors( 0 );
+///////////////////////////////////////////////////////////////////
 }
 
 /* Checks for delays in communication from the Gumstix to Robostix 1
@@ -279,19 +291,23 @@ void check_receive_delay( )
         serial_reset( );
 
         LED_ON( YELLOW );
+
+///////////////////////////////////////////////////////////////////
+        enable_sensors( 0 );
+///////////////////////////////////////////////////////////////////
     }
 
     /* check if new sensor data have been received */
     if( !flag_new_sensors )
     {
         /* reset Robostix-2-to-Robostix-1 interface */
-        parallel_reset( );
+        //parallel_reset( );
 
         LED_ON( BLUE );
     }
 
     /* update sensor status */
-    enable_sensors( flag_new_signals );
+    //enable_sensors( flag_new_signals );
 
     flag_check_delay = 0;
     flag_new_signals = 0;
@@ -304,12 +320,21 @@ void send_javiator_data( void )
 {
     uint8_t data[ JAVIATOR_LDAT_SIZE ];
 
+//////////////////////////////////////////////////////////////////////////
+    javiator_data.id = motor_signals.id;
+//////////////////////////////////////////////////////////////////////////
+
     /* encode JAviator data */
 	javiator_ldat_to_stream( &javiator_data, data, JAVIATOR_LDAT_SIZE );
 
     /* transmit JAviator data */
 	serial_send_data( COMM_JAVIATOR_DATA, data, JAVIATOR_LDAT_SIZE );
 
+//////////////////////////////////////////////////////////////////////////
+    javiator_data.state = 0;
+//////////////////////////////////////////////////////////////////////////
+
+#if 0
     /* increment motor signals ID before being sent on round trip */
     ++motor_signals.id;
 
@@ -321,6 +346,12 @@ void send_javiator_data( void )
 
     /* request new sensor data */
     parallel_send_data( COMM_SENSOR_DATA, data, 3 );
+#endif
+    /* request new IMU data */
+    dm3gx1_request( );
+
+    /* convert battery data */
+    adc_convert( ADC_CH_BATT );
 }
 
 /* Enables/disables specific sensors
@@ -334,11 +365,13 @@ void enable_sensors( uint8_t enable )
     {
         if( enable )
         {
-            dm3gx1_start( );
+            //dm3gx1_start( );
+            minia_start( );
         }
         else
         {
-            dm3gx1_stop( );
+            //dm3gx1_stop( );
+            minia_stop( );
         }
 
         /* store new sensor status */
@@ -350,6 +383,8 @@ void enable_sensors( uint8_t enable )
 */
 int main( void )
 {
+    uint8_t already_converted = 0;
+
     /* initialize Robostix 1 */
     controller_init( );
 
@@ -362,15 +397,43 @@ int main( void )
         }
 
         /* check if new serial or parallel data available */
-        if( serial_is_new_data( ) || parallel_is_new_data( ) )
+        if( serial_is_new_data( ) )//|| parallel_is_new_data( ) )
         {
             process_data_packet( );
         }
 
         /* check if new IMU data available */
-        if( dm3gx1_is_new_data( ) )
+        if( dm3gx1_is_new_data( ) &&
+            !dm3gx1_get_data( &javiator_data ) )
         {
-            dm3gx1_get_data( &javiator_data );
+            javiator_data.state |= ST_NEW_DATA_IMU;
+        }
+
+        /* check if new analog sonar data available */
+        if( minia_is_new_data( ) && !already_converted )
+        {
+            /* convert sonar data */
+            adc_convert( ADC_CH_SONAR );
+
+            already_converted = 1;
+        }
+        else
+        if( !minia_is_new_data( ) )
+        {
+            already_converted = 0;
+        }
+
+        /* check if new converted sonar data available */
+        if( adc_is_new_data( ADC_CH_SONAR ) &&
+            !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
+        {
+            javiator_data.state |= ST_NEW_DATA_SONAR;
+        }
+
+        /* check if new converted battery data available */
+        if( adc_is_new_data( ADC_CH_BATT ) )
+        {
+            adc_get_data( ADC_CH_BATT, &javiator_data.batt );
         }
     }
 

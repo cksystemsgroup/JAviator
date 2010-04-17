@@ -34,10 +34,10 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Configuration of Timer T0 to obtain a clock signal with a period of 1ms:
+/* Configuration of Timer T0 to obtain an overflow interrupt every 1ms:
    Dividing clock rate 16MHz by 64 gives 250000 counts/sec or 250 counts/ms,
    respectively.  That is, Counter TCNT0 is incremented 250 times/ms, so
-   there's an offset of 6 required to get an overflow interrupt at 256.
+   there is an offset of 6 required to get an overflow interrupt at 256.
 */
 #define TCNT0_OFFSET        0x06
 

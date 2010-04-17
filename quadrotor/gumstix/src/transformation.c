@@ -89,128 +89,92 @@ void transformation_set_angles( double roll, double pitch, double yaw )
     s33 = cr / cp;
 }
 
-/* Returns the cosinus of the set Roll angle
+/* Returns the cosinus of the set Roll/Pitch/Yaw angle
 */
 double transformation_get_cos_Roll( void )
 {
     return( cr );
 }
-
-/* Returns the cosinus of the set Pitch angle
-*/
 double transformation_get_cos_Pitch( void )
 {
     return( cp );
 }
-
-/* Returns the cosinus of the set Yaw angle
-*/
 double transformation_get_cos_Yaw( void )
 {
     return( cy );
 }
 
-/* Returns the sinus of the set Roll angle
+/* Returns the sinus of the set Roll/Pitch/Yaw angle
 */
 double transformation_get_sin_Roll( void )
 {
     return( sr );
 }
-
-/* Returns the sinus of the set Pitch angle
-*/
 double transformation_get_sin_Pitch( void )
 {
     return( sp );
 }
-
-/* Returns the sinus of the set Yaw angle
-*/
 double transformation_get_sin_Yaw( void )
 {
     return( sy );
 }
 
-/* Returns the X component transformed to the global frame
+/* Returns the X/Y/Z component transformed to the earth-fixed frame
 */
-double rotate_local_to_global_X( double x, double y, double z )
+double rotate_body_to_earth_X( double x, double y, double z )
 {
     return( x * r11 + y * r12 + z * r13 );
 }
-
-/* Returns the Y component transformed to the global frame
-*/
-double rotate_local_to_global_Y( double x, double y, double z )
+double rotate_body_to_earth_Y( double x, double y, double z )
 {
     return( x * r21 + y * r22 + z * r23 );
 }
-
-/* Returns the Z component transformed to the global frame
-*/
-double rotate_local_to_global_Z( double x, double y, double z )
+double rotate_body_to_earth_Z( double x, double y, double z )
 {
     return( x * r31 + y * r32 + z * r33 );
 }
 
-/* Returns the X component transformed to the local frame
+/* Returns the X/Y/Z component transformed to the body-fixed frame
 */ 
-double rotate_global_to_local_X( double x, double y, double z )
+double rotate_earth_to_body_X( double x, double y, double z )
 {
     return( x * r11 + y * r21 + z * r31 );
 }
-
-/* Returns the Y component transformed to the local frame
-*/ 
-double rotate_global_to_local_Y( double x, double y, double z )
+double rotate_earth_to_body_Y( double x, double y, double z )
 {
     return( x * r12 + y * r22 + z * r32 );
 }
-
-/* Returns the Z component transformed to the local frame
-*/ 
-double rotate_global_to_local_Z( double x, double y, double z )
+double rotate_earth_to_body_Z( double x, double y, double z )
 {
     return( x * r13 + y * r23 + z * r33 );
 }
 
-/* Returns the dRoll component transformed to the global frame
+/* Returns the dRoll/dPitch/dYaw component transformed to the earth-fixed frame
 */ 
-double rotate_local_to_global_dRoll( double dr, double dp, double dy )
+double rotate_body_to_earth_dRoll( double dr, double dp, double dy )
 {
     return( dr * s11 + dp * s12 + dy * s13 );
 }
-
-/* Returns the dPitch component transformed to the global frame
-*/ 
-double rotate_local_to_global_dPitch( double dr, double dp, double dy )
+double rotate_body_to_earth_dPitch( double dr, double dp, double dy )
 {
     return( dr * s21 + dp * s22 + dy * s23 );
 }
-
-/* Returns the dYaw component transformed to the global frame
-*/ 
-double rotate_local_to_global_dYaw( double dr, double dp, double dy )
+double rotate_body_to_earth_dYaw( double dr, double dp, double dy )
 {
     return( dr * s31 + dp * s32 + dy * s33 );
 }
 
-/* Returns the dRoll component transformed to the local frame
+/* Returns the dRoll/dPitch/dYaw component transformed to the body-fixed frame
 */ 
-double rotate_global_to_local_dRoll( double dr, double dp, double dy )
+double rotate_earth_to_body_dRoll( double dr, double dp, double dy )
 {
     return( dr * s11 + dp * s21 + dy * s31 );
 }
-
-/* Returns the dPitch component transformed to the local frame
-*/ 
-double rotate_global_to_local_dPitch( double dr, double dp, double dy )
+double rotate_earth_to_body_dPitch( double dr, double dp, double dy )
 {
     return( dr * s12 + dp * s22 + dy * s32 );
 }
-
-/* Returns the dYaw component transformed to the local frame
-*/ 
-double rotate_global_to_local_dYaw( double dr, double dp, double dy )
+double rotate_earth_to_body_dYaw( double dr, double dp, double dy )
 {
     return( dr * s13 + dp * s23 + dy * s33 );
 }

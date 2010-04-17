@@ -71,8 +71,8 @@
 
 /* Analog input channels assigned to the Analog-to-Digital Converter
 */
-#define ADC_CH_SONAR        PF7     /* pin where the sonar signal connects to */
-#define ADC_CH_BATT         PF6     /* pin where the battery signal connects to */
+#define ADC_CH_SONAR        PF2//7     /* pin where the sonar signal connects to */
+#define ADC_CH_BATT         PF3//6     /* pin where the battery signal connects to */
 
 /* Port, data direction register, and pins used for the BMU 09-A sensor
 */
@@ -91,9 +91,11 @@
 
 /* Port, data direction register, and pin used for the Mini-A sonar sensor
 */
-#define MINIA_PORT          PORTA   /* port where the trigger signal is provided */
-#define MINIA_DDR           DDRA    /* data direction register associated with port */
-#define MINIA_TRIGGER       PA7     /* pin where the trigger signal connects to */
+#define MINIA_PORT          PORTC//A   /* port where the trigger signal is provided */
+#define MINIA_DDR           DDRC//A    /* data direction register associated with port */
+#define MINIA_REG           PINC//A    /* control register associated with port pins */
+#define MINIA_TRIGGER       PC0//A7     /* pin where the trigger signal connects to */
+#define MINIA_PWM_CLK       PC1//A7     /* pin where the PWM clock signal connects to */
 
 /* Default, minimum, and maximum address settings for the SRF10 sonar sensor
 */

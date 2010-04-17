@@ -38,8 +38,9 @@
 
 /* Global variables */
 static          uint16_t    data_buf[ ADC_CHANNELS ];
-static volatile int8_t      new_data[ ADC_CHANNELS ];
-static volatile int8_t      selected_channel;
+static volatile uint8_t     new_data[ ADC_CHANNELS ];
+static volatile uint8_t     current_ch;
+static volatile uint8_t     waiting_ch;
 
 
 /*****************************************************************************/
@@ -59,23 +60,38 @@ void adc_init( void )
     ADMUX = (1 << REFS0);
 
     /* initialize data structures */
-    memset( &data_buf,  0, sizeof( data_buf ) );
-    memset( &new_data, -1, sizeof( new_data ) );
+    memset( &data_buf, 0, sizeof( data_buf ) );
+    memset( &new_data, 0, sizeof( new_data ) );
 
-    /* disable selection mechanism */
-    selected_channel = -1;
+    /* initialize global variables */
+    current_ch = ADC_CHANNELS;
+    waiting_ch = ADC_CHANNELS;
 }
 
-/* Performs a conversion for all registered channels.
+/* Performs a conversion for the given channel.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_convert( void )
+int8_t adc_convert( uint8_t channel )
 {
-    /* check for registered channels */
-    if( selected_channel == -1 )
+    if( channel >= ADC_CHANNELS )
     {
         return( -1 );
     }
+
+    /* check if ADC is converting */
+    if( current_ch < ADC_CHANNELS )
+    {
+        waiting_ch = channel;
+        return( -1 );
+    }
+
+    current_ch = channel;
+
+    /* clear channel setting */
+    ADMUX &= 0xE0; /* ~00011111 = 11100000 */
+
+    /* set new input channel */
+    ADMUX |= current_ch;
 
     /* start conversion cycle */
     ADCSR |= (1 << ADSC);
@@ -83,43 +99,12 @@ int8_t adc_convert( void )
     return( 0 );
 }
 
-/* Adds a new channel to the ADC channel list.
-   Returns 0 if successful, -1 otherwise.
+/* Returns -1 if the given channel is invalid,
+   1 if new data available, 0 otherwise.
 */
-int8_t adc_add_channel( int8_t channel )
+int8_t adc_is_new_data( uint8_t channel )
 {
-    if( channel < 0 || channel > ADC_CHANNELS - 1 )
-    {
-        return( -1 );
-    }
-
-    /* enable given channel for conversions */
-    new_data[ channel ] = 0;
-
-    /* check if this is the first channel added */
-    if( selected_channel == -1 )
-    {
-        /* enable selection mechanism */
-        selected_channel = channel;
-
-        /* clear channel setting */
-        ADMUX &= 0xE0; /* ~00011111 = 11100000 */
-
-        /* set new input channel */
-        ADMUX |= selected_channel;
-    }
-
-    return( 0 );
-}
-
-/* Returns -1 if the given channel is invalid or
-   disabled, 1 if new data available, 0 otherwise
-*/
-int8_t adc_is_new_data( int8_t channel )
-{
-    static uint8_t num_channels = 0;
-
-    if( channel < 0 || channel > ADC_CHANNELS - 1 )
+    if( channel >= ADC_CHANNELS )
     {
         return( -1 );
     }
@@ -132,43 +117,26 @@ int8_t adc_is_new_data( int8_t channel )
 
         /* to obtain correct 10-bit result: ADCL must be read before ADCH
            (see page 247 in the ATmega128 manual for details) */
-        data_buf[ selected_channel ] = ADCL | (ADCH << 8);
-        new_data[ selected_channel ] = 1;
+        data_buf[ current_ch ] = ADCL | (ADCH << 8);
+        new_data[ current_ch ] = 1;
 
-        /* search for next enabled channel */
-        while( 1 )
+        if( waiting_ch < ADC_CHANNELS )
         {
-            /* increment number of channels handled so far */
-            ++num_channels;
+            current_ch = waiting_ch;
+            waiting_ch = ADC_CHANNELS;
 
-            /* check for end of valid channels */
-            if( ++selected_channel == ADC_CHANNELS )
-            {
-                selected_channel = 0;
-            }
+            /* clear channel setting */
+            ADMUX &= 0xE0; /* ~00011111 = 11100000 */
 
-            /* check for enabled channel */
-            if( new_data[ selected_channel ] != -1 )
-            {
-                /* clear channel setting */
-                ADMUX &= 0xE0; /* ~00011111 = 11100000 */
+            /* set new input channel */
+            ADMUX |= current_ch;
 
-                /* set new input channel */
-                ADMUX |= selected_channel;
-
-                break;
-            }
-        }
-
-        /* check for end of conversion cycle */
-        if( num_channels >= ADC_CHANNELS )
-        {
-            num_channels = 0;
+            /* start conversion cycle */
+            ADCSR |= (1 << ADSC);
         }
         else
         {
-            /* start next conversion */
-            ADCSR |= (1 << ADSC);
+            current_ch = ADC_CHANNELS;
         }
     }
 
@@ -178,15 +146,9 @@ int8_t adc_is_new_data( int8_t channel )
 /* Copies the sampled data to the given buffer.
    Returns 0 if successful, -1 otherwise.
 */
-int8_t adc_get_data( int8_t channel, uint16_t *buf )
+int8_t adc_get_data( uint8_t channel, uint16_t *buf )
 {
-    if( channel < 0 || channel > ADC_CHANNELS - 1 )
-    {
-        return( -1 );
-    }
-
-    /* check that given channel is not disabled */
-    if( new_data[ channel ] == -1 )
+    if( channel >= ADC_CHANNELS )
     {
         return( -1 );
     }

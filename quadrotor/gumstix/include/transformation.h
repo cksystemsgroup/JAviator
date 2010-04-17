@@ -33,77 +33,41 @@ void   transformation_init( void );
 */
 void   transformation_set_angles( double roll, double pitch, double yaw );
 
-/* Returns the cosinus of the set Roll angle
+/* Returns the cosinus of the set Roll/Pitch/Yaw angle
 */
-double transformation_get_cos_Roll( void );
-
-/* Returns the cosinus of the set Pitch angle
-*/
+double transformation_get_cos_Roll ( void );
 double transformation_get_cos_Pitch( void );
+double transformation_get_cos_Yaw  ( void );
 
-/* Returns the cosinus of the set Yaw angle
+/* Returns the sinus of the set Roll/Pitch/Yaw angle
 */
-double transformation_get_cos_Yaw( void );
-
-/* Returns the sinus of the set Roll angle
-*/
-double transformation_get_sin_Roll( void );
-
-/* Returns the sinus of the set Pitch angle
-*/
+double transformation_get_sin_Roll ( void );
 double transformation_get_sin_Pitch( void );
+double transformation_get_sin_Yaw  ( void );
 
-/* Returns the sinus of the set Yaw angle
-*/
-double transformation_get_sin_Yaw( void );
-
-/* Returns the X component transformed to the global frame
+/* Returns the X/Y/Z component transformed to the earth-fixed frame
 */ 
-double rotate_local_to_global_X( double x, double y, double z );
+double rotate_body_to_earth_X( double x, double y, double z );
+double rotate_body_to_earth_Y( double x, double y, double z );
+double rotate_body_to_earth_Z( double x, double y, double z );
 
-/* Returns the Y component transformed to the global frame
+/* Returns the X/Y/Z component transformed to the body-fixed frame
 */ 
-double rotate_local_to_global_Y( double x, double y, double z );
+double rotate_earth_to_body_X( double x, double y, double z );
+double rotate_earth_to_body_Y( double x, double y, double z );
+double rotate_earth_to_body_Z( double x, double y, double z );
 
-/* Returns the Z component transformed to the global frame
+/* Returns the dRoll/dPitch/dYaw component transformed to the earth-fixed frame
 */ 
-double rotate_local_to_global_Z( double x, double y, double z );
+double rotate_body_to_earth_dRoll ( double dr, double dp, double dy );
+double rotate_body_to_earth_dPitch( double dr, double dp, double dy );
+double rotate_body_to_earth_dYaw  ( double dr, double dp, double dy );
 
-/* Returns the X component transformed to the local frame
+/* Returns the dRoll/dPitch/dYaw component transformed to the body-fixed frame
 */ 
-double rotate_global_to_local_X( double x, double y, double z );
-
-/* Returns the Y component transformed to the local frame
-*/ 
-double rotate_global_to_local_Y( double x, double y, double z );
-
-/* Returns the Z component transformed to the local frame
-*/ 
-double rotate_global_to_local_Z( double x, double y, double z );
-
-/* Returns the dRoll component transformed to the global frame
-*/ 
-double rotate_local_to_global_dRoll( double dr, double dp, double dy );
-
-/* Returns the dPitch component transformed to the global frame
-*/ 
-double rotate_local_to_global_dPitch( double dr, double dp, double dy );
-
-/* Returns the dYaw component transformed to the global frame
-*/ 
-double rotate_local_to_global_dYaw( double dr, double dp, double dy );
-
-/* Returns the dRoll component transformed to the local frame
-*/ 
-double rotate_global_to_local_dRoll( double dr, double dp, double dy );
-
-/* Returns the dPitch component transformed to the local frame
-*/ 
-double rotate_global_to_local_dPitch( double dr, double dp, double dy );
-
-/* Returns the dYaw component transformed to the local frame
-*/ 
-double rotate_global_to_local_dYaw( double dr, double dp, double dy );
+double rotate_earth_to_body_dRoll ( double dr, double dp, double dy );
+double rotate_earth_to_body_dPitch( double dr, double dp, double dy );
+double rotate_earth_to_body_dYaw  ( double dr, double dp, double dy );
 
 #endif /* !TRANSFORMATION_H */
 

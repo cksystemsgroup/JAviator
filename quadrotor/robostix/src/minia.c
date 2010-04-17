@@ -33,10 +33,10 @@
 /*                                                                           */
 /*****************************************************************************/
 
-/* Configuration of Timer T2 to obtain a clock signal with a period of 10ms:
+/* Configuration of Timer T2 to obtain an overflow interrupt every 10ms:
    Dividing clock rate 16MHz by 1024 gives 15625 counts/sec or 156 counts/10ms,
    respectively.  That is, Counter TCNT2 is incremented 156 times/10ms, so
-   there's an offset of 100 required to get an overflow interrupt at 256.
+   there is an offset of 100 required to get an overflow interrupt at 256.
 */
 #define TCNT2_OFFSET    0x64
 
@@ -57,6 +57,9 @@ void minia_init( void )
 
     /* make trigger signal an output */
     MINIA_DDR |= (1 << MINIA_TRIGGER);
+
+    /* make PWM clock signal an input */
+    MINIA_DDR &= ~(1 << MINIA_PWM_CLK);
 
     /* just for the case the sonar was not stopped
        properly during the previous operation */
@@ -83,6 +86,13 @@ void minia_stop( void )
 
     /* trail trigger signal */
     MINIA_PORT |= (1 << MINIA_TRIGGER);
+}
+
+/* Returns 1 if new data available, 0 otherwise
+*/
+uint8_t minia_is_new_data( void )
+{
+    return( !(MINIA_REG & (1 << MINIA_PWM_CLK)) );
 }
 
 

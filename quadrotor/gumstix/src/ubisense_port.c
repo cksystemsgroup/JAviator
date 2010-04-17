@@ -31,10 +31,11 @@
 #include "communication.h"
 #include "protocol.h"
 
-static ubisense_data_t  ubisense_data;
 static comm_channel_t * comm_channel;
 static char             comm_buf[ COMM_BUF_SIZE ];
 static int              ubisense_tag;
+static int              ubisense_x;
+static int              ubisense_y;
 static int              new_data;
 static int              running;
 static pthread_t        thread;
@@ -69,14 +70,14 @@ static inline int parse_data_packet( const char *buf, int len )
         return( -1 );
     }
 
-    ubisense_data.y = atoi( ++buf );
+    ubisense_y = atoi( ++buf );
 
     if( !(buf = strchr( buf, ',' )) )
     {
         return( -1 );
     }
 
-    ubisense_data.x = atoi( ++buf );
+    ubisense_x = atoi( ++buf );
 
     new_data = 1;
 
@@ -156,10 +157,10 @@ int ubisense_port_init( comm_channel_t *channel, int tag )
 
     if( !already_initialized )
     {
-        memset( &ubisense_data, 0, sizeof( ubisense_data ) );
-
         comm_channel        = channel;
         ubisense_tag        = tag;
+        ubisense_x          = 0;
+        ubisense_y          = 0;
         new_data            = 0;
         running             = 1;
         already_initialized = 1;
@@ -177,10 +178,11 @@ int ubisense_port_is_new_data( void )
     return( new_data );
 }
 
-int ubisense_port_get_data( ubisense_data_t *data )
+int ubisense_port_get_data( sensor_data_t *data )
 {
 	lock( );
-    memcpy( data, &ubisense_data, sizeof( *data ) );
+    data->x = ubisense_x;
+    data->y = ubisense_y;
     new_data = 0;
 	unlock( );
     return( 0 );

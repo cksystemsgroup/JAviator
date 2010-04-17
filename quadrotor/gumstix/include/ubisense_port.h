@@ -26,16 +26,7 @@
 #define UBISENSE_PORT_H
 
 #include "comm_channel.h"
-
-/* Structure for representing position data */
-typedef struct
-{
-    int x;
-    int y;
-
-} ubisense_data_t;
-
-#define POSITION_DATA_SIZE  8   /* byte size of ubisense_data_t */
+#include "sensor_data.h"
 
 int ubisense_port_tick( void );
 
@@ -43,7 +34,7 @@ int ubisense_port_init( comm_channel_t *channel, int tag );
 
 int ubisense_port_is_new_data( void );
 
-int ubisense_port_get_data( ubisense_data_t *data );
+int ubisense_port_get_data( sensor_data_t *data );
 
 #endif /* !UBISENSE_PORT_H */
 

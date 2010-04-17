@@ -158,11 +158,10 @@ static double pidd_x_y_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
     state->last_desired = desired;
 
-    return pidd_compute( state, s_error, v_error, acceleration );
+    return pidd_compute( state, s_error, velocity, acceleration );
 }
 
 static int pidd_set_params( controller_t *controller,
@@ -221,6 +220,7 @@ int pidd_yaw_controller_init( controller_t *controller, double period )
 {
     int res = pidd_def_controller_init( controller, period );
 
+    controller->state->int_limit /= 10;
     controller->do_control = pidd_yaw_control;
 
     return( res );
@@ -230,6 +230,7 @@ int pidd_x_y_controller_init( controller_t *controller, double period )
 {
     int res = pidd_def_controller_init( controller, period );
 
+    controller->state->int_limit /= 10;
     controller->do_control = pidd_x_y_control;
 
     return( res );
