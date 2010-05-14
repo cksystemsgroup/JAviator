@@ -33,7 +33,7 @@
 #define STD_ANG_VEL     10
 #define STD_POSITION    0.1
 #define STD_VELOCITY    10
-#define STD_LIN_ACC     1000
+#define STD_LIN_ACC     10000 /* 10000: less accurate, 1000: more accurate */
 
 static double dt, x1[3], x2[3], x3[3];
 static double q[3][3], f[3][3], i[3][3];

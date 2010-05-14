@@ -107,11 +107,14 @@
 static volatile int             running;
 static double                   period;
 static int                      us_period;
+static int                      cmd_delay;
 static int                      compute_z;
 static int                      ubisense_enabled;
 static int                      heli_state;
 static int                      heli_mode;
 static int                      heli_settled;
+static double                   cmd_roll;
+static double                   cmd_pitch;
 static long long                next_period;
 
 /* motor speed parameters */
@@ -184,18 +187,21 @@ static void                     print_stats( void );
  *          Control Loop Code           *
  ****************************************/
 
-int control_loop_setup( int ms_period, int control_z, int ubisense )
+int control_loop_setup( int ms_period, int ctrl_cmds, int control_z, int ubisense )
 {
     struct sigaction act;
 
     running             = 1;
     period              = ms_period / 1000.0;
     us_period           = ms_period * 1000;
+    cmd_delay           = ctrl_cmds;
     compute_z           = control_z;
     ubisense_enabled    = ubisense;
     heli_state          = HELI_STATE_SHUTDOWN;
     heli_mode           = HELI_MODE_MAN_CTRL;
     heli_settled        = 1;
+    cmd_roll            = 0;
+    cmd_pitch           = 0;
     next_period         = 0;
     motor_speed_revving = 0;
     motor_speed_liftoff = 0;
@@ -597,6 +603,8 @@ static void perform_shut_down( void )
     controller_reset_zero( &ctrl_z );
 
     heli_settled = 1;
+    cmd_roll     = 0;
+    cmd_pitch    = 0;
 }
 
 static int perform_ground_actions( void )
@@ -634,8 +642,7 @@ static int perform_ground_actions( void )
 
 static int compute_motor_signals( void )
 {
-    double c_roll  = -command_data.roll;
-    double c_pitch = command_data.pitch;
+    static int cnt = 0;
     double u_roll  = 0;
     double u_pitch = 0;
     double u_yaw   = 0;
@@ -664,33 +671,44 @@ static int compute_motor_signals( void )
     /* compute roll/pitch commands based on EKF estimate */
     if( heli_mode == HELI_MODE_POS_CTRL )
     {
-        c_roll  = -controller_do_control( &ctrl_y, command_data.roll,
-            sensor_data.y, sensor_data.dy, sensor_data.ddy );
+        /* check for controller invokation */
+        if( ++cnt == cmd_delay )
+        {
+            cmd_roll  = -controller_do_control( &ctrl_y, command_data.roll,
+                sensor_data.y, sensor_data.dy, sensor_data.ddy );
 
-        c_pitch = -controller_do_control( &ctrl_x, -command_data.pitch,
-            sensor_data.x, sensor_data.dx, sensor_data.ddx );
+            cmd_pitch = -controller_do_control( &ctrl_x, -command_data.pitch,
+                sensor_data.x, sensor_data.dx, sensor_data.ddx );
 
-        /* saturate roll command */
-        if( c_roll > ROLL_PITCH_LIMIT )
-        {
-            c_roll = ROLL_PITCH_LIMIT;
-        }
-        else
-        if( c_roll < -ROLL_PITCH_LIMIT )
-        {
-            c_roll = -ROLL_PITCH_LIMIT;
-        }
+            /* saturate roll command */
+            if( cmd_roll > ROLL_PITCH_LIMIT )
+            {
+                cmd_roll = ROLL_PITCH_LIMIT;
+            }
+            else
+            if( cmd_roll < -ROLL_PITCH_LIMIT )
+            {
+                cmd_roll = -ROLL_PITCH_LIMIT;
+            }
 
-        /* saturate pitch command */
-        if( c_pitch > ROLL_PITCH_LIMIT )
-        {
-            c_pitch = ROLL_PITCH_LIMIT;
+            /* saturate pitch command */
+            if( cmd_pitch > ROLL_PITCH_LIMIT )
+            {
+                cmd_pitch = ROLL_PITCH_LIMIT;
+            }
+            else
+            if( cmd_pitch < -ROLL_PITCH_LIMIT )
+            {
+                cmd_pitch = -ROLL_PITCH_LIMIT;
+            }
+
+            cnt = 0;
         }
-        else
-        if( c_pitch < -ROLL_PITCH_LIMIT )
-        {
-            c_pitch = -ROLL_PITCH_LIMIT;
-        }
+    }
+    else
+    {
+        cmd_roll  = -command_data.roll;
+        cmd_pitch = command_data.pitch;
     }
 
     /* trace command data before rotation */
@@ -698,10 +716,10 @@ static int compute_motor_signals( void )
     trace_data.value_14 = (int16_t)( command_data.pitch );
 
     /* rotate roll/pitch command depending on yaw angle */
-    command_data.roll  = c_pitch * transformation_get_sin_Yaw( )
-                       - c_roll  * transformation_get_cos_Yaw( );
-    command_data.pitch = c_pitch * transformation_get_cos_Yaw( )
-                       + c_roll  * transformation_get_sin_Yaw( );
+    command_data.roll  = cmd_pitch * transformation_get_sin_Yaw( )
+                       - cmd_roll  * transformation_get_cos_Yaw( );
+    command_data.pitch = cmd_pitch * transformation_get_cos_Yaw( )
+                       + cmd_roll  * transformation_get_sin_Yaw( );
 
     /* trace command data after rotation */
     trace_data.value_15 = (int16_t)( command_data.roll );

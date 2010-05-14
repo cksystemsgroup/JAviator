@@ -38,6 +38,7 @@
 
 #define CONTROLLER_PERIOD   15  /* [ms] */
 #define PERIOD_MULTIPLIER   1   /* communicate with terminal every period */
+#define COMPUTE_CTRL_CMDS   1   /* compute control commands every period */
 #define Z_AXIS_CONTROLLER   1   /* enable z-axis controller */
 #define EXEC_CONTROL_LOOP   1   /* execute control loop */
 #define ENABLE_UBISENSE     0   /* setup Ubisense socket */
@@ -128,9 +129,10 @@ static void usage( char *binary )
     printf( "usage: %s [OPTIONS]\n"
             "OPTIONS are:\n"
             "\t -c      ... disable control loop\n"
-            "\t -s      ... setup Ubisense port\n"
             "\t -h      ... print this message\n"
-            "\t -m mult ... send data every <mult> period to terminal\n"
+            "\t -m mult ... communicate with terminal every <mult> period\n"
+            "\t -p mult ... compute control commands every <mult> period\n"
+            "\t -s      ... setup Ubisense port\n"
             "\t -t time ... controller period in milliseconds\n"
             "\t -u      ... use TCP socket instead of UDP socket\n"
             "\t -z      ... disable z-controller\n"
@@ -139,8 +141,9 @@ static void usage( char *binary )
 
 int main( int argc, char **argv )
 {
-    int period     = CONTROLLER_PERIOD;
+    int ms_period     = CONTROLLER_PERIOD;
     int multiplier = PERIOD_MULTIPLIER;
+    int ctrl_cmds  = COMPUTE_CTRL_CMDS;
     int control_z  = Z_AXIS_CONTROLLER;
     int exec_loop  = EXEC_CONTROL_LOOP;
     int ubisense   = ENABLE_UBISENSE;
@@ -151,7 +154,7 @@ int main( int argc, char **argv )
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
     memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
 
-	while( (opt = getopt( argc, argv, "chm:st:uz" )) != -1 )
+	while( (opt = getopt( argc, argv, "chm:p:st:uz" )) != -1 )
     {
 		switch( opt )
 		{
@@ -168,12 +171,21 @@ int main( int argc, char **argv )
 				}
 				break;
 
+			case 'p':
+				if( (ctrl_cmds = atoi( optarg )) < 1 )
+                {
+					fprintf( stderr, "ERROR: option '-p' requires a value > 0\n" );
+					usage( argv[0] );
+					exit( 1 );
+				}
+				break;
+
 			case 's':
 				ubisense = 1;
 				break;
 
 			case 't':
-				if( (period = atoi( optarg )) < 1 )
+				if( (ms_period = atoi( optarg )) < 1 )
                 {
 					fprintf( stderr, "ERROR: option '-t' requires a value > 0\n" );
 					usage( argv[0] );
@@ -236,7 +248,7 @@ int main( int argc, char **argv )
     if( exec_loop )
     {
         printf( "setting up control loop\n" );
-        control_loop_setup( period, control_z, ubisense );
+        control_loop_setup( ms_period, ctrl_cmds, control_z, ubisense );
         printf( "starting control loop\n" );
         control_loop_run( );
     }
