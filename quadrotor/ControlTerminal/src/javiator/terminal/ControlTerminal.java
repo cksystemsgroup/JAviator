@@ -1325,6 +1325,24 @@ public class ControlTerminal extends Frame
     	}
     }
 
+    private Packet storeTrimPacket = new Packet( PacketType.COMM_STORE_TRIM, null );
+    private void doStoreTrimValues( )
+    {
+    	if( remote != null )
+    	{
+            remote.sendPacket( storeTrimPacket );
+    	}
+    }
+
+    private Packet clearTrimPacket = new Packet( PacketType.COMM_CLEAR_TRIM, null );
+    private void doClearTrimValues( )
+    {
+    	if( remote != null )
+    	{
+            remote.sendPacket( clearTrimPacket );
+    	}
+    }
+
     /*************************************************************************/
     /*                                                                       */
     /* Class MotionThread                                                    */
@@ -1444,6 +1462,8 @@ public class ControlTerminal extends Frame
         private int     offsetDesiredAltitude  = 0;
         private int     buttonsPressed         = 0;
         private int     buttonNotPressed       = 0;
+        private boolean alreadyToggledButton5  = false;
+        private boolean alreadyToggledButton6  = false;
         private boolean alreadyToggledButton7  = false;
         private boolean alreadyToggledButton9  = false;
         private boolean alreadyToggledButton10 = false;
@@ -1499,18 +1519,32 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton10 = false;
             }
 
-            /* reset the green meter needles */
-            if( (buttonsPressed & Joystick.BUTTON9) != 0 )
+            /* send a store-trim-values command */
+            if( (buttonsPressed & Joystick.BUTTON5) != 0 )
             {
-				if( !alreadyToggledButton9 )
+				if( !alreadyToggledButton5 )
                 {
-                    alreadyToggledButton9 = true;
-                    resetMeterNeedles( );
+                    alreadyToggledButton5 = true;
+            	    doStoreTrimValues( );
                 }
             }
             else
             {
-                alreadyToggledButton9 = false;
+                alreadyToggledButton5 = false;
+            }
+
+            /* send a clear-trim-values command */
+            if( (buttonsPressed & Joystick.BUTTON6) != 0 )
+            {
+				if( !alreadyToggledButton6 )
+                {
+                    alreadyToggledButton6 = true;
+            	    doClearTrimValues( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton6 = false;
             }
 
             /* toggle the test-mode button */
@@ -1525,6 +1559,20 @@ public class ControlTerminal extends Frame
             else
             {
                 alreadyToggledButton7 = false;
+            }
+
+            /* reset the green meter needles */
+            if( (buttonsPressed & Joystick.BUTTON9) != 0 )
+            {
+				if( !alreadyToggledButton9 )
+                {
+                    alreadyToggledButton9 = true;
+                    resetMeterNeedles( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton9 = false;
             }
 
             /* update the four desired-value needles */

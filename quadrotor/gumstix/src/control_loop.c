@@ -113,6 +113,8 @@ static int                      ubisense_enabled;
 static int                      heli_state;
 static int                      heli_mode;
 static int                      heli_settled;
+static double                   offset_roll;
+static double                   offset_pitch;
 static double                   cmd_roll;
 static double                   cmd_pitch;
 static long long                next_period;
@@ -187,7 +189,8 @@ static void                     print_stats( void );
  *          Control Loop Code           *
  ****************************************/
 
-int control_loop_setup( int ms_period, int ctrl_cmds, int control_z, int ubisense )
+int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
+                        int ubisense, double offset_r, double offset_p )
 {
     struct sigaction act;
 
@@ -200,6 +203,8 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z, int ubisens
     heli_state          = HELI_STATE_SHUTDOWN;
     heli_mode           = HELI_MODE_MAN_CTRL;
     heli_settled        = 1;
+    offset_roll         = offset_r;
+    offset_pitch        = offset_p;
     cmd_roll            = 0;
     cmd_pitch           = 0;
     next_period         = 0;
@@ -270,6 +275,26 @@ static int get_javiator_data( void )
     sensor_data.roll  = FACTOR_EULER_ANGLE * javiator_data.roll;
     sensor_data.pitch = FACTOR_EULER_ANGLE * javiator_data.pitch;
     sensor_data.yaw   = FACTOR_EULER_ANGLE * javiator_data.yaw;
+
+    /* check for trimming change */
+    if( terminal_port_is_store_trim( ) )
+    {
+        offset_roll  += sensor_data.roll;
+        offset_pitch += sensor_data.pitch;
+        fprintf( stdout, "parameter update: Trim Values\n--> roll: %1.3f\tpitch: %1.3f\n",
+            offset_roll, offset_pitch );
+    }
+    else
+    if( terminal_port_is_clear_trim( ) )
+    {
+        offset_roll  = 0;
+        offset_pitch = 0;
+        fprintf( stdout, "parameter update: Trim Values\n--> cleared\n" );
+    }
+
+    /* apply roll/pitch trimming */
+    sensor_data.roll  -= offset_roll;
+    sensor_data.pitch -= offset_pitch;
 
 	/* IMPORTANT: yaw angle must be zero-adjusted BEFORE
 	   updating the angles of the transformation matrices */
@@ -466,7 +491,7 @@ static int get_command_data( void )
     else
     if( terminal_port_is_state_switch( ) )
     {
-		printf( "State Switch...\n" );
+		fprintf( stdout, "State Switch...\n" );
 		print_stats( );
 
 		loop_count = 0;

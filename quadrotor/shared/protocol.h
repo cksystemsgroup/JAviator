@@ -58,9 +58,11 @@
 #define COMM_STREAM         0x10    /* transmission of arbitrary stream */
 #define COMM_SWITCH_STATE   0x11    /* request to perform a state switch */
 #define COMM_SWITCH_MODE    0x12    /* request to perform a mode switch */
-#define COMM_SHUT_DOWN      0x13    /* request to perform a shut-down */
-#define COMM_EN_SENSORS     0x14    /* request to enable/disable senors */
-#define COMM_PACKET_LIMIT   0x14    /* limit of valid packet identifiers */
+#define COMM_STORE_TRIM     0x13    /* request to store trim values */
+#define COMM_CLEAR_TRIM     0x14    /* request to clear trim values */
+#define COMM_SHUT_DOWN      0x15    /* request to perform a shut-down */
+#define COMM_EN_SENSORS     0x16    /* request to enable/disable senors */
+#define COMM_PACKET_LIMIT   0x16    /* limit of valid packet identifiers */
 #define COMM_PACKET_MARK    0xFF    /* used to mark a packet's begin */
 
 #endif /* !PROTOCOL_H */

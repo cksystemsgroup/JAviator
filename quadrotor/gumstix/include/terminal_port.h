@@ -58,6 +58,10 @@ int terminal_port_is_state_switch( void );
 
 int terminal_port_is_mode_switch( void );
 
+int terminal_port_is_store_trim( void );
+
+int terminal_port_is_clear_trim( void );
+
 int terminal_port_is_shut_down( void );
 
 int terminal_port_get_command_data( command_data_t *data );

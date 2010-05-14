@@ -44,6 +44,8 @@ static comm_packet_t    comm_packet;
 static char             comm_packet_buf[ COMM_BUF_SIZE ];
 static volatile int     state_switch;
 static volatile int     mode_switch;
+static volatile int     store_trim;
+static volatile int     clear_trim;
 static volatile int     shut_down;
 static volatile int     base_motor_speed;
 static volatile int     multiplier = 1;
@@ -117,6 +119,18 @@ static inline int set_mode_switch( void )
     return( 0 );
 }
 
+static inline int set_store_trim( void )
+{
+    store_trim = 1;
+    return( 0 );
+}
+
+static inline int set_clear_trim( void )
+{
+    clear_trim = 1;
+    return( 0 );
+}
+
 static inline int set_shut_down( void )
 {
     shut_down = 1;
@@ -167,6 +181,14 @@ static int process_data_packet( const comm_packet_t *packet )
 
         case COMM_SWITCH_MODE:
             res = set_mode_switch( );
+			break;
+
+        case COMM_STORE_TRIM:
+            res = set_store_trim( );
+			break;
+
+        case COMM_CLEAR_TRIM:
+            res = set_clear_trim( );
 			break;
 
         case COMM_SHUT_DOWN:
@@ -329,6 +351,20 @@ int terminal_port_is_mode_switch( void )
     int __mode_switch = mode_switch;
     mode_switch = 0;
     return( __mode_switch );
+}
+
+int terminal_port_is_store_trim( void )
+{
+    int __store_trim = store_trim;
+    store_trim = 0;
+    return( __store_trim );
+}
+
+int terminal_port_is_clear_trim( void )
+{
+    int __clear_trim = clear_trim;
+    clear_trim = 0;
+    return( __clear_trim );
 }
 
 int terminal_port_is_shut_down( void )

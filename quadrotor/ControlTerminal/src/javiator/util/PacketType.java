@@ -41,9 +41,11 @@ public final class PacketType
     public static final byte COMM_STREAM        = 0x10; /* transmission of arbitrary stream */
     public static final byte COMM_SWITCH_STATE  = 0x11; /* request to perform a state switch */
     public static final byte COMM_SWITCH_MODE   = 0x12; /* request to perform a mode switch */
-    public static final byte COMM_SHUT_DOWN     = 0x13; /* request to perform a shut-down */
-    public static final byte COMM_EN_SENSORS    = 0x14; /* request to enable/disable senors */
-    public static final byte COMM_PACKET_LIMIT  = 0x14; /* limit of valid packet identifiers */
+    public static final byte COMM_STORE_TRIM    = 0x13; /* request to store trim values */
+    public static final byte COMM_CLEAR_TRIM    = 0x14; /* request to clear trim values */
+    public static final byte COMM_SHUT_DOWN     = 0x15; /* request to perform a shut-down */
+    public static final byte COMM_EN_SENSORS    = 0x16; /* request to enable/disable senors */
+    public static final byte COMM_PACKET_LIMIT  = 0x16; /* limit of valid packet identifiers */
     public static final byte COMM_PACKET_MARK   = (-1); /* used to mark a packet's begin */
 }
 

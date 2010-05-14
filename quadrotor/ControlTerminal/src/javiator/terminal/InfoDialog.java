@@ -66,8 +66,9 @@ public class InfoDialog extends Dialog
     /*                                                                       */
     /*************************************************************************/
 
-    private static final String NOT_USED  = "(not used)";
-    private static final String RELEASE_  = "Release ";
+    private static final String RELEASE_     = "Release ";
+    private static final String NOT_USED     = "(not used)";
+    private static final String _TRIM_VALUES = " Trim Values";
 
     private static final String[] KEYBOARD_LIST =
     {
@@ -100,8 +101,8 @@ public class InfoDialog extends Dialog
     	RELEASE_ + ControlTerminal.YAW,                                          "2",
         NOT_USED,                                                                "3",
         NOT_USED,                                                                "4",
-        NOT_USED,                                                                "5",
-        NOT_USED,                                                                "6",
+        "Store" + _TRIM_VALUES,                                                  "5",
+        "Clear" + _TRIM_VALUES,                                                  "6",
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "7",
         NOT_USED,                                                                "8",
         ControlTerminal.RESET_NEEDLES,                                           "9",
