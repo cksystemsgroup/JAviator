@@ -27,7 +27,7 @@
 #define CONTROL_LOOP_H
 
 int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
-                        int ubisense, double offset_r, double offset_p );
+                        int ubisense, double *offset_r, double *offset_p );
 
 int control_loop_run( void );
 

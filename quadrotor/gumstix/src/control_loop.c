@@ -113,8 +113,8 @@ static int                      ubisense_enabled;
 static int                      heli_state;
 static int                      heli_mode;
 static int                      heli_settled;
-static double                   offset_roll;
-static double                   offset_pitch;
+static double *                 offset_roll;
+static double *                 offset_pitch;
 static double                   cmd_roll;
 static double                   cmd_pitch;
 static long long                next_period;
@@ -190,7 +190,7 @@ static void                     print_stats( void );
  ****************************************/
 
 int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
-                        int ubisense, double offset_r, double offset_p )
+                        int ubisense, double *offset_r, double *offset_p )
 {
     struct sigaction act;
 
@@ -279,22 +279,22 @@ static int get_javiator_data( void )
     /* check for trimming change */
     if( terminal_port_is_store_trim( ) )
     {
-        offset_roll  += sensor_data.roll;
-        offset_pitch += sensor_data.pitch;
+        *offset_roll  += sensor_data.roll;
+        *offset_pitch += sensor_data.pitch;
         fprintf( stdout, "parameter update: Trim Values\n--> roll: %1.3f\tpitch: %1.3f\n",
-            offset_roll, offset_pitch );
+            (double) *offset_roll, (double) *offset_pitch );
     }
     else
     if( terminal_port_is_clear_trim( ) )
     {
-        offset_roll  = 0;
-        offset_pitch = 0;
-        fprintf( stdout, "parameter update: Trim Values\n--> cleared\n" );
+        *offset_roll  = 0;
+        *offset_pitch = 0;
+        fprintf( stdout, "parameter update: Trim Values\n--> all cleared\n" );
     }
 
     /* apply roll/pitch trimming */
-    sensor_data.roll  -= offset_roll;
-    sensor_data.pitch -= offset_pitch;
+    sensor_data.roll  -= *offset_roll;
+    sensor_data.pitch -= *offset_pitch;
 
 	/* IMPORTANT: yaw angle must be zero-adjusted BEFORE
 	   updating the angles of the transformation matrices */

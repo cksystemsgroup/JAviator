@@ -1462,8 +1462,8 @@ public class ControlTerminal extends Frame
         private int     offsetDesiredAltitude  = 0;
         private int     buttonsPressed         = 0;
         private int     buttonNotPressed       = 0;
-        private boolean alreadyToggledButton5  = false;
-        private boolean alreadyToggledButton6  = false;
+        private boolean alreadyToggledButton3  = false;
+        private boolean alreadyToggledButton4  = false;
         private boolean alreadyToggledButton7  = false;
         private boolean alreadyToggledButton9  = false;
         private boolean alreadyToggledButton10 = false;
@@ -1520,31 +1520,31 @@ public class ControlTerminal extends Frame
             }
 
             /* send a store-trim-values command */
-            if( (buttonsPressed & Joystick.BUTTON5) != 0 )
+            if( (buttonsPressed & Joystick.BUTTON3) != 0 )
             {
-				if( !alreadyToggledButton5 )
+				if( !alreadyToggledButton3 )
                 {
-                    alreadyToggledButton5 = true;
+                    alreadyToggledButton3 = true;
             	    doStoreTrimValues( );
                 }
             }
             else
             {
-                alreadyToggledButton5 = false;
+                alreadyToggledButton3 = false;
             }
 
             /* send a clear-trim-values command */
-            if( (buttonsPressed & Joystick.BUTTON6) != 0 )
+            if( (buttonsPressed & Joystick.BUTTON4) != 0 )
             {
-				if( !alreadyToggledButton6 )
+				if( !alreadyToggledButton4 )
                 {
-                    alreadyToggledButton6 = true;
+                    alreadyToggledButton4 = true;
             	    doClearTrimValues( );
                 }
             }
             else
             {
-                alreadyToggledButton6 = false;
+                alreadyToggledButton4 = false;
             }
 
             /* toggle the test-mode button */

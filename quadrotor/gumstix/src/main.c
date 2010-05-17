@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #include "comm_channel.h"
 #include "serial_channel.h"
@@ -47,7 +48,7 @@
 #define TERMINAL_PORT       7000
 #define UBISENSE_ADDR       "192.168.1.3"
 #define UBISENSE_PORT       9001
-#define UBISENSE_TAG        20235 /* 21098 */
+#define CFG_FILENAME        "control.cfg"
 
 static comm_channel_t       javiator_channel;
 static comm_channel_t       terminal_channel;
@@ -128,16 +129,15 @@ static void usage( char *binary )
 {
     printf( "usage: %s [OPTIONS]\n"
             "OPTIONS are:\n"
-            "\t -c       ... disable control loop\n"
-            "\t -h       ... print this message\n"
-            "\t -m mult  ... communicate with terminal every <mult> period\n"
-            "\t -n mult  ... compute control commands every <mult> period\n"
-            "\t -p value ... pitch offset in radians\n"
-            "\t -r value ... roll offset in radians\n"
-            "\t -s       ... setup Ubisense port\n"
-            "\t -t time  ... controller period in milliseconds\n"
-            "\t -u       ... use TCP socket instead of UDP socket\n"
-            "\t -z       ... disable z-controller\n"
+            "\t -c      ... disable control loop\n"
+            "\t -h      ... print this message\n"
+            "\t -i ID   ... Ubisense tag ID\n"
+            "\t -m mult ... communicate with terminal every <mult> period\n"
+            "\t -n mult ... compute control commands every <mult> period\n"
+            "\t -s      ... setup Ubisense port\n"
+            "\t -t time ... controller period in milliseconds\n"
+            "\t -u      ... use TCP socket instead of UDP socket\n"
+            "\t -z      ... disable z-controller\n"
             , binary );
 }
 
@@ -145,6 +145,7 @@ int main( int argc, char **argv )
 {
     double offset_p   = 0;
     double offset_r   = 0;
+    int    ubi_tag_id = 0;
     int    ms_period  = CONTROLLER_PERIOD;
     int    multiplier = PERIOD_MULTIPLIER;
     int    ctrl_cmds  = COMPUTE_CTRL_CMDS;
@@ -152,18 +153,27 @@ int main( int argc, char **argv )
     int    exec_loop  = EXEC_CONTROL_LOOP;
     int    ubisense   = ENABLE_UBISENSE;
 	int    conn_type  = SOCK_UDP;
-	int    opt;
+	int    opt, fd;
 
     memset( &javiator_channel, 0, sizeof( javiator_channel ) );
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
     memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
 
-	while( (opt = getopt( argc, argv, "chm:n:p:r:st:uz" )) != -1 )
+	while( (opt = getopt( argc, argv, "chi:m:n:st:uz" )) != -1 )
     {
 		switch( opt )
 		{
 			case 'c':
 				exec_loop = 0;
+				break;
+
+			case 'i':
+				if( (ubi_tag_id = atoi( optarg )) < 0 )
+                {
+					fprintf( stderr, "ERROR: option '-i' requires a positive value\n" );
+					usage( argv[0] );
+					exit( 1 );
+				}
 				break;
 
 			case 'm':
@@ -182,14 +192,6 @@ int main( int argc, char **argv )
 					usage( argv[0] );
 					exit( 1 );
 				}
-				break;
-
-			case 'p':
-				offset_p = atof( optarg );
-				break;
-
-			case 'r':
-				offset_r = atof( optarg );
 				break;
 
 			case 's':
@@ -220,6 +222,28 @@ int main( int argc, char **argv )
 		}
 	}
 
+	printf( "loading configuration ... " );
+
+    if( (fd = open( CFG_FILENAME, O_RDONLY )) < 0 )
+    {
+        printf( "failed\n" );
+        fprintf( stderr, "ERROR: could not open file %s\n", CFG_FILENAME );
+    }
+    else
+    {
+        read( fd, &offset_r, sizeof( offset_r ) );
+        read( fd, &offset_p, sizeof( offset_p ) );
+
+        if( !ubi_tag_id )
+        {
+            read( fd, &ubi_tag_id, sizeof( ubi_tag_id ) );
+        }
+
+        close( fd );
+        printf( "ok\noffset roll  = %1.3f\noffset pitch = %1.3f\nUbisense tag = %d\n",
+            offset_r, offset_p, ubi_tag_id );
+    }
+
     printf( "setting up JAviator port ... " );
 
     if( setup_javiator_port( SERIAL_DEVICE, SERIAL_BAUDRATE ) )
@@ -246,8 +270,7 @@ int main( int argc, char **argv )
     {
 	    printf( "setting up Ubisense port ... " );
 
-        if( setup_ubisense_port( SOCK_CLIENT,
-            UBISENSE_ADDR, UBISENSE_PORT, UBISENSE_TAG ) )
+        if( setup_ubisense_port( SOCK_CLIENT, UBISENSE_ADDR, UBISENSE_PORT, ubi_tag_id ) )
         {
             printf( "failed\n" );
             fprintf( stderr, "ERROR: could not setup the Ubisense port\n" );
@@ -260,7 +283,7 @@ int main( int argc, char **argv )
     if( exec_loop )
     {
         printf( "setting up control loop\n" );
-        control_loop_setup( ms_period, ctrl_cmds, control_z, ubisense, offset_r, offset_p );
+        control_loop_setup( ms_period, ctrl_cmds, control_z, ubisense, &offset_r, &offset_p );
         printf( "starting control loop\n" );
         control_loop_run( );
     }
@@ -283,6 +306,22 @@ int main( int argc, char **argv )
     {
 	    printf( "destroying Ubisense port ... " );
         socket_channel_destroy( &ubisense_channel, SOCK_CLIENT );
+        printf( "ok\n" );
+    }
+
+	printf( "saving configuration ... " );
+
+    if( (fd = open( CFG_FILENAME, O_WRONLY | O_CREAT )) < 0 )
+    {
+        printf( "failed\n" );
+        fprintf( stderr, "ERROR: could not open file %s\n", CFG_FILENAME );
+    }
+    else
+    {
+        write( fd, &offset_r, sizeof( offset_r ) );
+        write( fd, &offset_p, sizeof( offset_p ) );
+        write( fd, &ubi_tag_id, sizeof( ubi_tag_id ) );
+        close( fd );
         printf( "ok\n" );
     }
 
