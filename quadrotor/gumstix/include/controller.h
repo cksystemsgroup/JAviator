@@ -44,7 +44,6 @@ typedef int    (*reset_zero)( controller_t *controller );
 typedef enum
 {
     CTRL_PIDD_DEF = 1,
-    CTRL_PIDD_YAW,
     CTRL_PIDD_X_Y,
 
 } ctrl_type_t;

@@ -85,23 +85,6 @@ static inline double get_s_error( double desired, double current )
     return( desired - current );
 }
 
-static inline double get_yaw_s_error( double desired, double current )
-{
-    double s_error = desired - current;
-
-    if( s_error < -M_PI )
-    {
-        s_error += 2 * M_PI;
-    }
-    else
-    if( s_error > M_PI )
-    {
-        s_error -= 2 * M_PI;
-    }
-
-    return( s_error );
-}
-
 static inline double get_v_error(
     double desired, double last_desired, double velocity, double period )
 {
@@ -132,19 +115,6 @@ static double pidd_do_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
-
-    state->last_desired = desired;
-
-    return pidd_compute( state, s_error, v_error, acceleration );
-}
-
-static double pidd_yaw_control( controller_t *controller,
-    double desired, double current, double velocity, double acceleration )
-{
-    /* Local definition to avoid double indirection in use */
-    ctrl_state_t *state = controller->state;
-    double s_error = get_yaw_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
     state->last_desired = desired;
@@ -214,16 +184,6 @@ int pidd_def_controller_init( controller_t *controller, double period )
     controller->state      = state;
 
     return( 0 );
-}
-
-int pidd_yaw_controller_init( controller_t *controller, double period )
-{
-    int res = pidd_def_controller_init( controller, period );
-
-    controller->state->int_limit /= 10;
-    controller->do_control = pidd_yaw_control;
-
-    return( res );
 }
 
 int pidd_x_y_controller_init( controller_t *controller, double period )

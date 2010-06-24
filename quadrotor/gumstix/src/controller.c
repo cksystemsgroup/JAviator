@@ -30,7 +30,6 @@
 #endif
 
 extern int pidd_def_controller_init( controller_t *, double );
-extern int pidd_yaw_controller_init( controller_t *, double );
 extern int pidd_x_y_controller_init( controller_t *, double );
 extern int pidd_all_controller_destroy( controller_t * );
 
@@ -45,10 +44,6 @@ int controller_init( controller_t *controller,
     {
         case CTRL_PIDD_DEF:
             res = pidd_def_controller_init( controller, period );
-            break;
-
-        case CTRL_PIDD_YAW:
-            res = pidd_yaw_controller_init( controller, period );
             break;
 
         case CTRL_PIDD_X_Y:

@@ -52,6 +52,9 @@
 #include "transformation.h"
 #include "us_timer.h"
 
+#define MRAD_PI     (1000*M_PI)
+#define MRAD_2PI    (2000*M_PI)
+
 /* helicopter states */
 #define HELI_STATE_GROUND       0x01
 #define HELI_STATE_FLYING       0x02
@@ -88,12 +91,12 @@
 
 /* controller parameters */
 #define COMMAND_THRESHOLD       35                      /* [iterations] max iterations to wait */
-#define ROLL_PITCH_LIMIT        700                    /* [mrad] max allowed roll/pitch angle */
+#define ROLL_PITCH_LIMIT        700                     /* [mrad] max allowed roll/pitch angle */
 #define OFFSET_TEMPERATURE      700                     /* [mC] temperature calibration */
 #define MOTOR_REVVING_STEP      50                      /* inc/dec for motor revving up/down */
 
 /* scaling constants */
-#define FACTOR_EULER_ANGLE      2000.0*M_PI/65536.0     /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
+#define FACTOR_EULER_ANGLE      MRAD_2PI/65536.0        /* [units] --> [mrad] (2*PI*1000 mrad/2^16) */
 #define FACTOR_ANGULAR_VEL      8500.0/32768.0          /* [units] --> [mrad/s] */
 #define FACTOR_ANGULAR_ACC      8500.0/32768.0*76.3     /* [units] --> [mrad/s^2] */
 #define FACTOR_LINEAR_ACC       9810.0/4681.0           /* [units] --> [mm/s^2] (4681=32768000/7000) */
@@ -113,6 +116,8 @@ static int                      ubisense_enabled;
 static int                      heli_state;
 static int                      heli_mode;
 static int                      heli_settled;
+static int                      yaw_wn_imu;
+static int                      yaw_wn_cmd;
 static double *                 offset_roll;
 static double *                 offset_pitch;
 static double                   cmd_roll;
@@ -130,6 +135,7 @@ static low_pass_filter_t        filter_ddy;
 static low_pass_filter_t        filter_ddz;
 static low_pass_filter_t        filter_cmdr;
 static low_pass_filter_t        filter_cmdp;
+static low_pass_filter_t        filter_cmdy;
 static low_pass_filter_t        filter_cmdz;
 static average_filter_t         filter_maps;
 static median_filter_t          filter_temp;
@@ -203,6 +209,8 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
     heli_state          = HELI_STATE_SHUTDOWN;
     heli_mode           = HELI_MODE_MAN_CTRL;
     heli_settled        = 1;
+    yaw_wn_imu          = 0;
+    yaw_wn_cmd          = 0;
     offset_roll         = offset_r;
     offset_pitch        = offset_p;
     cmd_roll            = 0;
@@ -224,13 +232,14 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
     low_pass_filter_init( &filter_ddz,  "ddZ",   FILTER_GAIN_LACC );
     low_pass_filter_init( &filter_cmdr, "cmdR",  FILTER_GAIN_CCMD );
     low_pass_filter_init( &filter_cmdp, "cmdP",  FILTER_GAIN_CCMD );
+    low_pass_filter_init( &filter_cmdy, "cmdY",  FILTER_GAIN_CCMD );
     low_pass_filter_init( &filter_cmdz, "cmdZ",  FILTER_GAIN_CCMD );
     average_filter_init ( &filter_maps, "MAPS",  FILTER_SIZE_MAPS );
     median_filter_init  ( &filter_temp, "TEMP",  FILTER_SIZE_TEMP );
     median_filter_init  ( &filter_batt, "BATT",  FILTER_SIZE_BATT );
     controller_init     ( &ctrl_roll,   "Roll",  CTRL_PIDD_DEF, period );
     controller_init     ( &ctrl_pitch,  "Pitch", CTRL_PIDD_DEF, period );
-    controller_init     ( &ctrl_yaw,    "Yaw",   CTRL_PIDD_YAW, period );
+    controller_init     ( &ctrl_yaw,    "Yaw",   CTRL_PIDD_DEF, period );
     controller_init     ( &ctrl_x,      "X",     CTRL_PIDD_X_Y, period );
     controller_init     ( &ctrl_y,      "Y",     CTRL_PIDD_X_Y, period );
     controller_init     ( &ctrl_z,      "Z",     CTRL_PIDD_DEF, period );
@@ -249,6 +258,7 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
 
 static int get_javiator_data( void )
 {
+    static double last_scaled_yaw = 0;
     static double data_offset_yaw = 0;
     static double data_offset_x   = 0;
     static double data_offset_y   = 0;
@@ -302,11 +312,27 @@ static int get_javiator_data( void )
     {
         data_offset_yaw = sensor_data.yaw;
         sensor_data.yaw = 0;
+        yaw_wn_imu      = 0;
     }
     else
     {
         sensor_data.yaw -= data_offset_yaw;
+
+        /* compute winding number of yaw angle */
+        if( last_scaled_yaw - sensor_data.yaw < -MRAD_PI )
+        {
+            --yaw_wn_imu;
+        }
+        else
+        if( last_scaled_yaw - sensor_data.yaw > MRAD_PI )
+        {
+            ++yaw_wn_imu;
+        }
     }
+
+    /* compute winded yaw angle */
+    last_scaled_yaw  = sensor_data.yaw;
+    sensor_data.yaw += yaw_wn_imu * MRAD_2PI;
 
 	/* IMPORTANT: all angles must be given in radians */
     transformation_set_angles( sensor_data.roll  / 1000,
@@ -483,6 +509,8 @@ static int check_terminal_connection( void )
 
 static int get_command_data( void )
 {
+    static double last_command_yaw = 0;
+
     if( terminal_port_is_shut_down( ) )
     {
         heli_state = HELI_STATE_SHUTDOWN;
@@ -522,9 +550,30 @@ static int get_command_data( void )
     {
         terminal_port_get_command_data( &command_data );
 
+        /* compute winding number of yaw command */
+        if( heli_settled )
+        {
+            yaw_wn_cmd = 0;
+        }
+        else
+        if( last_command_yaw - command_data.yaw < -MRAD_PI )
+        {
+            --yaw_wn_cmd;
+        }
+        else
+        if( last_command_yaw - command_data.yaw > MRAD_PI )
+        {
+            ++yaw_wn_cmd;
+        }
+
+        /* compute winded yaw command */
+        last_command_yaw  = command_data.yaw;
+        command_data.yaw += yaw_wn_cmd * MRAD_2PI;
+
         /* apply low-pass filters */
         command_data.roll  = low_pass_filter_update( &filter_cmdr, command_data.roll );
         command_data.pitch = low_pass_filter_update( &filter_cmdp, command_data.pitch );
+        command_data.yaw   = low_pass_filter_update( &filter_cmdy, command_data.yaw );
         command_data.z     = low_pass_filter_update( &filter_cmdz, command_data.z );
     }
 
@@ -617,6 +666,7 @@ static void perform_shut_down( void )
     low_pass_filter_reset( &filter_ddz );
     low_pass_filter_reset( &filter_cmdr );
     low_pass_filter_reset( &filter_cmdp );
+    low_pass_filter_reset( &filter_cmdy );
     low_pass_filter_reset( &filter_cmdz );
     extended_kalman_reset( );
 
@@ -678,7 +728,7 @@ static int compute_motor_signals( void )
     trace_data.value_1  = (int16_t)( period * 1000 ); /* [ms] */
     trace_data.value_2  = (int16_t)( sensor_data.roll );
     trace_data.value_3  = (int16_t)( sensor_data.pitch );
-    trace_data.value_4  = (int16_t)( sensor_data.yaw );
+    trace_data.value_4  = (int16_t)( sensor_data.yaw - yaw_wn_imu * MRAD_2PI );
     trace_data.value_5  = (int16_t)( sensor_data.x );
     trace_data.value_6  = (int16_t)( sensor_data.y );
     trace_data.value_7  = (int16_t)( sensor_data.z );
@@ -733,7 +783,7 @@ static int compute_motor_signals( void )
     else
     {
         cmd_roll  = -command_data.roll;
-        cmd_pitch = command_data.pitch;
+        cmd_pitch =  command_data.pitch;
     }
 
     /* trace command data before rotation */
@@ -816,6 +866,10 @@ static int compute_motor_signals( void )
     motor_offsets.pitch = (int16_t)( u_pitch );
     motor_offsets.yaw   = (int16_t)( u_yaw );
     motor_offsets.z     = (int16_t)( u_z );
+
+    /* restore unwinded yaw angle and command */
+    sensor_data.yaw    -= yaw_wn_imu * MRAD_2PI;
+    command_data.yaw   -= yaw_wn_cmd * MRAD_2PI;
 
     return( 0 );
 }
@@ -1009,6 +1063,7 @@ int control_loop_run( void )
     low_pass_filter_destroy( &filter_ddz );
     low_pass_filter_destroy( &filter_cmdr );
     low_pass_filter_destroy( &filter_cmdp );
+    low_pass_filter_destroy( &filter_cmdy );
     low_pass_filter_destroy( &filter_cmdz );
     average_filter_destroy ( &filter_maps );
     median_filter_destroy  ( &filter_temp );
