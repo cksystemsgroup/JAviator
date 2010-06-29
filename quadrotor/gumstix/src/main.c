@@ -46,7 +46,7 @@
 #define SERIAL_DEVICE       "/dev/ttyS2"
 #define SERIAL_BAUDRATE     115200
 #define TERMINAL_PORT       7000
-#define UBISENSE_ADDR       "192.168.1.3"
+#define UBISENSE_ADDR       "192.168.2.125"
 #define UBISENSE_PORT       9001
 #define CFG_FILENAME        "control.cfg"
 

@@ -35,14 +35,14 @@
 /* State of a controller for 1 degree of freedom */
 struct ctrl_state
 {
-    double dt;           /* Control period [s] */
-    double kp;           /* Gain for tracking error [PWM/mrad] */
-    double ki;           /* Gain for integral of tracking error [PWM/(mrad*s)] */
-    double kd;           /* Gain for derivative of tracking error [PWM/(mrad/s)] */
-    double kdd;          /* Gain for second derivative of tracking error */
-    double integral;     /* Running integral of the tracking error [mrad*s] */
-    double int_limit;    /* Integral limit [mrad*s] */
-    double last_desired; /* Stores command to use for finite differencing [mrad] */
+    double dt;            /* Control period [s] */
+    double kp;            /* Gain for tracking error [PWM/mrad] */
+    double ki;            /* Gain for integral of tracking error [PWM/(mrad*s)] */
+    double kd;            /* Gain for derivative of tracking error [PWM/(mrad/s)] */
+    double kdd;           /* Gain for second derivative of tracking error */
+    double integral;      /* Running integral of the tracking error [mrad*s] */
+    double int_limit;     /* Integral limit [mrad*s] */
+    double last_desired;  /* Stores command to use for finite differencing [mrad] */
     double p;
     double i;
     double d;
@@ -117,7 +117,7 @@ static double pidd_do_control( controller_t *controller,
     double s_error = get_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
 
-    state->last_desired = desired;
+    state->last_desired  = desired;
 
     return pidd_compute( state, s_error, v_error, acceleration );
 }

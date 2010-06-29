@@ -297,7 +297,7 @@ static int client_socket_connect( tcp_connection_t *tc )
         fcntl( tc->fd, F_SETFL, saved_fd );
         linger.l_onoff = 0;
 
-        if( setsockopt( tc->fd, SOL_SOCKET, SO_LINGER, &flag, sizeof( flag ) ) )
+        if( setsockopt( tc->fd, SOL_SOCKET, SO_LINGER, &linger, sizeof( linger ) ) )
         {
             fprintf( stderr, "ERROR in %s %d: setsockopt linger\n",
                 __FILE__, __LINE__ );

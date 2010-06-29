@@ -52,6 +52,8 @@
 #include "transformation.h"
 #include "us_timer.h"
 
+#include "kalman_filter.h"
+
 #define MRAD_PI     (1000*M_PI)
 #define MRAD_2PI    (2000*M_PI)
 
@@ -140,6 +142,8 @@ static low_pass_filter_t        filter_cmdz;
 static average_filter_t         filter_maps;
 static median_filter_t          filter_temp;
 static median_filter_t          filter_batt;
+
+static kalman_filter_t          filter_dz;
 
 /* controller objects */
 static controller_t             ctrl_roll;
@@ -245,6 +249,8 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
     controller_init     ( &ctrl_z,      "Z",     CTRL_PIDD_DEF, period );
     extended_kalman_init( period );
     transformation_init ( );
+
+    kalman_filter_init( &filter_dz, "dZ", FILTER_PROC_NS_DZ, FILTER_DATA_NS_DZ, period );
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -393,6 +399,9 @@ static int get_javiator_data( void )
             last_sensor_dy = sensor_data.dy;
             sensor_delay_x = 0;
             sensor_delay_y = 0;
+
+            fprintf( stdout, "  x: %3.3f    y: %3.3f\r", sensor_data.x, sensor_data.y );
+            fflush( stdout );
         }
         else
         {
@@ -670,6 +679,8 @@ static void perform_shut_down( void )
     low_pass_filter_reset( &filter_cmdz );
     extended_kalman_reset( );
 
+    kalman_filter_reset( &filter_dz );
+
     controller_reset_zero( &ctrl_roll );
     controller_reset_zero( &ctrl_pitch );
     controller_reset_zero( &ctrl_yaw );
@@ -737,7 +748,11 @@ static int compute_motor_signals( void )
     trace_data.value_10 = (int16_t)( sensor_data.dz );
 
     /* estimate attitude, position, and velocity */
-    extended_kalman_update( &sensor_data );
+    //extended_kalman_update( &sensor_data );
+
+    kalman_filter_update( &filter_dz, sensor_data.z, sensor_data.ddz );
+    sensor_data.z  = kalman_filter_get_S( &filter_dz );
+    sensor_data.dz = kalman_filter_get_dS( &filter_dz );
 
     /* trace command data as applied to controller */
     trace_data.value_11 = (int16_t)( command_data.roll );
@@ -791,10 +806,10 @@ static int compute_motor_signals( void )
     trace_data.value_14 = (int16_t)( command_data.pitch );
 
     /* rotate roll/pitch command depending on yaw angle */
-    command_data.roll  = cmd_pitch * transformation_get_sin_Yaw( )
-                       - cmd_roll  * transformation_get_cos_Yaw( );
-    command_data.pitch = cmd_pitch * transformation_get_cos_Yaw( )
-                       + cmd_roll  * transformation_get_sin_Yaw( );
+    //command_data.roll  = cmd_pitch * transformation_get_sin_Yaw( )
+    //                   - cmd_roll  * transformation_get_cos_Yaw( );
+    //command_data.pitch = cmd_pitch * transformation_get_cos_Yaw( )
+    //                   + cmd_roll  * transformation_get_sin_Yaw( );
 
     /* trace command data after rotation */
     trace_data.value_15 = (int16_t)( command_data.roll );
@@ -1074,6 +1089,8 @@ int control_loop_run( void )
     controller_destroy     ( &ctrl_x );
     controller_destroy     ( &ctrl_y );
     controller_destroy     ( &ctrl_z );
+
+    kalman_filter_destroy( &filter_dz );
 
     print_stats( );
     return( 0 );
