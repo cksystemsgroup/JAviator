@@ -48,6 +48,8 @@
 #define TERMINAL_PORT       7000
 #define UBISENSE_ADDR       "192.168.2.125"
 #define UBISENSE_PORT       9001
+#define UBI_TAG_FRONT       20235
+#define UBI_TAG_REAR        21098
 #define CFG_FILENAME        "control.cfg"
 
 static comm_channel_t       javiator_channel;
@@ -102,7 +104,7 @@ static int setup_terminal_port( int listen_port, int type, int multiplier )
     return( 0 );
 }
 
-static int setup_ubisense_port( int type, char *addr, int port, int tag )
+static int setup_ubisense_port( int type, char *addr, int port, int tag_front, int tag_rear )
 {
     if( socket_channel_create( &ubisense_channel, type ) )
     {
@@ -116,7 +118,7 @@ static int setup_ubisense_port( int type, char *addr, int port, int tag )
         return( -1 );
     }
 
-    if( ubisense_port_init( &ubisense_channel, tag ) )
+    if( ubisense_port_init( &ubisense_channel, tag_front, tag_rear ) )
     {
         fprintf( stderr, "ERROR: Ubisense port not correctly initialized\n" );
         return( -1 );
@@ -131,7 +133,6 @@ static void usage( char *binary )
             "OPTIONS are:\n"
             "\t -c      ... disable control loop\n"
             "\t -h      ... print this message\n"
-            "\t -i ID   ... Ubisense tag ID\n"
             "\t -m mult ... communicate with terminal every <mult> period\n"
             "\t -n mult ... compute control commands every <mult> period\n"
             "\t -s      ... setup Ubisense port\n"
@@ -145,7 +146,6 @@ int main( int argc, char **argv )
 {
     double offset_p   = 0;
     double offset_r   = 0;
-    int    ubi_tag_id = 0;
     int    ms_period  = CONTROLLER_PERIOD;
     int    multiplier = PERIOD_MULTIPLIER;
     int    ctrl_cmds  = COMPUTE_CTRL_CMDS;
@@ -159,21 +159,12 @@ int main( int argc, char **argv )
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
     memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
 
-	while( (opt = getopt( argc, argv, "chi:m:n:st:uz" )) != -1 )
+	while( (opt = getopt( argc, argv, "chm:n:st:uz" )) != -1 )
     {
 		switch( opt )
 		{
 			case 'c':
 				exec_loop = 0;
-				break;
-
-			case 'i':
-				if( (ubi_tag_id = atoi( optarg )) < 0 )
-                {
-					fprintf( stderr, "ERROR: option '-i' requires a positive value\n" );
-					usage( argv[0] );
-					exit( 1 );
-				}
 				break;
 
 			case 'm':
@@ -233,15 +224,9 @@ int main( int argc, char **argv )
     {
         read( fd, &offset_r, sizeof( offset_r ) );
         read( fd, &offset_p, sizeof( offset_p ) );
-
-        if( !ubi_tag_id )
-        {
-            read( fd, &ubi_tag_id, sizeof( ubi_tag_id ) );
-        }
-
         close( fd );
-        printf( "ok\noffset roll  = %1.3f\noffset pitch = %1.3f\nUbisense tag = %d\n",
-            offset_r, offset_p, ubi_tag_id );
+        printf( "ok\noffset roll  = %1.3f\noffset pitch = %1.3f\n",
+            offset_r, offset_p );
     }
 
     printf( "setting up JAviator port ... " );
@@ -270,7 +255,8 @@ int main( int argc, char **argv )
     {
 	    printf( "setting up Ubisense port ... " );
 
-        if( setup_ubisense_port( SOCK_CLIENT, UBISENSE_ADDR, UBISENSE_PORT, ubi_tag_id ) )
+        if( setup_ubisense_port( SOCK_CLIENT, UBISENSE_ADDR, UBISENSE_PORT,
+            UBI_TAG_FRONT, UBI_TAG_REAR ) )
         {
             printf( "failed\n" );
             fprintf( stderr, "ERROR: could not setup the Ubisense port\n" );
@@ -283,7 +269,8 @@ int main( int argc, char **argv )
     if( exec_loop )
     {
         printf( "setting up control loop\n" );
-        control_loop_setup( ms_period, ctrl_cmds, control_z, ubisense, &offset_r, &offset_p );
+        control_loop_setup( ms_period, ctrl_cmds, control_z, ubisense,
+            &offset_r, &offset_p );
         printf( "starting control loop\n" );
         control_loop_run( );
     }
@@ -320,7 +307,6 @@ int main( int argc, char **argv )
     {
         write( fd, &offset_r, sizeof( offset_r ) );
         write( fd, &offset_p, sizeof( offset_p ) );
-        write( fd, &ubi_tag_id, sizeof( ubi_tag_id ) );
         close( fd );
         printf( "ok\n" );
     }

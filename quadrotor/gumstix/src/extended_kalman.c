@@ -292,17 +292,17 @@ void extended_kalman_update( sensor_data_t *data )
     bal_m( mul_m( sub_m( i, k3, s ), p3, t ), p3 );
 
     /* update given sensor data */
-    data->roll  = x1[0];
+    //data->roll  = x1[0];
     data->x     = x1[1];
     data->dx    = x1[2];
 
-    data->pitch = x2[0];
+    //data->pitch = x2[0];
     data->y     = x2[1];
     data->dy    = x2[2];
 
-    data->yaw   = x3[0];
-    data->z     = x3[1];
-    data->dz    = x3[2];
+    //data->yaw   = x3[0];
+    //data->z     = x3[1];
+    //data->dz    = x3[2];
 }
 
 /* End of file */

@@ -33,9 +33,12 @@
 
 static comm_channel_t * comm_channel;
 static char             comm_buf[ COMM_BUF_SIZE ];
-static int              ubisense_tag;
-static int              ubisense_x;
-static int              ubisense_y;
+static int              ubi_tag_front;
+static int              ubi_tag_rear;
+static int              ubi_x_front;
+static int              ubi_x_rear;
+static int              ubi_y_front;
+static int              ubi_y_rear;
 static int              new_data;
 static int              running;
 static pthread_t        thread;
@@ -54,30 +57,58 @@ static inline void unlock( void )
 
 static inline int parse_data_packet( const char *buf, int len )
 {
+    int tag_id;
+
     /* Data format: "------tttttt,x1...xn,y1...yn\0", where
        the first 6 digits <------> can be ignored, the next
        6 digits <tttttt> represent the tag ID, and the last
        digits <x1...xn> and <y1...yn> indicate variable
        numbers of digits representing the x and y values.
     */
-    if( len < 12 || atoi( buf + 6 ) != ubisense_tag )
+    if( len < 12 )
     {
         return( -1 );
     }
 
-    if( !(buf = strchr( buf, ',' )) )
+    tag_id = atoi( buf + 6 );
+
+    if( tag_id == ubi_tag_front )
+    {
+        if( !(buf = strchr( buf, ',' )) )
+        {
+            return( -1 );
+        }
+
+        ubi_y_front = atoi( ++buf );
+
+        if( !(buf = strchr( buf, ',' )) )
+        {
+            return( -1 );
+        }
+
+        ubi_x_front = atoi( ++buf );
+    }
+    else
+    if( tag_id == ubi_tag_rear )
+    {
+        if( !(buf = strchr( buf, ',' )) )
+        {
+            return( -1 );
+        }
+
+        ubi_y_rear = atoi( ++buf );
+
+        if( !(buf = strchr( buf, ',' )) )
+        {
+            return( -1 );
+        }
+
+        ubi_x_rear = atoi( ++buf );
+    }
+    else
     {
         return( -1 );
     }
-
-    ubisense_y = atoi( ++buf );
-
-    if( !(buf = strchr( buf, ',' )) )
-    {
-        return( -1 );
-    }
-
-    ubisense_x = atoi( ++buf );
 
     new_data = 1;
 
@@ -151,16 +182,19 @@ static void start_ubisense_thread( void )
 	pthread_create( &thread, &attr, ubisense_thread, NULL );
 }
 
-int ubisense_port_init( comm_channel_t *channel, int tag )
+int ubisense_port_init( comm_channel_t *channel, int tag_front, int tag_rear )
 {
     static int already_initialized = 0;
 
     if( !already_initialized )
     {
         comm_channel        = channel;
-        ubisense_tag        = tag;
-        ubisense_x          = 0;
-        ubisense_y          = 0;
+        ubi_tag_front       = tag_front;
+        ubi_tag_rear        = tag_rear;
+        ubi_x_front         = 0;
+        ubi_x_rear          = 0;
+        ubi_y_front         = 0;
+        ubi_y_rear          = 0;
         new_data            = 0;
         running             = 1;
         already_initialized = 1;
@@ -181,8 +215,10 @@ int ubisense_port_is_new_data( void )
 int ubisense_port_get_data( sensor_data_t *data )
 {
 	lock( );
-    data->x = ubisense_x;
-    data->y = ubisense_y;
+    data->x  = ubi_x_front;
+    data->y  = ubi_y_front;
+    data->dx = ubi_x_rear;
+    data->dy = ubi_y_rear;
     new_data = 0;
 	unlock( );
     return( 0 );

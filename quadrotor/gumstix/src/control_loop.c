@@ -69,8 +69,8 @@
 /* filter parameters */
 #define FILTER_MDIFF_Z          50                      /* [mm] maximum allowed z-difference */
 #define FILTER_LIMIT_Z          2                       /* limit for counting z-outliers */
-#define FILTER_PROC_NS_DXY      100                     /* process noise for dx/dy-filter */
-#define FILTER_DATA_NS_DXY      0.1                     /* data noise for dx/dy-filter */
+#define FILTER_PROC_NS_DXY      1                       /* process noise for dx/dy-filter */
+#define FILTER_DATA_NS_DXY      0.01                    /* data noise for dx/dy-filter */
 #define FILTER_PROC_NS_DZ       10000                   /* process noise for dz-filter */
 #define FILTER_DATA_NS_DZ       0.01                    /* data noise for dz-filter */
 #define FILTER_GAIN_LACC        0.1                     /* gain for linear accelerations */
@@ -143,6 +143,11 @@ static average_filter_t         filter_maps;
 static median_filter_t          filter_temp;
 static median_filter_t          filter_batt;
 
+static kalman_filter_t          filter_yaw;
+static kalman_filter_t          filter_dx1;
+static kalman_filter_t          filter_dx2;
+static kalman_filter_t          filter_dy1;
+static kalman_filter_t          filter_dy2;
 static kalman_filter_t          filter_dz;
 
 /* controller objects */
@@ -250,7 +255,12 @@ int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
     extended_kalman_init( period );
     transformation_init ( );
 
-    kalman_filter_init( &filter_dz, "dZ", FILTER_PROC_NS_DZ, FILTER_DATA_NS_DZ, period );
+    kalman_filter_init( &filter_yaw, "yaw", 100, 0.01, period );
+    kalman_filter_init( &filter_dx1, "dX1", FILTER_PROC_NS_DXY, FILTER_DATA_NS_DXY, period );
+    kalman_filter_init( &filter_dx2, "dX2", FILTER_PROC_NS_DXY, FILTER_DATA_NS_DXY, period );
+    kalman_filter_init( &filter_dy1, "dY1", FILTER_PROC_NS_DXY, FILTER_DATA_NS_DXY, period );
+    kalman_filter_init( &filter_dy2, "dY2", FILTER_PROC_NS_DXY, FILTER_DATA_NS_DXY, period );
+    kalman_filter_init( &filter_dz,  "dZ",  FILTER_PROC_NS_DZ,  FILTER_DATA_NS_DZ,  period );
 
     memset( &command_data,  0, sizeof( command_data ) );
     memset( &javiator_data, 0, sizeof( javiator_data ) );
@@ -290,7 +300,41 @@ static int get_javiator_data( void )
     /* scale Euler angles */
     sensor_data.roll  = FACTOR_EULER_ANGLE * javiator_data.roll;
     sensor_data.pitch = FACTOR_EULER_ANGLE * javiator_data.pitch;
-    sensor_data.yaw   = FACTOR_EULER_ANGLE * javiator_data.yaw;
+
+    /* save old angular velocities */
+    sensor_data.ddroll  = sensor_data.droll;
+    sensor_data.ddpitch = sensor_data.dpitch;
+    sensor_data.ddyaw   = sensor_data.dyaw;
+
+    /* scale new angular velocities */
+    sensor_data.droll   = FACTOR_ANGULAR_VEL * javiator_data.droll;
+    sensor_data.dpitch  = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
+    sensor_data.dyaw    = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
+
+    /* compute angular accelerations */
+    sensor_data.ddroll  = FACTOR_ANGULAR_ACC * (sensor_data.droll  - sensor_data.ddroll);
+    sensor_data.ddpitch = FACTOR_ANGULAR_ACC * (sensor_data.dpitch - sensor_data.ddpitch);
+    sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * (sensor_data.dyaw   - sensor_data.ddyaw) / period;
+
+    /* compute yaw angle with 2 Ubisense tags */
+    if( ubisense_enabled )
+    {
+        sensor_data.yaw = atan2(
+                          kalman_filter_get_S( &filter_dy1 )
+                        - kalman_filter_get_S( &filter_dy2 ),
+                          kalman_filter_get_S( &filter_dx1 )
+                        - kalman_filter_get_S( &filter_dx2 ) ) * 1000;
+
+        kalman_filter_update( &filter_yaw, sensor_data.yaw,  sensor_data.ddyaw );
+        sensor_data.yaw = kalman_filter_get_S( &filter_yaw );
+    }
+    else
+    {
+        sensor_data.yaw = FACTOR_EULER_ANGLE * javiator_data.yaw;
+    }
+
+    //fprintf( stdout, "  yaw: %3.3f\r", sensor_data.yaw );
+    //fflush( stdout );
 
     /* check for trimming change */
     if( terminal_port_is_store_trim( ) )
@@ -344,7 +388,7 @@ static int get_javiator_data( void )
     transformation_set_angles( sensor_data.roll  / 1000,
                                sensor_data.pitch / 1000,
                                sensor_data.yaw   / 1000 );
-
+#if 0
     /* save old angular velocities */
     sensor_data.ddroll  = sensor_data.droll;
     sensor_data.ddpitch = sensor_data.dpitch;
@@ -359,7 +403,7 @@ static int get_javiator_data( void )
     sensor_data.ddroll  = FACTOR_ANGULAR_ACC * (sensor_data.droll  - sensor_data.ddroll);
     sensor_data.ddpitch = FACTOR_ANGULAR_ACC * (sensor_data.dpitch - sensor_data.ddpitch);
     sensor_data.ddyaw   = FACTOR_ANGULAR_ACC * (sensor_data.dyaw   - sensor_data.ddyaw);
-
+#endif
     /* save new linear accelerations */
     sensor_data.dx  = FACTOR_LINEAR_ACC * javiator_data.ddx;
     sensor_data.dy  = FACTOR_LINEAR_ACC * javiator_data.ddy;
@@ -377,7 +421,7 @@ static int get_javiator_data( void )
 
     /* IMPORTANT: the Z-axis is pointing DOWNWARDS in the aircraft
        coordinate system, hence the sign of ddZ must be changed */
-    sensor_data.ddz     = -sensor_data.ddz;
+    sensor_data.ddz = -sensor_data.ddz;
 
     /* increment position data delays */
     sensor_delay_x += period;
@@ -391,8 +435,8 @@ static int get_javiator_data( void )
         {
             ubisense_port_get_data( &sensor_data );
 
-            sensor_data.dx = (sensor_data.x - last_sensor_x) / sensor_delay_x;
-            sensor_data.dy = (sensor_data.y - last_sensor_y) / sensor_delay_y;
+            //sensor_data.dx = (sensor_data.x - last_sensor_x) / sensor_delay_x;
+            //sensor_data.dy = (sensor_data.y - last_sensor_y) / sensor_delay_y;
             last_sensor_x  = sensor_data.x;
             last_sensor_y  = sensor_data.y;
             last_sensor_dx = sensor_data.dx;
@@ -400,8 +444,9 @@ static int get_javiator_data( void )
             sensor_delay_x = 0;
             sensor_delay_y = 0;
 
-            fprintf( stdout, "  x: %3.3f    y: %3.3f\r", sensor_data.x, sensor_data.y );
-            fflush( stdout );
+            //fprintf( stdout, "  x1: %3.3f  y1: %3.3f    x2: %3.3f  y2: %3.3f\r",
+            //    sensor_data.x, sensor_data.y, sensor_data.dx, sensor_data.dy );
+            //fflush( stdout );
         }
         else
         {
@@ -445,6 +490,16 @@ static int get_javiator_data( void )
             sensor_data.dy = last_sensor_dy;
         }
     }
+
+    kalman_filter_update( &filter_dx1, sensor_data.x,  sensor_data.ddx );
+    kalman_filter_update( &filter_dx2, sensor_data.dx, sensor_data.ddx );
+    kalman_filter_update( &filter_dy1, sensor_data.y,  sensor_data.ddy );
+    kalman_filter_update( &filter_dy2, sensor_data.dy, sensor_data.ddy );
+
+    sensor_data.x  = (kalman_filter_get_S ( &filter_dx1 ) + kalman_filter_get_S ( &filter_dx2 )) / 2;
+    sensor_data.dx = (kalman_filter_get_dS( &filter_dx1 ) + kalman_filter_get_dS( &filter_dx2 )) / 2;
+    sensor_data.y  = (kalman_filter_get_S ( &filter_dy1 ) + kalman_filter_get_S ( &filter_dy2 )) / 2;
+    sensor_data.dy = (kalman_filter_get_dS( &filter_dy1 ) + kalman_filter_get_dS( &filter_dy2 )) / 2;
 
     /* transform z-position and compute z-velocity */
     if( (javiator_data.state & ST_NEW_DATA_SONAR) )
@@ -679,6 +734,11 @@ static void perform_shut_down( void )
     low_pass_filter_reset( &filter_cmdz );
     extended_kalman_reset( );
 
+    kalman_filter_reset( &filter_yaw );
+    //kalman_filter_reset( &filter_dx1 );
+    //kalman_filter_reset( &filter_dx2 );
+    //kalman_filter_reset( &filter_dy1 );
+    //kalman_filter_reset( &filter_dy2 );
     kalman_filter_reset( &filter_dz );
 
     controller_reset_zero( &ctrl_roll );
@@ -747,12 +807,12 @@ static int compute_motor_signals( void )
     trace_data.value_9  = (int16_t)( sensor_data.dy );
     trace_data.value_10 = (int16_t)( sensor_data.dz );
 
-    /* estimate attitude, position, and velocity */
-    //extended_kalman_update( &sensor_data );
-
     kalman_filter_update( &filter_dz, sensor_data.z, sensor_data.ddz );
     sensor_data.z  = kalman_filter_get_S( &filter_dz );
     sensor_data.dz = kalman_filter_get_dS( &filter_dz );
+
+    /* estimate attitude, position, and velocity */
+    //extended_kalman_update( &sensor_data );
 
     /* trace command data as applied to controller */
     trace_data.value_11 = (int16_t)( command_data.roll );
@@ -1090,6 +1150,11 @@ int control_loop_run( void )
     controller_destroy     ( &ctrl_y );
     controller_destroy     ( &ctrl_z );
 
+    kalman_filter_destroy( &filter_yaw );
+    kalman_filter_destroy( &filter_dx1 );
+    kalman_filter_destroy( &filter_dx2 );
+    kalman_filter_destroy( &filter_dy1 );
+    kalman_filter_destroy( &filter_dy2 );
     kalman_filter_destroy( &filter_dz );
 
     print_stats( );

@@ -30,7 +30,7 @@
 
 int ubisense_port_tick( void );
 
-int ubisense_port_init( comm_channel_t *channel, int tag );
+int ubisense_port_init( comm_channel_t *channel, int tag_front, int tag_rear );
 
 int ubisense_port_is_new_data( void );
 
