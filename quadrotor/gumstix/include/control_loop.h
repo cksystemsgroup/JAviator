@@ -19,15 +19,15 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  *
  */
 
 #ifndef CONTROL_LOOP_H
 #define CONTROL_LOOP_H
 
-int control_loop_setup( int ms_period, int ctrl_cmds, int control_z,
-                        int ubisense, double *offset_r, double *offset_p );
+int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
+                        double *offset_r, double *offset_p );
 
 int control_loop_run( void );
 

@@ -121,8 +121,11 @@ public class DigitalMeter extends Panel
 
     public void setSensorData( SensorData data )
     {
-        positionX.setText( ControlTerminal.NIL + ( (double) data.x / 10.0 ) );
-        positionY.setText( ControlTerminal.NIL + ( (double) data.y / 10.0 ) );
+    	/* IMPORTANT: Ubisense location data refer to Cartesian coordinates,
+           whereas JAviator location data refer to aircraft coordinates,
+           hence x and y must be exchanged when copying the data. */
+        positionX.setText( ControlTerminal.NIL + ( (double) data.y / 10.0 ) );
+        positionY.setText( ControlTerminal.NIL + ( (double) data.x / 10.0 ) );
         mapsLabel.setText( ControlTerminal.NIL + ( (double) data.maps / 10.0 ) );
         tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 10) / 10.0 ) );
         battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
@@ -163,11 +166,12 @@ public class DigitalMeter extends Panel
 
     public void setMotorSignals( MotorSignals signals )
     {
+/*
         if( parent.isShow3D( ) )
         {
         	parent.getJaviator3D( ).setRotorSpeed( motorSignals );
         }
-
+*/
         if( motorSignals.front != signals.front )
         {
             signalFront.setText( ControlTerminal.NIL + signals.front );
@@ -343,7 +347,7 @@ public class DigitalMeter extends Panel
     /*                                                                       */
     /*************************************************************************/
 
-    private ControlTerminal parent        = null;
+    //private ControlTerminal parent        = null;
     private MotorSignals    motorSignals  = null;
     private MotorOffsets    motorOffsets  = null;
     
@@ -382,7 +386,7 @@ public class DigitalMeter extends Panel
 
     private void initWindow( ControlTerminal parent )
     {
-        this.parent   = parent;
+        //this.parent   = parent;
         motorSignals  = new MotorSignals( );
         motorOffsets  = new MotorOffsets( );
 

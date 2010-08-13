@@ -24,21 +24,18 @@
 
 #include <stdio.h>
 #include <malloc.h>
-#include <math.h>
 
-#include "outlier_filter.h"
+#include "iir_lp_filter.h"
 
-/* State of an outlier filter */
-struct of_state
+/* State of an IIR low-pass filter */
+struct iir_state
 {
-    double  mdiff;
-    double  value;
-    int     limit;
-    int     count;
+    double gain;
+    double value;
 };
 
 
-static inline of_state_t *get_of_state( const outlier_filter_t *filter )
+static inline iir_state_t *get_iir_state( const iir_lp_filter_t *filter )
 {
     if( !filter->state )
     {
@@ -48,20 +45,20 @@ static inline of_state_t *get_of_state( const outlier_filter_t *filter )
     return( filter->state );
 }
 
-/* Initializes an outlier filter.
+/* Initializes an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int limit )
+int iir_lp_filter_init( iir_lp_filter_t *filter, char *name, double gain )
 {
-    of_state_t *state;
+    iir_state_t *state;
 
-    if( limit < 1 )
+    if( gain < 0 || gain > 1 )
     {
-        fprintf( stderr, "ERROR: invalid %s filter limit (%d)\n", name, limit );
+        fprintf( stderr, "ERROR: invalid %s filter gain (%f)\n", name, gain );
         return( -1 );
     }
 
-    state = malloc( sizeof( of_state_t ) );
+    state = malloc( sizeof( iir_state_t ) );
 
     if( !state )
     {
@@ -69,29 +66,28 @@ int outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int
         return( -1 );
     }
 
-    state->mdiff  = fabs( mdiff ); /* make sure state->mdiff is positive */
-    state->limit  = limit;
+    state->gain   = gain;
     filter->name  = name;
     filter->state = state;
-    return outlier_filter_reset( filter );
+    return iir_lp_filter_reset( filter );
 }
 
-/* Destroys an outlier filter.
+/* Destroys an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int outlier_filter_destroy( outlier_filter_t *filter )
+int iir_lp_filter_destroy( iir_lp_filter_t *filter )
 {
     free( filter->state );
     filter->state = NULL;
     return( 0 );
 }
 
-/* Resets the outlier filter.
+/* Resets an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int outlier_filter_reset( outlier_filter_t *filter )
+int iir_lp_filter_reset( iir_lp_filter_t *filter )
 {
-    of_state_t *state = get_of_state( filter );
+    iir_state_t *state = get_iir_state( filter );
 
     if( !state )
     {
@@ -99,34 +95,23 @@ int outlier_filter_reset( outlier_filter_t *filter )
     }
 
     state->value = 0;
-    state->count = 0;
     return( 0 );
 }
 
-/* Updates an outlier filter with the given value.
+/* Updates an IIR low-pass filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double outlier_filter_update( outlier_filter_t *filter, double update )
+double iir_lp_filter_update( iir_lp_filter_t *filter, double update )
 {
-    of_state_t *state = get_of_state( filter );
+    iir_state_t *state = get_iir_state( filter );
 
     if( !state )
     {
         return( -1 );
     }
 
-    if( fabs( state->value - update ) > state->mdiff && state->count < state->limit )
-    {
-        update = state->value;
-        ++state->count;
-    }
-    else
-    {
-        state->count = 0;
-    }
-
-    state->value = update;
-    return( update );
+    state->value = state->value + state->gain * (update - state->value);
+    return( state->value );
 }
 
 /* End of file */

@@ -52,7 +52,8 @@ public class PortDialog extends Dialog
 {
     public static final long serialVersionUID = 1;
 
-    public static PortDialog createInstance( ControlTerminal parent, String title )
+    public static PortDialog createInstance( ControlTerminal parent,
+    	String title )
     {
         if( Instance == null )
         {

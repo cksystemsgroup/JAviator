@@ -19,7 +19,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  *
  */
 
@@ -486,7 +486,8 @@ int tcp_socket_channel_init( comm_channel_t *channel, socket_type_t type, char *
             return client_socket_init( tc, addr, port );
 
 		default:
-            fprintf( stderr, "ERROR: unknown socket type\n" );
+            fprintf( stderr, "ERROR in %s %d: unknown socket type\n",
+                __FILE__, __LINE__ );
     }
 
     return( -1 );

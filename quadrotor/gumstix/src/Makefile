@@ -55,16 +55,16 @@ libcontroller_platform_a_OBJECTS =  \
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_control_OBJECTS = average_filter.$(OBJEXT) communication.$(OBJEXT) \
+am_control_OBJECTS = altitude_kf.$(OBJEXT) attitude_ekf.$(OBJEXT) \
+	average_filter.$(OBJEXT) communication.$(OBJEXT) \
 	controller.$(OBJEXT) control_loop.$(OBJEXT) \
-	extended_kalman.$(OBJEXT) javiator_port.$(OBJEXT) \
-	kalman_filter.$(OBJEXT) low_pass_filter.$(OBJEXT) \
-	main.$(OBJEXT) median_filter.$(OBJEXT) \
+	fir_lp_filter.$(OBJEXT) iir_lp_filter.$(OBJEXT) \
+	javiator_port.$(OBJEXT) main.$(OBJEXT) median_filter.$(OBJEXT) \
 	outlier_filter.$(OBJEXT) pidd_controller.$(OBJEXT) \
-	serial_channel.$(OBJEXT) tcp_socket_channel.$(OBJEXT) \
-	terminal_port.$(OBJEXT) transformation.$(OBJEXT) \
-	ubisense_port.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
-	us_timer.$(OBJEXT)
+	position_ekf.$(OBJEXT) serial_channel.$(OBJEXT) \
+	tcp_socket_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
+	transformation.$(OBJEXT) ubisense_port.$(OBJEXT) \
+	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -192,18 +192,20 @@ noinst_LIBRARIES = libcontroller-platform.a
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
+    altitude_kf.c \
+    attitude_ekf.c \
     average_filter.c \
     communication.c \
     controller.c \
     control_loop.c \
-    extended_kalman.c \
+    fir_lp_filter.c \
+    iir_lp_filter.c \
     javiator_port.c \
-    kalman_filter.c \
-    low_pass_filter.c \
     main.c \
     median_filter.c \
     outlier_filter.c \
     pidd_controller.c \
+    position_ekf.c \
     serial_channel.c \
     tcp_socket_channel.c \
     terminal_port.c \
@@ -286,18 +288,20 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/altitude_kf.Po
+include ./$(DEPDIR)/attitude_ekf.Po
 include ./$(DEPDIR)/average_filter.Po
 include ./$(DEPDIR)/communication.Po
 include ./$(DEPDIR)/control_loop.Po
 include ./$(DEPDIR)/controller.Po
-include ./$(DEPDIR)/extended_kalman.Po
+include ./$(DEPDIR)/fir_lp_filter.Po
+include ./$(DEPDIR)/iir_lp_filter.Po
 include ./$(DEPDIR)/javiator_port.Po
-include ./$(DEPDIR)/kalman_filter.Po
-include ./$(DEPDIR)/low_pass_filter.Po
 include ./$(DEPDIR)/main.Po
 include ./$(DEPDIR)/median_filter.Po
 include ./$(DEPDIR)/outlier_filter.Po
 include ./$(DEPDIR)/pidd_controller.Po
+include ./$(DEPDIR)/position_ekf.Po
 include ./$(DEPDIR)/serial_channel.Po
 include ./$(DEPDIR)/tcp_socket_channel.Po
 include ./$(DEPDIR)/terminal_port.Po

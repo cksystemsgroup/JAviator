@@ -31,7 +31,7 @@ import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Color;
 import java.awt.Rectangle;
-import java.awt.GraphicsEnvironment;
+import java.awt.Point;
 import java.awt.MediaTracker;
 import java.awt.AWTEvent;
 
@@ -58,7 +58,7 @@ import javiator.util.TraceData;
 import javiator.util.Packet;
 import javiator.util.PacketType;
 
-import javiator.signals.SignalsDialog;
+//import javiator.signals.SignalsDialog;
 
 import com.centralnexus.input.Joystick;
 
@@ -70,31 +70,33 @@ import com.centralnexus.input.Joystick;
 
 public class ControlTerminal extends Frame
 {
-    public static final long serialVersionUID  = 1;
+    public static final long serialVersionUID = 1;
 
-    private static final boolean SMALL_DISPLAY = true;
-    private static final boolean SHOW_3DWINDOW = false;
-    private boolean              show_diagrams = false;
+    public static final boolean SMALL_DISPLAY = true;
+    public static final boolean SHOW_3DWINDOW = false;
 
-    public static final String LOG_FILE_NAME   = "traces/ubisense_.csv";
+    public static final Rectangle UBI_RECT    = new Rectangle(    0,    0, 7130, 8470 );
+    public static final Rectangle MAX_RECT    = new Rectangle( 2000, 2000, 3130, 4470 );
 
-    public static final String LOG_TITLE_STR   = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
-    	                                         "ekf-roll,ekf-pitch,ekf-yaw," +
-											     "droll,dpitch,dyaw," +
-											     "ddroll,ddpitch,ddyaw," +
-											     "ekf-x,ekf-y,ekf-z," +
-											     "ekf-dx,ekf-dy,ekf-dz," +
-											     "ddx,ddy,ddz," +
-											     "maps,temp,batt," +
-											     "front,right,rear,left," +
-											     "u-roll,u-pitch,u-yaw,u-z," +
-											     "period," +
-											     "true-roll,true-pitch,true-yaw," +
-											     "true-x,true-y,true-z," +
-											     "true-dx,true-dy,true-dz," +
-                                                 "true-c-roll,true-c-pitch," +
-                                                 "ctrl-c-roll,ctrl-c-pitch," +
-                                                 "rotated-roll,rotated-pitch";
+    public static final String LOG_FILE_NAME  = "traces/integral_test_.csv";
+
+    public static final String LOG_TITLE_STR  = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
+    	                                        "ekf-roll,ekf-pitch,ekf-yaw," +
+											    "droll,dpitch,dyaw," +
+											    "ddroll,ddpitch,ddyaw," +
+											    "ekf-x,ekf-y,ekf-z," +
+											    "ekf-dx,ekf-dy,ekf-dz," +
+											    "ddx,ddy,ddz," +
+											    "maps,temp,batt," +
+											    "front,right,rear,left," +
+											    "u-roll,u-pitch,u-yaw,u-z," +
+											    "period," +
+											    "true-roll,true-pitch,true-yaw," +
+											    "true-x,true-y,true-z," +
+											    "true-dx,true-dy,true-dz," +
+                                                "true-c-roll,true-c-pitch," +
+                                                "ctrl-c-roll,ctrl-c-pitch," +
+                                                "rotated-roll,rotated-pitch";
 
     public ControlTerminal( )
     {
@@ -105,7 +107,7 @@ public class ControlTerminal extends Frame
     {
         new ControlTerminal( );
     }
-
+/*
     public boolean isShow3D( )
     {
     	return( SHOW_3DWINDOW );
@@ -120,15 +122,31 @@ public class ControlTerminal extends Frame
     {
         this.visualization = visualization;
     }
-
+*/
     public CommandData getCommandData( )
     {
         CommandData data = new CommandData( );
 
-        data.roll  = (short) meterRoll     .getDesired( );
-        data.pitch = (short) meterPitch    .getDesired( );
-        data.yaw   = (short) meterYaw      .getDesired( );
-        data.z     = (short) meterAltitude .getDesired( );
+        if( showPosition[0] )
+        {
+        	Point desired = positionDialog.getDesired( );
+        	data.roll     = (short) desired.x;
+        	data.pitch    = (short) desired.y;
+        }
+        else
+        if( digitalMeter.getHeliMode( ) == ControllerConstants.HELI_MODE_POS_CTRL )
+        {
+            data.roll  = (short)( posOffsetY + meterRoll.getDesired( ) );
+            data.pitch = (short)( meterPitch.getDesired( ) - posOffsetX );
+        }
+        else
+        {
+        	data.roll  = (short) meterRoll  .getDesired( );
+        	data.pitch = (short) meterPitch .getDesired( );
+        }
+
+        data.yaw = (short) meterYaw      .getDesired( );
+        data.z   = (short) meterAltitude .getDesired( );
 
         return( data );
     }
@@ -258,6 +276,22 @@ public class ControlTerminal extends Frame
 
 	public void setSensorData( SensorData data )
     {
+        if( showPosition[0] )
+        {
+        	/* IMPORTANT: Ubisense location data refer to Cartesian coordinates,
+               whereas JAviator location data refer to aircraft coordinates,
+               hence x and y must be exchanged when accessing the data. */
+        	Point current = new Point( data.y, data.x );
+        	positionDialog.setCurrent( current );
+        }
+        else
+        if( digitalMeter.getHeliMode( )  == ControllerConstants.HELI_MODE_POS_CTRL &&
+            digitalMeter.getHeliState( ) != ControllerConstants.HELI_STATE_FLYING )
+        {
+            posOffsetX = data.x;
+            posOffsetY = data.y;
+        }
+
         meterRoll     .setCurrent( data.roll );
         meterPitch    .setCurrent( data.pitch );
         meterYaw      .setCurrent( data.yaw );
@@ -267,7 +301,7 @@ public class ControlTerminal extends Frame
         {
         	meterYaw.setDesired( data.yaw );
         }
-
+/*
         if( SHOW_3DWINDOW && visualization != null )
         {
             SensorData desiredData = new SensorData( );
@@ -279,8 +313,8 @@ public class ControlTerminal extends Frame
 
             visualization.sendSensorData( data, desiredData );
         }
-        
-        if( show_diagrams )
+
+        if( showDiagrams )
         {
         	if( signalsDialog == null )
         	{ 
@@ -289,7 +323,7 @@ public class ControlTerminal extends Frame
         	else
         	if( signalsDialog.isClosed( ) )
         	{
-        		show_diagrams = false;
+        		showDiagrams = false;
         	}
 
             MotorSignals motor = digitalMeter.getMotorSignals( );
@@ -306,7 +340,7 @@ public class ControlTerminal extends Frame
             signalsDialog.ddyaw     .add( data.ddyaw );
             signalsDialog.vx        .add( data.dx );
             signalsDialog.vy        .add( data.dy );
-            signalsDialog.vz        .add( data.dz );
+            signalsDialog.vz        .add( data.dz );posOffsetX
             signalsDialog.ddx       .add( data.ddx );
             signalsDialog.ddy       .add( data.ddy );
             signalsDialog.ddz       .add( data.ddz );
@@ -319,6 +353,7 @@ public class ControlTerminal extends Frame
             signalsDialog.rear      .add( motor.rear );
             signalsDialog.left      .add( motor.left );
         }
+*/
     }
 
     public void writeLogData( CommandData  commandData,
@@ -401,12 +436,33 @@ public class ControlTerminal extends Frame
     {
         if( connected )
         {
-            meterRoll     .setDesired( 0 );
-            meterPitch    .setDesired( 0 );
-            meterYaw      .setDesired( meterYaw.getCurrent( ) );
+            if( showPosition[0] )
+            {
+            	positionDialog.setDesired( positionDialog.getCurrent( ) );
+            }
+            else
+            if( digitalMeter.getHeliMode( ) == ControllerConstants.HELI_MODE_POS_CTRL )
+            {
+            	meterRoll  .setDesired( remote.sensorData.y - posOffsetY );
+            	meterPitch .setDesired( posOffsetX - remote.sensorData.x );
+            }
+            else
+            {
+            	meterRoll  .setDesired( 0 );
+            	meterPitch .setDesired( 0 );
+            }
+
+            meterYaw.setDesired( meterYaw.getCurrent( ) );
         }
         else
         {
+            if( showPosition[0] )
+            {
+            	Point zero = new Point( 0, 0 );
+            	positionDialog.setDesired( zero );
+            	positionDialog.setCurrent( zero );
+            }
+
             meterRoll     .setDesired( 0 );
             meterPitch    .setDesired( 0 );
             meterYaw      .setDesired( 0 );
@@ -418,11 +474,12 @@ public class ControlTerminal extends Frame
             meterAltitude .setCurrent( 0 );
 
             digitalMeter  .resetMotorMeter( );
-
+/*
             if( SHOW_3DWINDOW && visualization != null )
             {
                 visualization.resetModel( );
             }
+*/
         }
     }
 
@@ -577,7 +634,7 @@ public class ControlTerminal extends Frame
 
     protected void finalize( )
     {
-        motion.terminate( );
+        motionThread.terminate( );
     }
 
     protected void processWindowEvent( WindowEvent we )
@@ -602,12 +659,12 @@ public class ControlTerminal extends Frame
 
     protected void processFocusEvent( FocusEvent fe )
     {
-        motion.setOffsetMaximumRollPitch( 0 );
-        motion.setOffsetMaximumAltitude ( 0 );
-        motion.setOffsetDesiredRoll     ( 0 );
-        motion.setOffsetDesiredPitch    ( 0 );
-        motion.setOffsetDesiredYaw      ( 0 );
-        motion.setOffsetDesiredAltitude ( 0 );
+        motionThread.setOffsetMaximumRollPitch( 0 );
+        motionThread.setOffsetMaximumAltitude ( 0 );
+        motionThread.setOffsetDesiredRoll     ( 0 );
+        motionThread.setOffsetDesiredPitch    ( 0 );
+        motionThread.setOffsetDesiredYaw      ( 0 );
+        motionThread.setOffsetDesiredAltitude ( 0 );
 
         meterRoll     .processFocusEvent( fe );
         meterPitch    .processFocusEvent( fe );
@@ -639,36 +696,36 @@ public class ControlTerminal extends Frame
         {
             /* command keys assigned to the right hand */
             case KeyEvent.VK_LEFT: /* roll left */
-                motion.setOffsetDesiredRoll( -MOTION_STEP );
+                motionThread.setOffsetDesiredRoll( -MOTION_STEP );
                 break;
 
             case KeyEvent.VK_RIGHT: /* roll right */
-                motion.setOffsetDesiredRoll( MOTION_STEP );
+                motionThread.setOffsetDesiredRoll( MOTION_STEP );
                 break;
 
             case KeyEvent.VK_UP: /* pitch forward */
-                motion.setOffsetDesiredPitch( -MOTION_STEP );
+                motionThread.setOffsetDesiredPitch( -MOTION_STEP );
                 break;
 
             case KeyEvent.VK_DOWN: /* pitch backward */
-                motion.setOffsetDesiredPitch( MOTION_STEP );
+                motionThread.setOffsetDesiredPitch( MOTION_STEP );
                 break;
 
             /* command keys assigned to the left hand */
             case KeyEvent.VK_A: /* yaw left */
-                motion.setOffsetDesiredYaw( -MOTION_STEP );
+                motionThread.setOffsetDesiredYaw( -MOTION_STEP );
                 break;
 
             case KeyEvent.VK_D: /* yaw right */
-                motion.setOffsetDesiredYaw( MOTION_STEP );
+                motionThread.setOffsetDesiredYaw( MOTION_STEP );
                 break;
 
             case KeyEvent.VK_S: /* descend */
-                motion.setOffsetDesiredAltitude( -MOTION_STEP );
+                motionThread.setOffsetDesiredAltitude( -MOTION_STEP );
                 break;
 
             case KeyEvent.VK_W: /* ascend */
-                motion.setOffsetDesiredAltitude( MOTION_STEP );
+                motionThread.setOffsetDesiredAltitude( MOTION_STEP );
                 break;
 
             /* command keys for different purposes */
@@ -690,10 +747,10 @@ public class ControlTerminal extends Frame
                 }
                 break;
             case KeyEvent.VK_F3:
-                doToggleDiagram( );
+                //doToggleDiagram( );
+            	doDisplayPosition( );
                 break;
 
-                
             case KeyEvent.VK_F4:
                 doToggleLogData( );
                 break;
@@ -765,22 +822,22 @@ public class ControlTerminal extends Frame
         {
             case KeyEvent.VK_LEFT:
             case KeyEvent.VK_RIGHT:
-                motion.setOffsetDesiredRoll( 0 );
+                motionThread.setOffsetDesiredRoll( 0 );
                 break;
 
             case KeyEvent.VK_UP:
             case KeyEvent.VK_DOWN:
-                motion.setOffsetDesiredPitch( 0 );
+                motionThread.setOffsetDesiredPitch( 0 );
                 break;
 
             case KeyEvent.VK_A:
             case KeyEvent.VK_D:
-                motion.setOffsetDesiredYaw( 0 );
+                motionThread.setOffsetDesiredYaw( 0 );
                 break;
 
             case KeyEvent.VK_S:
             case KeyEvent.VK_W:
-                motion.setOffsetDesiredAltitude( 0 );
+                motionThread.setOffsetDesiredAltitude( 0 );
                 break;
 
             default:
@@ -791,7 +848,6 @@ public class ControlTerminal extends Frame
     protected String getFileName( String extension )
     {
         String className = getClass( ).getName( );
-
         return( className.substring( className.lastIndexOf( '.' ) + 1 ) + '.' + extension );
     }
 
@@ -818,30 +874,37 @@ public class ControlTerminal extends Frame
     /*                                                                       */
     /*************************************************************************/
 
-    private static final int       MOTION_STEP    = 5; /* mrad */
+    private static final int       MOTION_STEP    = 5; /* mrad/mm */
     private static final int       CTRL_PARAMS    = 16;
 
     private Image                  iconImage      = null;
-    private JAviator3DControlPanel visualization  = null;
-    private SignalsDialog		   signalsDialog  = null;
-    private MotionThread           motion         = null;
+    //private JAviator3DControlPanel visualization  = null;
+    //private SignalsDialog          signalsDialog  = null;
+    private PositionDialog         positionDialog = null;
+    private MotionThread           motionThread   = null;
     private Thread                 remoteThread   = null;
     private Transceiver            remote         = null;
     private Joystick               stick          = null;
     private Label                  logDataLabel   = null;
     private short[]                controlParams  = null;
     private int[]                  changedParamID = null;
+    private int             	   posOffsetX     = 0;
+	private int                    posOffsetY     = 0;
+    private boolean[]              showPosition   = null;
     private boolean                newIdlingSpeed = false;
     private boolean                new_R_P_Params = false;
     private boolean                new_Yaw_Params = false;
     private boolean                new_Alt_Params = false;
     private boolean                new_X_Y_Params = false;
     private boolean                logData        = false;
+    //private boolean                showDiagrams   = false;
 
     private void initWindow( )
     {
+        motionThread   = new MotionThread( );
         controlParams  = new short[ CTRL_PARAMS ];
         changedParamID = new int[ 1 ];
+        showPosition   = new boolean[ 1 ];
 
         for( int i = 0; i < controlParams.length; ++i )
         {
@@ -849,6 +912,7 @@ public class ControlTerminal extends Frame
         }
 
         changedParamID[0] = -1;
+        showPosition[0]   = false;
 
         setTitle( "JAviator Control Terminal" );
         setBackground( Color.WHITE );
@@ -872,19 +936,18 @@ public class ControlTerminal extends Frame
             System.out.println( "ok" );
         }
 
-        enableEvents( AWTEvent.WINDOW_EVENT_MASK | AWTEvent.FOCUS_EVENT_MASK | AWTEvent.KEY_EVENT_MASK );
-        Rectangle bounds = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getMaximumWindowBounds( );
-        setLocation( bounds.width - getWidth( ), 0 );
+        enableEvents( AWTEvent.WINDOW_EVENT_MASK |
+        		      AWTEvent.FOCUS_EVENT_MASK |
+        		      AWTEvent.KEY_EVENT_MASK );
+        setLocation( 0, 0 );
         setVisible( true );
-
-        motion = new MotionThread( );
-
+/*
         if( SHOW_3DWINDOW )
         {
             visualization = new JAviator3DControlPanel( );
             visualization.createModel( );
         }        
-       
+*/
         try
         {
             iconImage = AnalogMeter.getImage( "pilot_icon.jpg" );
@@ -915,6 +978,7 @@ public class ControlTerminal extends Frame
         }
 
         setIconImage( iconImage );
+        motionThread.start( );
     }
 
     private Panel makeCenterPanel( )
@@ -933,12 +997,12 @@ public class ControlTerminal extends Frame
         {
             public void mousePressed( MouseEvent me )
             {
-                motion.setOffsetMaximumAltitude( MOTION_STEP );
+                motionThread.setOffsetMaximumAltitude( MOTION_STEP );
             }
 
             public void mouseReleased( MouseEvent me )
             {
-                motion.setOffsetMaximumAltitude( 0 );
+                motionThread.setOffsetMaximumAltitude( 0 );
             }
         } );
 
@@ -948,12 +1012,12 @@ public class ControlTerminal extends Frame
         {
             public void mousePressed( MouseEvent me )
             {
-                motion.setOffsetMaximumAltitude( -MOTION_STEP );
+                motionThread.setOffsetMaximumAltitude( -MOTION_STEP );
             }
 
             public void mouseReleased( MouseEvent me )
             {
-                motion.setOffsetMaximumAltitude( 0 );
+                motionThread.setOffsetMaximumAltitude( 0 );
             }
         } );
 
@@ -963,12 +1027,12 @@ public class ControlTerminal extends Frame
         {
             public void mousePressed( MouseEvent me )
             {
-                motion.setOffsetMaximumRollPitch( MOTION_STEP );
+                motionThread.setOffsetMaximumRollPitch( MOTION_STEP );
             }
 
             public void mouseReleased( MouseEvent me )
             {
-                motion.setOffsetMaximumRollPitch( 0 );
+                motionThread.setOffsetMaximumRollPitch( 0 );
             }
         } );
 
@@ -978,12 +1042,12 @@ public class ControlTerminal extends Frame
         {
             public void mousePressed( MouseEvent me )
             {
-                motion.setOffsetMaximumRollPitch( -MOTION_STEP );
+                motionThread.setOffsetMaximumRollPitch( -MOTION_STEP );
             }
 
             public void mouseReleased( MouseEvent me )
             {
-                motion.setOffsetMaximumRollPitch( 0 );
+                motionThread.setOffsetMaximumRollPitch( 0 );
             }
         } );
 
@@ -1225,10 +1289,13 @@ public class ControlTerminal extends Frame
     private Packet switchStatePacket = new Packet( PacketType.COMM_SWITCH_STATE, null );
     private void doSwitchHeliState( )
     {
-    	meterYaw.setDesired( meterYaw.getCurrent( ) );
-
     	if( remote != null )
     	{
+            if( digitalMeter.getHeliState( ) == ControllerConstants.HELI_STATE_GROUND )
+            {
+            	resetMeterNeedles( );
+            }
+
             remote.sendPacket( switchStatePacket );
     	}
     }
@@ -1264,12 +1331,12 @@ public class ControlTerminal extends Frame
 
     private void doShowAboutInfo( )
     {
-        InfoDialog.createInstance( this, ABOUT_TERMINAL, InfoDialog.TYPE_ABOUT_TERMINAL );
+    	InfoDialog.createInstance( this, ABOUT_TERMINAL, InfoDialog.TYPE_ABOUT_TERMINAL );
     }
-
+/*
     private void doToggleDiagram( )
-    {    	
-    	if( !show_diagrams )
+    {
+    	if( (showDiagrams = !showDiagrams) )
     	{
     		if( signalsDialog == null )
     		{
@@ -1278,10 +1345,14 @@ public class ControlTerminal extends Frame
     		
     		signalsDialog.open( );
     	}
-    	
-    	show_diagrams = !show_diagrams;
     }
-    
+*/
+    private void doDisplayPosition( )
+    {
+        positionDialog = PositionDialog.createInstance( this, "Helicopter Position",
+            UBI_RECT, MAX_RECT, showPosition );
+    }
+
     private void doToggleLogData( )
     {
         if( (logData = !logData) )
@@ -1353,7 +1424,6 @@ public class ControlTerminal extends Frame
     {
         public MotionThread( )
         {
-            start( );
         }
 
         public void run( )
@@ -1576,28 +1646,53 @@ public class ControlTerminal extends Frame
             }
 
             /* update the four desired-value needles */
-            meterRoll  .setDesired( (int)( meterRoll  .getMaximum( ) * stick.getX( ) ) );
-            meterPitch .setDesired( (int)( meterPitch .getMaximum( ) * stick.getY( ) ) );
+            if( showPosition[0] )
+            {
+            	Point desired = positionDialog.getDesired( );
+            	positionDialog.setDesired( new Point(
+                    desired.x + (int)( stick.getX( ) * 10.0f ),
+                    desired.y - (int)( stick.getY( ) * 10.0f ) ) );
+            }
+            else
+            {
+            	meterRoll  .setDesired( (int)( meterRoll  .getMaximum( ) * stick.getX( ) ) );
+            	meterPitch .setDesired( (int)( meterPitch .getMaximum( ) * stick.getY( ) ) );
+            }
 
             if( (buttonsPressed & Joystick.BUTTON2) != 0 )
             {
-	            meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) + (int)( stick.getZ( ) * 10.0f ) ) );
+	            meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) +
+                    (int)( stick.getZ( ) * 20.0f ) ) );
             }
 
-            meterAltitude.setDesired( (int)( meterAltitude.getMaximum( ) * ( stick.getR( ) - 1.0f ) * -0.5f ) );
+            meterAltitude.setDesired( (int)( meterAltitude.getMaximum( ) *
+                ( stick.getR( ) - 1.0f ) * -0.5f ) );
         }
 
         private void processKeyboard( )
         {
             /* animate the four desired-value needles */
-            if( offsetDesiredRoll != 0 )
-	        {
-	            meterRoll.setDesired( meterRoll.getDesired( ) + offsetDesiredRoll );
-	        }
-
-	        if( offsetDesiredPitch != 0 )
-	        {
-	            meterPitch.setDesired( meterPitch.getDesired( ) + offsetDesiredPitch );
+            if( showPosition[0] )
+            {
+	            if( offsetDesiredRoll != 0 || offsetDesiredPitch != 0 )
+	            {
+	            	Point desired = positionDialog.getDesired( );
+            	    positionDialog.setDesired( new Point(
+                        desired.x + offsetDesiredRoll,
+                        desired.y - offsetDesiredPitch ) );
+	            }
+            }
+            else
+            {
+	            if( offsetDesiredRoll != 0 )
+		        {
+		            meterRoll.setDesired( meterRoll.getDesired( ) + offsetDesiredRoll );
+		        }
+	
+		        if( offsetDesiredPitch != 0 )
+		        {
+		            meterPitch.setDesired( meterPitch.getDesired( ) + offsetDesiredPitch );
+	            }
             }
 
 	        if( offsetDesiredYaw != 0 )

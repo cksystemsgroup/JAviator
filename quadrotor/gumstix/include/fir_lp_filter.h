@@ -22,43 +22,43 @@
  *
  */
 
-#ifndef OUTLIER_FILTER
-#define OUTLIER_FILTER
+#ifndef FIR_LP_FILTER
+#define FIR_LP_FILTER
 
-struct of_state;
-typedef struct of_state of_state_t;
+struct fir_state;
+typedef struct fir_state fir_state_t;
 
-/* This filter is designed to reject outliers
-   controlled by the user-defined maximum
-   difference and limit of occurrences.
+/* This Finite Impulse Response (FIR) filter is designed to compute
+   the integral over a finite sequence of values with the update
+   effort controlled by the user-defined gain.
 */
 typedef struct
 {
     char *          name;
-    of_state_t *    state;
+    fir_state_t *   state;
 
-} outlier_filter_t;
+} fir_lp_filter_t;
 
-/* Initializes an outlier filter.
+/* Initializes a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int limit );
+int    fir_lp_filter_init( fir_lp_filter_t *filter, char *name, double gain );
 
-/* Destroys an outlier filter.
+/* Destroys a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_destroy( outlier_filter_t *filter );
+int    fir_lp_filter_destroy( fir_lp_filter_t *filter );
 
-/* Resets an outlier filter.
+/* Resets a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_reset( outlier_filter_t *filter );
+int    fir_lp_filter_reset( fir_lp_filter_t *filter );
 
-/* Updates an outlier filter with the given value.
+/* Updates a FIR low-pass filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double outlier_filter_update( outlier_filter_t *filter, double update );
+double fir_lp_filter_update( fir_lp_filter_t *filter, double update );
 
-#endif /* !OUTLIER_FILTER */
+#endif /* !FIR_LP_FILTER */
 
 /* End of file */

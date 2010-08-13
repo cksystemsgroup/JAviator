@@ -365,12 +365,10 @@ void enable_sensors( uint8_t enable )
     {
         if( enable )
         {
-            //dm3gx1_start( );
             minia_start( );
         }
         else
         {
-            //dm3gx1_stop( );
             minia_stop( );
         }
 

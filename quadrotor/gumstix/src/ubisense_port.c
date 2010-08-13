@@ -18,7 +18,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  */
 
 #include <stdlib.h>
@@ -26,23 +26,44 @@
 #include <stdio.h>
 #include <errno.h>
 #include <pthread.h>
+#include <netinet/in.h>
 
 #include "ubisense_port.h"
 #include "communication.h"
 #include "protocol.h"
 
+/* Message constants */
+#define MSG_MAGIC_0     0xE298
+#define MSG_MAGIC_1     0x026A
+
 static comm_channel_t * comm_channel;
 static char             comm_buf[ COMM_BUF_SIZE ];
-static int              ubi_tag_front;
-static int              ubi_tag_rear;
-static int              ubi_x_front;
-static int              ubi_x_rear;
-static int              ubi_y_front;
-static int              ubi_y_rear;
+static int              tag_id;
+static int              tag_pos_x;
+static int              tag_pos_y;
 static int              new_data;
 static int              running;
 static pthread_t        thread;
 static pthread_mutex_t  ubisense_lock = PTHREAD_MUTEX_INITIALIZER;
+
+typedef struct
+{
+    uint16_t    magic_0;        /* 1st magic number identifying a location message */
+    uint16_t    magic_1;        /* 2nd magic number identifying a location message */
+    uint32_t    tag_id_high;    /* high-order 32 bits of tag ID (currently always zero) */
+    uint32_t    tag_id_low;     /* low-order 32 bits of tag ID */
+    uint32_t    flags;          /* bit 0 indicates a valid location if (flags & 1) == 1 */
+    float       x;              /* x-coordinate of tag location */
+    float       y;              /* y-coordinate of tag location */
+    float       z;              /* z-coordinate of tag location */
+    float       gdop;           /* geometric dilution of precision */
+    float       error;          /* standard error of location calculation */
+    uint32_t    slot;           /* timeslot number of received message */
+    uint32_t    slot_interval;  /* microseconds between two timeslots */
+    uint32_t    slot_delay;     /* delay between transmission timeslot and message timeslot */
+    uint32_t    cell_id;        /* ID of cell that generated this message */
+
+} location_message_t;
 
 
 static inline void lock( void )
@@ -55,62 +76,42 @@ static inline void unlock( void )
 	pthread_mutex_unlock( &ubisense_lock );
 }
 
-static inline int parse_data_packet( const char *buf, int len )
+static inline void swap_byte_order( char *p )
 {
-    int tag_id;
+   char c;
 
-    /* Data format: "------tttttt,x1...xn,y1...yn\0", where
-       the first 6 digits <------> can be ignored, the next
-       6 digits <tttttt> represent the tag ID, and the last
-       digits <x1...xn> and <y1...yn> indicate variable
-       numbers of digits representing the x and y values.
-    */
-    if( len < 12 )
+   c    = p[0];
+   p[0] = p[3];
+   p[3] = c;
+   c    = p[1];
+   p[1] = p[2];
+   p[2] = c;
+}
+
+static inline int parse_data_packet( char *buf, int len )
+{
+    location_message_t *msg = (location_message_t *) buf;
+
+    if( len != sizeof( location_message_t )  || /* invalid message length */
+        ntohs( msg->magic_0 ) != MSG_MAGIC_0 || /* invalid 1st magic number */
+        ntohs( msg->magic_1 ) != MSG_MAGIC_1 || /* invalid 2nd magic number */
+        (ntohl( msg->flags ) & 1) != 1 )        /* invalid location data */
     {
         return( -1 );
     }
 
-    tag_id = atoi( buf + 6 );
-
-    if( tag_id == ubi_tag_front )
+    if( ntohl( msg->tag_id_low ) == tag_id )
     {
-        if( !(buf = strchr( buf, ',' )) )
+        if( 1 != ntohl( 1 ) )
         {
-            return( -1 );
+            swap_byte_order( (char *) &msg->x );
+            swap_byte_order( (char *) &msg->y );
         }
 
-        ubi_y_front = atoi( ++buf );
-
-        if( !(buf = strchr( buf, ',' )) )
-        {
-            return( -1 );
-        }
-
-        ubi_x_front = atoi( ++buf );
+        tag_pos_x = (int)( msg->x * 1000 );
+        tag_pos_y = (int)( msg->y * 1000 );
+        new_data  = 1;
     }
-    else
-    if( tag_id == ubi_tag_rear )
-    {
-        if( !(buf = strchr( buf, ',' )) )
-        {
-            return( -1 );
-        }
-
-        ubi_y_rear = atoi( ++buf );
-
-        if( !(buf = strchr( buf, ',' )) )
-        {
-            return( -1 );
-        }
-
-        ubi_x_rear = atoi( ++buf );
-    }
-    else
-    {
-        return( -1 );
-    }
-
-    new_data = 1;
 
     return( 0 );
 }
@@ -123,7 +124,7 @@ int ubisense_port_tick( void )
     {
         if( res < COMM_BUF_SIZE )
         {
-            comm_buf[ res ] = 0;
+            comm_buf[ res ] = 0; /* null-terminate end of received data */
         }
 
         parse_data_packet( comm_buf, res );
@@ -182,19 +183,16 @@ static void start_ubisense_thread( void )
 	pthread_create( &thread, &attr, ubisense_thread, NULL );
 }
 
-int ubisense_port_init( comm_channel_t *channel, int tag_front, int tag_rear )
+int ubisense_port_init( comm_channel_t *channel, int tag )
 {
     static int already_initialized = 0;
 
     if( !already_initialized )
     {
         comm_channel        = channel;
-        ubi_tag_front       = tag_front;
-        ubi_tag_rear        = tag_rear;
-        ubi_x_front         = 0;
-        ubi_x_rear          = 0;
-        ubi_y_front         = 0;
-        ubi_y_rear          = 0;
+        tag_id              = 0x14000000 | ((tag / 1000) << 8) | (tag % 1000);
+        tag_pos_x           = 0;
+        tag_pos_y           = 0;
         new_data            = 0;
         running             = 1;
         already_initialized = 1;
@@ -215,11 +213,14 @@ int ubisense_port_is_new_data( void )
 int ubisense_port_get_data( sensor_data_t *data )
 {
 	lock( );
-    data->x  = ubi_x_front;
-    data->y  = ubi_y_front;
-    data->dx = ubi_x_rear;
-    data->dy = ubi_y_rear;
+
+	/* IMPORTANT: Ubisense location data refer to Cartesian coordinates,
+       whereas JAviator location data refer to aircraft coordinates,
+       hence x and y must be exchanged when accessing the data. */
+    data->x  = tag_pos_y;
+    data->y  = tag_pos_x;
     new_data = 0;
+
 	unlock( );
     return( 0 );
 }

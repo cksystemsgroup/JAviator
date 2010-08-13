@@ -18,24 +18,24 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  *
  */
 
 #include <stdio.h>
 #include <malloc.h>
 
-#include "low_pass_filter.h"
+#include "fir_lp_filter.h"
 
-/* State of a low-pass filter */
-struct lpf_state
+/* State of a FIR low-pass filter */
+struct fir_state
 {
-    double gain;
-    double value;
+    double gain[2];
+    double value[3];
 };
 
 
-static inline lpf_state_t *get_lpf_state( const low_pass_filter_t *filter )
+static inline fir_state_t *get_fir_state( const fir_lp_filter_t *filter )
 {
     if( !filter->state )
     {
@@ -45,20 +45,20 @@ static inline lpf_state_t *get_lpf_state( const low_pass_filter_t *filter )
     return( filter->state );
 }
 
-/* Initializes a low-pass filter.
+/* Initializes a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain )
+int fir_lp_filter_init( fir_lp_filter_t *filter, char *name, double gain )
 {
-    lpf_state_t *state;
+    fir_state_t *state;
 
-    if( gain < 0 )
+    if( gain < 0 || gain > 1 )
     {
         fprintf( stderr, "ERROR: invalid %s filter gain (%f)\n", name, gain );
         return( -1 );
     }
 
-    state = malloc( sizeof( lpf_state_t ) );
+    state = malloc( sizeof( fir_state_t ) );
 
     if( !state )
     {
@@ -66,52 +66,60 @@ int low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain )
         return( -1 );
     }
 
-    state->gain   = gain;
-    filter->name  = name;
-    filter->state = state;
-    return low_pass_filter_reset( filter );
+    state->gain[0] = (1 - gain) / 2;
+    state->gain[1] = gain;
+    filter->name   = name;
+    filter->state  = state;
+    return fir_lp_filter_reset( filter );
 }
 
-/* Destroys a low-pass filter.
+/* Destroys a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_destroy( low_pass_filter_t *filter )
+int fir_lp_filter_destroy( fir_lp_filter_t *filter )
 {
     free( filter->state );
     filter->state = NULL;
     return( 0 );
 }
 
-/* Resets a low-pass filter.
+/* Resets a FIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int low_pass_filter_reset( low_pass_filter_t *filter )
+int fir_lp_filter_reset( fir_lp_filter_t *filter )
 {
-    lpf_state_t *state = get_lpf_state( filter );
+    fir_state_t *state = get_fir_state( filter );
 
     if( !state )
     {
         return( -1 );
     }
 
-    state->value = 0;
+    state->value[0] = 0;
+    state->value[1] = 0;
+    state->value[2] = 0;
     return( 0 );
 }
 
-/* Updates a low-pass filter with the given value.
+/* Updates a FIR low-pass filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double low_pass_filter_update( low_pass_filter_t *filter, double update )
+double fir_lp_filter_update( fir_lp_filter_t *filter, double update )
 {
-    lpf_state_t *state = get_lpf_state( filter );
+    fir_state_t *state = get_fir_state( filter );
 
     if( !state )
     {
         return( -1 );
     }
 
-    state->value = state->value + state->gain * (update - state->value);
-    return( state->value );
+    state->value[0] = state->value[1];
+    state->value[1] = state->value[2];
+    state->value[2] = update;
+
+    return( state->gain[0] * state->value[0]
+          + state->gain[1] * state->value[1]
+          + state->gain[0] * state->value[2] );
 }
 
 /* End of file */

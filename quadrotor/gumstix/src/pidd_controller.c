@@ -19,7 +19,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  *
  */
 
@@ -35,22 +35,22 @@
 /* State of a controller for 1 degree of freedom */
 struct ctrl_state
 {
-    double dt;            /* Control period [s] */
-    double kp;            /* Gain for tracking error [PWM/mrad] */
-    double ki;            /* Gain for integral of tracking error [PWM/(mrad*s)] */
-    double kd;            /* Gain for derivative of tracking error [PWM/(mrad/s)] */
-    double kdd;           /* Gain for second derivative of tracking error */
-    double integral;      /* Running integral of the tracking error [mrad*s] */
-    double int_limit;     /* Integral limit [mrad*s] */
-    double last_desired;  /* Stores command to use for finite differencing [mrad] */
+    double dt;         /* Control period [s] */
+    double kp;         /* Gain for tracking error [PWM/mrad] */
+    double ki;         /* Gain for integral of tracking error [PWM/(mrad*s)] */
+    double kd;         /* Gain for derivative of tracking error [PWM/(mrad/s)] */
+    double kdd;        /* Gain for second derivative of tracking error */
+    double integral;   /* Running integral of the tracking error [mrad*s] */
+    double int_limit;  /* Integral limit [mrad*s] */
+    double last_value; /* Stores a controller-dependent last value */
     double p;
     double i;
     double d;
     double dd;
 };
 
-
-static void saturate_integral( ctrl_state_t *state )
+static double pidd_compute( ctrl_state_t *state,
+    double s_error, double v_error, double acceleration )
 {
     /* Saturate the integral (anti-windup) */
     if( state->integral > state->int_limit )
@@ -62,14 +62,6 @@ static void saturate_integral( ctrl_state_t *state )
     {
         state->integral = -state->int_limit;
     }
-}
-
-static double pidd_compute( ctrl_state_t *state,
-    double s_error, double v_error, double acceleration )
-{
-    /* Compute integral of error */
-    state->integral += s_error * state->dt;
-    saturate_integral( state );
 
     /* Compute the contribution of each metric of the angle error */
     state->p  = state->kp  * s_error;         /* error contribution to control effort */
@@ -115,23 +107,34 @@ static double pidd_do_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_desired, velocity, state->dt );
+    double v_error = get_v_error( desired, state->last_value, velocity, state->dt );
 
-    state->last_desired  = desired;
+    state->integral  += s_error * state->dt;
+    state->last_value = desired;
 
     return pidd_compute( state, s_error, v_error, acceleration );
 }
 
 static double pidd_x_y_control( controller_t *controller,
-    double desired, double current, double velocity, double acceleration )
+    double desired, double current, double velocity, double delay )
 {
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
+    double v_error = (current - state->last_value) / delay;
 
-    state->last_desired = desired;
+    if( abs( s_error ) > abs( get_s_error( desired, state->last_value ) ) )
+    {
+        state->integral += s_error * state->dt;
+    }
+    else
+    {
+        state->integral -= s_error * state->dt;
+    }
 
-    return pidd_compute( state, s_error, velocity, acceleration );
+    state->last_value = current;
+
+    return pidd_compute( state, s_error, v_error, velocity );
 }
 
 static int pidd_set_params( controller_t *controller,
@@ -174,9 +177,9 @@ int pidd_def_controller_init( controller_t *controller, double period )
 
     memset( state, 0, sizeof( ctrl_state_t ) );
 
-    state->dt           = period;
-    state->int_limit    = MOTOR_MAX;
-    state->last_desired = 0;
+    state->dt         = period;
+    state->int_limit  = MOTOR_MAX;
+    state->last_value = 0;
 
     controller->do_control = pidd_do_control;
     controller->set_params = pidd_set_params;
@@ -190,7 +193,7 @@ int pidd_x_y_controller_init( controller_t *controller, double period )
 {
     int res = pidd_def_controller_init( controller, period );
 
-    controller->state->int_limit /= 10;
+    controller->state->int_limit /= 100;
     controller->do_control = pidd_x_y_control;
 
     return( res );

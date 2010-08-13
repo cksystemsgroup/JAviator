@@ -48,11 +48,11 @@ public class AnalogMeter extends Canvas
     public static final double MRAD_TO_MM       = 0.628;
     public static final double MRAD_TO_PER      = 3.142;
 
-    public static final int    DEG_45           = 785;  // mrad
-    public static final int    DEG_90           = 1571; // mrad
-    public static final int    DEG_135          = 2356; // mrad
-    public static final int    DEG_180          = 3142; // mrad
-    public static final int    DEG_360          = 6284; // mrad
+    public static final int    DEG_45           = 785;  /* mrad */
+    public static final int    DEG_90           = 1571; /* mrad */
+    public static final int    DEG_135          = 2356; /* mrad */
+    public static final int    DEG_180          = 3142; /* mrad */
+    public static final int    DEG_360          = 6284; /* mrad */
 
     public static final byte   TYPE_ROLL        = 1;
     public static final byte   TYPE_PITCH       = 2;
@@ -111,7 +111,7 @@ public class AnalogMeter extends Canvas
             case TYPE_PITCH:
                 return( angle >= 0 && angle <= DEG_90 );
             case TYPE_YAW:
-                return( true ); // every angle is valid
+                return( true ); /* every angle is valid */
             default:
                 return( false );
         }
@@ -162,11 +162,11 @@ public class AnalogMeter extends Canvas
 
     public void setMaximum( int maximum )
     {
-        if( meterType != TYPE_YAW && // no maximum needle in yaw meter
+        if( meterType != TYPE_YAW && /* no maximum needle in yaw meter */
             this.maximum != maximum && isValidMaximum( maximum ) )
         {
         	this.maximum = maximum;
-        	updateMaximum = true;
+        	redrawMeter  = true;
 
             if( desired < 0 && desired < -maximum )
             {
@@ -184,22 +184,22 @@ public class AnalogMeter extends Canvas
         if( this.desired != desired && isValidDesired( desired ) )
         {
             this.desired = desired;        
-            updateDesired = true; 
-        }        
+            redrawMeter  = true; 
+        }
     }
 
     public void setCurrent( int current )
     {
-        if( this.current != current ) // Do not check for validity, since
-        {                             // this value represents heli data,
-        	this.current = current;   // and thus, must always be accepted
-            updateCurrent = true;     // as it is, even if out of range.   
+        if( this.current != current )
+        {                           /* Do not check for validity, since this point */
+        	this.current = current; /* represents heli data, and thus, must always */
+        	redrawMeter  = true;    /* be accepted as it is, even if out of range. */
         }
     }
 
     public void update( Graphics g )
-    {    	
-        if( updateMaximum || updateDesired || updateCurrent )
+    {
+        if( redrawMeter )
         {
 			g.drawImage( meterImage, 0, 0, this );
 			g.setColor( colorDesired );
@@ -233,10 +233,8 @@ public class AnalogMeter extends Canvas
             g.setColor( colorOutline );
             g.drawPolygon( needleCurrent );
     
-            updateMaximum = false;
-            updateDesired = false;
-            updateCurrent = false;
-        }     
+            redrawMeter = false;
+        }
     }
 
     public void setGrayed( boolean grayed )
@@ -259,9 +257,7 @@ public class AnalogMeter extends Canvas
     
     public void paint( Graphics g )
     {
-        updateMaximum = true;
-        updateDesired = true;
-        updateCurrent = true;
+        redrawMeter = true;
         update( g );
     }
 
@@ -294,32 +290,29 @@ public class AnalogMeter extends Canvas
     /*                                                                       */
     /*************************************************************************/
 
-    private static final int PAINT_DELAY    = 50;
-    private static final int N_POINTS       = 6;
+    private static final int   PAINT_DELAY    = 50; /* ms */
+    private static final int   N_POINTS       = 6;
 
-    private static Painter   painter        = null;
-
-    private AnalogMeter      nextMeter      = null;
-    private Image            meterImage     = null;
-    private Color            colorDesired   = null;
-    private Color            colorCurrent   = null;
-    private Color            colorOutline   = null;
-    private AffineTransform  transformation = null;
-    private Polygon          needleMaximum  = null;
-    private Polygon          needleDesired  = null;
-    private Polygon          needleCurrent  = null;
-    private double[]         srcPoints      = null;
-    private double[]         dstPoints      = null;
-    private int              originX        = 0;
-    private int              originY        = 0;
-    private int              offsetW        = 0;
-    private int              maximum        = 0;
-    private int              desired        = 0;
-    private int              current        = 0;
-    private byte             meterType      = 0;
-    private boolean          updateMaximum  = true;
-    private boolean          updateDesired  = true;
-    private boolean          updateCurrent  = true;
+    private static PaintThread paintThread    = null;
+    private AnalogMeter        nextMeter      = null;
+    private Image              meterImage     = null;
+    private AffineTransform    transformation = null;
+    private Polygon            needleMaximum  = null;
+    private Polygon            needleDesired  = null;
+    private Polygon            needleCurrent  = null;
+    private double[]           srcPoints      = null;
+    private double[]           dstPoints      = null;
+    private Color              colorDesired   = null;
+    private Color              colorCurrent   = null;
+    private Color              colorOutline   = null;
+    private int                originX        = 0;
+    private int                originY        = 0;
+    private int                offsetW        = 0;
+    private int                maximum        = 0;
+    private int                desired        = 0;
+    private int                current        = 0;
+    private byte               meterType      = 0;
+    private boolean            redrawMeter    = true;
 
     private void initWindow( boolean smallDisplay, byte meterType )
     {
@@ -381,12 +374,10 @@ public class AnalogMeter extends Canvas
             return;
         }
 
-        colorDesired   = Color.GREEN;
-        colorCurrent   = Color.RED;
-        colorOutline   = Color.BLACK;
+    	paintThread    = new PaintThread( );
         transformation = new AffineTransform( );
-        int[] xpoints  = new int[N_POINTS];
-        int[] ypoints  = new int[N_POINTS];
+        int[] xpoints  = new int[ N_POINTS ];
+        int[] ypoints  = new int[ N_POINTS ];
 
         if( smallDisplay )
         {
@@ -466,8 +457,8 @@ public class AnalogMeter extends Canvas
         needleMaximum = new Polygon( xpoints, ypoints, N_POINTS );
         needleDesired = new Polygon( xpoints, ypoints, N_POINTS );
         needleCurrent = new Polygon( xpoints, ypoints, N_POINTS );
-        srcPoints     = new double[N_POINTS<<1];
-        dstPoints     = new double[N_POINTS<<1];
+        srcPoints     = new double[ N_POINTS << 1 ];
+        dstPoints     = new double[ N_POINTS << 1 ];
 
         for( int i = 0, j = 0; j < N_POINTS; i += 2, ++j )
         {
@@ -475,11 +466,15 @@ public class AnalogMeter extends Canvas
             srcPoints[i+1] = ypoints[j];
         }
 
+        colorDesired = Color.GREEN;
+        colorCurrent = Color.RED;
+        colorOutline = Color.BLACK;
+
         setSize( meterImage.getWidth( this ), meterImage.getHeight( this ) );
         setFocusable( false );
 
-    	painter = new Painter( );
-        painter.addMeter( this );
+        paintThread.addMeter( this );
+        paintThread.start( );
     }
 
     private void rotateNeedle( Polygon needle, double angle )
@@ -520,21 +515,20 @@ public class AnalogMeter extends Canvas
     
     /*************************************************************************/
     /*                                                                       */
-    /* Class Painter                                                         */
+    /* Class PaintThread                                                     */
     /*                                                                       */
     /*************************************************************************/
 
-    private class Painter extends Thread
+    private class PaintThread extends Thread
     {
-        public Painter( )
+        public PaintThread( )
         {
-            start( );
         }
 
     	public void run( )
     	{
     		AnalogMeter meter;
-    		Graphics   graphics;
+    		Graphics    graphics;
 
     		while( true )
     		{

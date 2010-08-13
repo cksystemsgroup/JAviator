@@ -18,47 +18,47 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
  *
  */
 
-#ifndef LOW_PASS_FILTER
-#define LOW_PASS_FILTER
+#ifndef IIR_LP_FILTER
+#define IIR_LP_FILTER
 
-struct lpf_state;
-typedef struct lpf_state lpf_state_t;
+struct iir_state;
+typedef struct iir_state iir_state_t;
 
-/* This filter is designed to compute the integral
-   over a sequence of values with the update effort
-   controlled by the user-defined gain.
+/* This Infinite Impulse Response (IIR) filter is designed to compute
+   the integral over an infinite sequence of values with the update
+   effort controlled by the user-defined gain.
 */
 typedef struct
 {
     char *          name;
-    lpf_state_t *   state;
+    iir_state_t *   state;
 
-} low_pass_filter_t;
+} iir_lp_filter_t;
 
-/* Initializes a low-pass filter.
+/* Initializes an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_init( low_pass_filter_t *filter, char *name, double gain );
+int    iir_lp_filter_init( iir_lp_filter_t *filter, char *name, double gain );
 
-/* Destroys a low-pass filter.
+/* Destroys an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_destroy( low_pass_filter_t *filter );
+int    iir_lp_filter_destroy( iir_lp_filter_t *filter );
 
-/* Resets a low-pass filter.
+/* Resets an IIR low-pass filter.
    Returns 0 if successful, -1 otherwise.
 */
-int    low_pass_filter_reset( low_pass_filter_t *filter );
+int    iir_lp_filter_reset( iir_lp_filter_t *filter );
 
-/* Updates a low-pass filter with the given value.
+/* Updates an IIR low-pass filter with the given value.
    Returns the filtered value if successful, -1 otherwise.
 */
-double low_pass_filter_update( low_pass_filter_t *filter, double update );
+double iir_lp_filter_update( iir_lp_filter_t *filter, double update );
 
-#endif /* !LOW_PASS_FILTER */
+#endif /* !IIR_LP_FILTER */
 
 /* End of file */

@@ -152,6 +152,8 @@ target_vendor = angstrom
 top_builddir = ..
 top_srcdir = ..
 nobase_noinst_HEADERS = \
+    altitude_kf.h \
+    attitude_ekf.h \
     average_filter.h \
     command_data.h \
     comm_channel.h \
@@ -159,14 +161,14 @@ nobase_noinst_HEADERS = \
     controller.h \
     control_loop.h \
     ctrl_params.h \
-    extended_kalman.h \
+    fir_lp_filter.h \
+    iir_lp_filter.h \
     javiator_data.h \
     javiator_port.h \
-    kalman_filter.h \
-    low_pass_filter.h \
     median_filter.h \
     motor_signals.h \
     outlier_filter.h \
+    position_ekf.h \
     sensor_data.h \
     serial_channel.h \
     socket_channel.h \

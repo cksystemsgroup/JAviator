@@ -51,12 +51,13 @@ public class ParamDialog extends Dialog
 {
     public static final long serialVersionUID = 1;
 
-    public static ParamDialog createInstance( ControlTerminal parent, String title,
-        short[] controlParams, int[] changedParamID )
+    public static ParamDialog createInstance( ControlTerminal parent,
+    	String title, short[] controlParams, int[] changedParamID )
     {
         if( Instance == null )
         {
-            Instance = new ParamDialog( parent, "Params", controlParams, changedParamID );
+            Instance = new ParamDialog( parent,
+            	title, controlParams, changedParamID );
         }
 
         return( Instance );
@@ -77,7 +78,7 @@ public class ParamDialog extends Dialog
     private short[]               controlParams  = null;
     private int[]                 changedParamID = null;
     private EditField[]           paramFields    = null;
-    private MotionThread          motion         = null;
+    private MotionThread          motionThread   = null;
 
     private ParamDialog( ControlTerminal parent, String title,
         short[] controlParams, int[] changedParamID )
@@ -87,6 +88,7 @@ public class ParamDialog extends Dialog
         this.controlParams  = controlParams;
         this.changedParamID = changedParamID;
         paramFields         = new EditField[ controlParams.length ];
+        motionThread        = new MotionThread( );
 
         setBackground( Color.WHITE );
         makePanel( );
@@ -132,13 +134,12 @@ public class ParamDialog extends Dialog
 
         setSize( getWidth( ), parent.getHeight( ) );
         setVisible( true );
-
-        motion = new MotionThread( );
+        motionThread.start( );
     }
     
     private void closeDialog( )
     {
-        motion.terminate( );
+        motionThread.terminate( );
         dispose( );
         Instance = null;
     }
@@ -305,12 +306,12 @@ public class ParamDialog extends Dialog
 
         public void mousePressed( MouseEvent me )
         {
-        	motion.setOffset( adapterID, paramStep );
+        	motionThread.setOffset( adapterID, paramStep );
         }
 
         public void mouseReleased( MouseEvent me )
         {
-        	motion.setOffset( adapterID, 0 );
+        	motionThread.setOffset( adapterID, 0 );
         	changedParamID[0] = adapterID;
         }
 
@@ -328,7 +329,6 @@ public class ParamDialog extends Dialog
     {
         public MotionThread( )
         {
-            start( );
         }
 
         public void run( )

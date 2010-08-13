@@ -22,43 +22,49 @@
  *
  */
 
-#ifndef OUTLIER_FILTER
-#define OUTLIER_FILTER
+#ifndef ATTITUDE_EKF
+#define ATTITUDE_EKF
 
-struct of_state;
-typedef struct of_state of_state_t;
+struct att_state;
+typedef struct att_state att_state_t;
 
-/* This filter is designed to reject outliers
-   controlled by the user-defined maximum
-   difference and limit of occurrences.
+/* This Extended Kalman Filter (EKF) is designed to estimate the attitude
+   by fusing Euler angle measurements with angular velocity measurements.
 */
 typedef struct
 {
     char *          name;
-    of_state_t *    state;
+    att_state_t *   state;
 
-} outlier_filter_t;
+} attitude_ekf_t;
 
-/* Initializes an outlier filter.
+/* Initializes an attitude EKF with the given period.
+   Parameter <period> is expected to be given in [s].
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_init( outlier_filter_t *filter, char *name, double mdiff, int limit );
+int    attitude_ekf_init( attitude_ekf_t *filter,
+    char *name, double proc_noise, double data_noise, double period );
 
-/* Destroys an outlier filter.
+/* Destroys an attitude EKF.
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_destroy( outlier_filter_t *filter );
+int    attitude_ekf_destroy( attitude_ekf_t *filter );
 
-/* Resets an outlier filter.
+/* Resets an attitude EKF.
    Returns 0 if successful, -1 otherwise.
 */
-int    outlier_filter_reset( outlier_filter_t *filter );
+int    attitude_ekf_reset( attitude_ekf_t *filter );
 
-/* Updates an outlier filter with the given value.
-   Returns the filtered value if successful, -1 otherwise.
+/* Estimates the Euler angle e based on the filtered angular rate w.
+   Parameter <e> is expected to be given in [mrad] and <w> in [mrad/s].
+   Returns 0 if successful, -1 otherwise.
 */
-double outlier_filter_update( outlier_filter_t *filter, double update );
+int    attitude_ekf_update( attitude_ekf_t *filter, double e, double w );
 
-#endif /* !OUTLIER_FILTER */
+/* Returns the estimated Euler angle e in [mrad] if successful, -1 otherwise.
+*/
+double attitude_ekf_get_E( attitude_ekf_t *filter );
+
+#endif /* !ATTITUDE_EKF */
 
 /* End of file */

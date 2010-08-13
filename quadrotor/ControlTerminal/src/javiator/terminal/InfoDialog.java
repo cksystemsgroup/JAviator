@@ -50,7 +50,8 @@ public class InfoDialog extends Dialog
     public static final byte TYPE_KEY_ASSISTANCE = 1;
     public static final byte TYPE_ABOUT_TERMINAL = 2;
 
-    public static InfoDialog createInstance( ControlTerminal parent, String title, byte type )
+    public static InfoDialog createInstance( ControlTerminal parent,
+    	String title, byte type )
     {
         if( Instance == null )
         {
