@@ -35,6 +35,7 @@ struct pos_state
     double x1, x2;
     double y1, y2;
     double p11, p12, p21, p22;
+    double v;
 };
 
 
@@ -122,6 +123,8 @@ int position_ekf_reset( position_ekf_t *filter )
     state->p21 = 0;
     state->p22 = 0;
 
+    state->v = 0;
+
     return( 0 );
 }
 
@@ -142,13 +145,25 @@ int position_ekf_update( position_ekf_t *filter, double s, double a,
 
     /* increment observation delay */
     state->od += state->dt;
+    state->v  += a;
 
     /* check for new position data */
-    if( new_observation )
+    if( new_observation && (
+        (s > state->y1 && state->v > 0) ||
+        (s < state->y1 && state->v < 0) ))
     {
         state->y2 = (s - state->y1) / state->od;
         state->y1 = s;
         state->od = 0;
+        state->v  = 0;
+    }
+    else
+    {
+        s = s * 0.5 + state->y1 * 0.5;
+        state->y2 = (s - state->y1) / state->od;
+        state->y1 = s;
+        state->od = 0;
+        state->v  = 0;
     }
 
     /* predict state estimate */

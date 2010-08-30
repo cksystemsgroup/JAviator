@@ -81,8 +81,8 @@
 #define FILTER_SIZE_BATT        15                      /* buffer size for battery data */
 #define FILTER_PROC_NS_RPY      0.1                     /* process noise for r/p/y-filter */
 #define FILTER_DATA_NS_RPY      10                      /* data noise for r/p/y-filter */
-#define FILTER_PROC_NS_XY       0.1                     /* process noise for x/y-filter */
-#define FILTER_DATA_NS_XY       10                      /* data noise for x/y-filter */
+#define FILTER_PROC_NS_XY       10//0.1                     /* process noise for x/y-filter */
+#define FILTER_DATA_NS_XY       0.01//10                      /* data noise for x/y-filter */
 #define FILTER_PROC_NS_Z        10000                   /* process noise for z-filter */
 #define FILTER_DATA_NS_Z        0.01                    /* data noise for z-filter */
 
@@ -163,8 +163,8 @@ static median_filter_t          filter_bmu_batt;
 static attitude_ekf_t           filter_att_roll;
 static attitude_ekf_t           filter_att_pitch;
 static attitude_ekf_t           filter_att_yaw;
-static position_ekf_t           filter_pos_x;
-static position_ekf_t           filter_pos_y;
+static altitude_kf_t           filter_pos_x;
+static altitude_kf_t           filter_pos_y;
 static altitude_kf_t            filter_pos_z;
 
 /* controller objects */
@@ -276,8 +276,8 @@ int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
     attitude_ekf_init  ( &filter_att_roll,  "ATT_Roll",  FILTER_PROC_NS_RPY, FILTER_DATA_NS_RPY, period );
     attitude_ekf_init  ( &filter_att_pitch, "ATT_Pitch", FILTER_PROC_NS_RPY, FILTER_DATA_NS_RPY, period );
     attitude_ekf_init  ( &filter_att_yaw,   "ATT_Yaw",   FILTER_PROC_NS_RPY, FILTER_DATA_NS_RPY, period );
-    position_ekf_init  ( &filter_pos_x,     "POS_X",     FILTER_PROC_NS_XY,  FILTER_DATA_NS_XY,  period );
-    position_ekf_init  ( &filter_pos_y,     "POS_Y",     FILTER_PROC_NS_XY,  FILTER_DATA_NS_XY,  period );
+    altitude_kf_init  ( &filter_pos_x,     "POS_X",     FILTER_PROC_NS_XY,  FILTER_DATA_NS_XY,  period );
+    altitude_kf_init  ( &filter_pos_y,     "POS_Y",     FILTER_PROC_NS_XY,  FILTER_DATA_NS_XY,  period );
     altitude_kf_init   ( &filter_pos_z,     "POS_Z",     FILTER_PROC_NS_Z,   FILTER_DATA_NS_Z,   period );
 
     /* initialize controller objects */
@@ -384,11 +384,21 @@ static int get_javiator_data( void )
     sensor_data.ddpitch = sensor_data.dpitch;
     sensor_data.ddyaw   = sensor_data.dyaw;
 
+    /* save new angular velocities */
+    sensor_data.dx      = FACTOR_ANGULAR_VEL * javiator_data.droll;
+    sensor_data.dy      = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
+    sensor_data.dz      = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
+
+    /* transform angular velocities */
+    sensor_data.droll   = rotate_body_to_earth_dRoll ( sensor_data.dx, sensor_data.dy, sensor_data.dz );
+    sensor_data.dpitch  = rotate_body_to_earth_dPitch( sensor_data.dx, sensor_data.dy, sensor_data.dz );
+    sensor_data.dyaw    = rotate_body_to_earth_dYaw  ( sensor_data.dx, sensor_data.dy, sensor_data.dz );
+#if 0
     /* scale new angular velocities */
     sensor_data.droll   = FACTOR_ANGULAR_VEL * javiator_data.droll;
     sensor_data.dpitch  = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
     sensor_data.dyaw    = FACTOR_ANGULAR_VEL * javiator_data.dyaw;
-
+#endif
     /* compute angular accelerations */
     sensor_data.ddroll  = FACTOR_ANGULAR_ACC * (sensor_data.droll  - sensor_data.ddroll);
     sensor_data.ddpitch = FACTOR_ANGULAR_ACC * (sensor_data.dpitch - sensor_data.ddpitch);
@@ -521,14 +531,17 @@ static int get_javiator_data( void )
     if( heli_mode == HELI_MODE_POS_CTRL )
     {
         /* save new Euler angular velocities */
-        sensor_data.dx = rotate_body_to_earth_dRoll ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
-        sensor_data.dy = rotate_body_to_earth_dPitch( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
-        sensor_data.dz = rotate_body_to_earth_dYaw  ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
+        //sensor_data.dx = rotate_body_to_earth_dRoll ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
+        //sensor_data.dy = rotate_body_to_earth_dPitch( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
+        //sensor_data.dz = rotate_body_to_earth_dYaw  ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
 
         /* update attitude filters */
-        attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.dx );
-        attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dy );
-        attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dz );
+        //attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.dx );
+        //attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dy );
+        //attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dz );
+        attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.droll );
+        attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dpitch );
+        attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dyaw );
 
         /* get attitude estimates */
         sensor_data.roll  = attitude_ekf_get_E( &filter_att_roll );
@@ -537,18 +550,18 @@ static int get_javiator_data( void )
     }
 
     /* update position filters */
-    position_ekf_update( &filter_pos_x, sensor_data.x, sensor_data.ddx, new_data_x );
-    position_ekf_update( &filter_pos_y, sensor_data.y, sensor_data.ddy, new_data_y );
+    altitude_kf_update( &filter_pos_x, sensor_data.x, sensor_data.ddx );//, new_data_x );
+    altitude_kf_update( &filter_pos_y, sensor_data.y, sensor_data.ddy );//, new_data_y );
     altitude_kf_update ( &filter_pos_z, sensor_data.z, sensor_data.ddz );
 
     /* get position estimates */
-    sensor_data.x  = position_ekf_get_S( &filter_pos_x );
-    sensor_data.y  = position_ekf_get_S( &filter_pos_y );
+    sensor_data.x  = altitude_kf_get_S( &filter_pos_x );
+    sensor_data.y  = altitude_kf_get_S( &filter_pos_y );
     sensor_data.z  = altitude_kf_get_S ( &filter_pos_z );
 
     /* get velocity estimates */
-    sensor_data.dx = position_ekf_get_V( &filter_pos_x );
-    sensor_data.dy = position_ekf_get_V( &filter_pos_y );
+    sensor_data.dx = altitude_kf_get_V( &filter_pos_x );
+    sensor_data.dy = altitude_kf_get_V( &filter_pos_y );
     sensor_data.dz = altitude_kf_get_V ( &filter_pos_z );
 
     return( 0 );
@@ -736,8 +749,8 @@ static inline void reset_filters( void )
     attitude_ekf_reset  ( &filter_att_roll );
     attitude_ekf_reset  ( &filter_att_pitch );
     attitude_ekf_reset  ( &filter_att_yaw );
-    position_ekf_reset  ( &filter_pos_x );
-    position_ekf_reset  ( &filter_pos_y );
+    altitude_kf_reset  ( &filter_pos_x );
+    altitude_kf_reset  ( &filter_pos_y );
     altitude_kf_reset   ( &filter_pos_z );
 }
 
@@ -896,7 +909,7 @@ static int compute_motor_signals( void )
 
         u_z     = controller_do_control( &ctrl_z, command_data.z,
             sensor_data.z, sensor_data.dz, sensor_data.ddz );
-        u_z    /= transformation_get_cos_Roll( ) * transformation_get_cos_Pitch( );
+        //u_z    /= transformation_get_cos_Roll( ) * transformation_get_cos_Pitch( );
         u_z    += motor_speed_liftoff;
     }
 
@@ -1149,8 +1162,8 @@ int control_loop_run( void )
     attitude_ekf_destroy  ( &filter_att_roll );
     attitude_ekf_destroy  ( &filter_att_pitch );
     attitude_ekf_destroy  ( &filter_att_yaw );
-    position_ekf_destroy  ( &filter_pos_x );
-    position_ekf_destroy  ( &filter_pos_y );
+    altitude_kf_destroy  ( &filter_pos_x );
+    altitude_kf_destroy  ( &filter_pos_y );
     altitude_kf_destroy   ( &filter_pos_z );
     controller_destroy    ( &ctrl_roll );
     controller_destroy    ( &ctrl_pitch );

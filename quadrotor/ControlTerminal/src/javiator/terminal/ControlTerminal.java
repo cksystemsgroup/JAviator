@@ -78,7 +78,7 @@ public class ControlTerminal extends Frame
     public static final Rectangle UBI_RECT    = new Rectangle(    0,    0, 7130, 8470 );
     public static final Rectangle MAX_RECT    = new Rectangle( 2000, 2000, 3130, 4470 );
 
-    public static final String LOG_FILE_NAME  = "traces/integral_test_.csv";
+    public static final String LOG_FILE_NAME  = "traces/accuracy_test_.csv";
 
     public static final String LOG_TITLE_STR  = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
     	                                        "ekf-roll,ekf-pitch,ekf-yaw," +
