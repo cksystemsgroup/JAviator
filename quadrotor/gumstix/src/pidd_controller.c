@@ -117,13 +117,13 @@ static double pidd_do_control( controller_t *controller,
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_value[0], velocity, state->dt );
-    double a_error = get_a_error( velocity, state->last_value[1], acceleration, state->dt );
+    //double a_error = get_a_error( velocity, state->last_value[1], acceleration, state->dt );
 
     state->integral  += s_error * state->dt;
     state->last_value[0] = desired;
     state->last_value[1] = velocity;
 
-    return pidd_compute( state, s_error, v_error, a_error );//acceleration );
+    return pidd_compute( state, s_error, v_error, acceleration );//a_error );
 }
 
 static double pidd_x_y_control( controller_t *controller,

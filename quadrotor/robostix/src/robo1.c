@@ -379,6 +379,7 @@ void enable_sensors( uint8_t enable )
 
 /* Runs the control loop
 */
+#if 0
 int main( void )
 {
     uint8_t already_converted = 0;
@@ -425,6 +426,77 @@ int main( void )
         if( adc_is_new_data( ADC_CH_SONAR ) &&
             !adc_get_data( ADC_CH_SONAR, &javiator_data.sonar ) )
         {
+            javiator_data.state |= ST_NEW_DATA_SONAR;
+        }
+
+        /* check if new converted battery data available */
+        if( adc_is_new_data( ADC_CH_BATT ) )
+        {
+            adc_get_data( ADC_CH_BATT, &javiator_data.batt );
+        }
+    }
+
+    return( 0 );
+}
+#endif
+int main( void )
+{
+    uint8_t  already_converted = 0;
+    uint8_t  outlier_count     = 0;
+    uint16_t new_sonar_value   = 0;
+
+    /* initialize Robostix 1 */
+    controller_init( );
+
+    while( 1 )
+    {
+        /* check if communication is upright */
+        if( flag_check_delay )
+        {
+            check_receive_delay( );
+        }
+
+        /* check if new serial or parallel data available */
+        if( serial_is_new_data( ) )//|| parallel_is_new_data( ) )
+        {
+            process_data_packet( );
+        }
+
+        /* check if new IMU data available */
+        if( dm3gx1_is_new_data( ) &&
+            !dm3gx1_get_data( &javiator_data ) )
+        {
+            javiator_data.state |= ST_NEW_DATA_IMU;
+        }
+
+        /* check if new analog sonar data available */
+        if( minia_is_new_data( ) && !already_converted )
+        {
+            /* convert sonar data */
+            adc_convert( ADC_CH_SONAR );
+
+            already_converted = 1;
+        }
+        else
+        if( !minia_is_new_data( ) )
+        {
+            already_converted = 0;
+        }
+
+        /* check if new converted sonar data available */
+        if( adc_is_new_data( ADC_CH_SONAR ) &&
+            !adc_get_data( ADC_CH_SONAR, &new_sonar_value ) )
+        {
+            if( abs( javiator_data.sonar - new_sonar_value ) < 15 || outlier_count > 1 )
+            {
+                javiator_data.sonar = new_sonar_value;
+                outlier_count = 0;
+            }
+            else
+            {
+                ++outlier_count;
+            }
+
             javiator_data.state |= ST_NEW_DATA_SONAR;
         }
 

@@ -1662,7 +1662,7 @@ public class ControlTerminal extends Frame
             if( (buttonsPressed & Joystick.BUTTON2) != 0 )
             {
 	            meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) +
-                    (int)( stick.getZ( ) * 20.0f ) ) );
+                    (int)( stick.getZ( ) * 30.0f ) ) );
             }
 
             meterAltitude.setDesired( (int)( meterAltitude.getMaximum( ) *

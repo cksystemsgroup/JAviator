@@ -57,6 +57,7 @@
 
 /* compilation directives */
 #define RIGHT_SPINNING_FRONT
+//#define EULER_ANGLE_VELOCITIES
 
 /* helicopter states */
 #define HELI_STATE_GROUND       0x01
@@ -383,7 +384,7 @@ static int get_javiator_data( void )
     sensor_data.ddroll  = sensor_data.droll;
     sensor_data.ddpitch = sensor_data.dpitch;
     sensor_data.ddyaw   = sensor_data.dyaw;
-
+#ifdef EULER_ANGLE_VELOCITIES
     /* save new angular velocities */
     sensor_data.dx      = FACTOR_ANGULAR_VEL * javiator_data.droll;
     sensor_data.dy      = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
@@ -393,7 +394,7 @@ static int get_javiator_data( void )
     sensor_data.droll   = rotate_body_to_earth_dRoll ( sensor_data.dx, sensor_data.dy, sensor_data.dz );
     sensor_data.dpitch  = rotate_body_to_earth_dPitch( sensor_data.dx, sensor_data.dy, sensor_data.dz );
     sensor_data.dyaw    = rotate_body_to_earth_dYaw  ( sensor_data.dx, sensor_data.dy, sensor_data.dz );
-#if 0
+#else
     /* scale new angular velocities */
     sensor_data.droll   = FACTOR_ANGULAR_VEL * javiator_data.droll;
     sensor_data.dpitch  = FACTOR_ANGULAR_VEL * javiator_data.dpitch;
@@ -473,7 +474,7 @@ static int get_javiator_data( void )
     if( (javiator_data.state & ST_NEW_DATA_SONAR) )
     {
         sensor_data.z = FACTOR_SONAR * javiator_data.sonar;
-        sensor_data.z = outlier_filter_update( &filter_out_z, sensor_data.z );
+        //sensor_data.z = outlier_filter_update( &filter_out_z, sensor_data.z );
         sensor_data.z = rotate_body_to_earth_Z( Z_SONAR_POS_X,
             Z_SONAR_POS_Y, Z_SONAR_POS_Z + sensor_data.z );
         last_sensor_z = sensor_data.z;
@@ -530,19 +531,21 @@ static int get_javiator_data( void )
     /* compute attitude estimates */
     if( heli_mode == HELI_MODE_POS_CTRL )
     {
-        /* save new Euler angular velocities */
-        //sensor_data.dx = rotate_body_to_earth_dRoll ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
-        //sensor_data.dy = rotate_body_to_earth_dPitch( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
-        //sensor_data.dz = rotate_body_to_earth_dYaw  ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
-
-        /* update attitude filters */
-        //attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.dx );
-        //attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dy );
-        //attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dz );
+#ifdef EULER_ANGLE_VELOCITIES
         attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.droll );
         attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dpitch );
         attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dyaw );
+#else
+        /* save new Euler angular velocities */
+        sensor_data.dx = rotate_body_to_earth_dRoll ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
+        sensor_data.dy = rotate_body_to_earth_dPitch( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
+        sensor_data.dz = rotate_body_to_earth_dYaw  ( sensor_data.droll, sensor_data.dpitch, sensor_data.dyaw );
 
+        /* update attitude filters */
+        attitude_ekf_update( &filter_att_roll,  sensor_data.roll,  sensor_data.dx );
+        attitude_ekf_update( &filter_att_pitch, sensor_data.pitch, sensor_data.dy );
+        attitude_ekf_update( &filter_att_yaw,   sensor_data.yaw,   sensor_data.dz );
+#endif
         /* get attitude estimates */
         sensor_data.roll  = attitude_ekf_get_E( &filter_att_roll );
         sensor_data.pitch = attitude_ekf_get_E( &filter_att_pitch );
@@ -909,7 +912,7 @@ static int compute_motor_signals( void )
 
         u_z     = controller_do_control( &ctrl_z, command_data.z,
             sensor_data.z, sensor_data.dz, sensor_data.ddz );
-        //u_z    /= transformation_get_cos_Roll( ) * transformation_get_cos_Pitch( );
+        u_z    /= transformation_get_cos_Roll( ) * transformation_get_cos_Pitch( );
         u_z    += motor_speed_liftoff;
     }
 
