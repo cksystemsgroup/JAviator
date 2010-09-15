@@ -78,7 +78,7 @@ public class ControlTerminal extends Frame
     public static final Rectangle UBI_RECT    = new Rectangle(    0,    0, 7130, 8470 );
     public static final Rectangle MAX_RECT    = new Rectangle( 2000, 2000, 3130, 4470 );
 
-    public static final String LOG_FILE_NAME  = "traces/accuracy_test_.csv";
+    public static final String LOG_FILE_NAME  = "traces/test_.csv";
 
     public static final String LOG_TITLE_STR  = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
     	                                        "ekf-roll,ekf-pitch,ekf-yaw," +
@@ -86,17 +86,17 @@ public class ControlTerminal extends Frame
 											    "ddroll,ddpitch,ddyaw," +
 											    "ekf-x,ekf-y,ekf-z," +
 											    "ekf-dx,ekf-dy,ekf-dz," +
-											    "ddx,ddy,ddz," +
+											    "iir-ddx,iir-ddy,iir-ddz," +
 											    "maps,temp,batt," +
 											    "front,right,rear,left," +
 											    "u-roll,u-pitch,u-yaw,u-z," +
 											    "period," +
 											    "true-roll,true-pitch,true-yaw," +
 											    "true-x,true-y,true-z," +
-											    "true-dx,true-dy,true-dz," +
+											    "true-ddx,true-ddy,true-ddz," +
                                                 "true-c-roll,true-c-pitch," +
-                                                "ctrl-c-roll,ctrl-c-pitch," +
-                                                "rotated-roll,rotated-pitch";
+                                                "fir-c-roll,fir-c-pitch," +
+                                                "rot-c-roll,rot-c-pitch";
 
     public ControlTerminal( )
     {
@@ -1662,7 +1662,7 @@ public class ControlTerminal extends Frame
             if( (buttonsPressed & Joystick.BUTTON2) != 0 )
             {
 	            meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) +
-                    (int)( stick.getZ( ) * 30.0f ) ) );
+                    (int)( stick.getZ( ) * 10.0f ) ) );
             }
 
             meterAltitude.setDesired( (int)( meterAltitude.getMaximum( ) *

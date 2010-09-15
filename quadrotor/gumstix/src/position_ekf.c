@@ -35,7 +35,6 @@ struct pos_state
     double x1, x2;
     double y1, y2;
     double p11, p12, p21, p22;
-    double v;
 };
 
 
@@ -54,7 +53,7 @@ static inline pos_state_t *get_pos_state( const position_ekf_t *filter )
    Returns 0 if successful, -1 otherwise.
 */
 int position_ekf_init( position_ekf_t *filter,
-    char *name, double proc_noise, double data_noise, double period )
+    char *name, double std_p, double std_v, double std_a, double period )
 {
     pos_state_t *state;
 
@@ -73,12 +72,12 @@ int position_ekf_init( position_ekf_t *filter,
     }
 
     state->dt     = period;
-    state->q11    = proc_noise * period * period * period * period / 4;
-    state->q12    = proc_noise * period * period * period / 2;
-    state->q21    = proc_noise * period * period * period / 2;
-    state->q22    = proc_noise * period * period;
-    state->r11    = data_noise * period * period / 2;
-    state->r22    = data_noise * period;
+    state->q11    = std_a * period * period * period * period / 4;
+    state->q12    = std_a * period * period * period / 2;
+    state->q21    = std_a * period * period * period / 2;
+    state->q22    = std_a * period * period;
+    state->r11    = std_p;
+    state->r22    = std_v;
     filter->name  = name;
     filter->state = state;
     return position_ekf_reset( filter );
@@ -123,16 +122,14 @@ int position_ekf_reset( position_ekf_t *filter )
     state->p21 = 0;
     state->p22 = 0;
 
-    state->v = 0;
-
     return( 0 );
 }
 
-/* Estimates the position s and velocity v based on the acceleration a.
-   Parameter <s> is expected to be given in [mm] and <a> in [mm/s^2].
+/* Estimates the position p and velocity v based on the acceleration a.
+   Parameter <p> is expected to be given in [mm] and <a> in [mm/s^2].
    Returns 0 if successful, -1 otherwise.
 */
-int position_ekf_update( position_ekf_t *filter, double s, double a,
+int position_ekf_update( position_ekf_t *filter, double p, double a,
     int new_observation )
 {
     pos_state_t *state = get_pos_state( filter );
@@ -145,25 +142,13 @@ int position_ekf_update( position_ekf_t *filter, double s, double a,
 
     /* increment observation delay */
     state->od += state->dt;
-    state->v  += a;
 
     /* check for new position data */
-    if( new_observation && (
-        (s > state->y1 && state->v > 0) ||
-        (s < state->y1 && state->v < 0) ))
+    if( new_observation )
     {
-        state->y2 = (s - state->y1) / state->od;
-        state->y1 = s;
+        state->y2 = (p - state->y1) / state->od;
+        state->y1 = p;
         state->od = 0;
-        state->v  = 0;
-    }
-    else
-    {
-        s = s * 0.5 + state->y1 * 0.5;
-        state->y2 = (s - state->y1) / state->od;
-        state->y1 = s;
-        state->od = 0;
-        state->v  = 0;
     }
 
     /* predict state estimate */
@@ -222,9 +207,9 @@ int position_ekf_update( position_ekf_t *filter, double s, double a,
     return( 0 );
 }
 
-/* Returns the estimated position s in [mm] if successful, -1 otherwise.
+/* Returns the estimated position p in [mm] if successful, -1 otherwise.
 */
-double position_ekf_get_S( position_ekf_t *filter )
+double position_ekf_get_P( position_ekf_t *filter )
 {
     pos_state_t *state = get_pos_state( filter );
 

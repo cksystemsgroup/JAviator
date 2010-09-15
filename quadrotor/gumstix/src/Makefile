@@ -55,16 +55,16 @@ libcontroller_platform_a_OBJECTS =  \
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_control_OBJECTS = altitude_kf.$(OBJEXT) attitude_ekf.$(OBJEXT) \
-	average_filter.$(OBJEXT) communication.$(OBJEXT) \
-	controller.$(OBJEXT) control_loop.$(OBJEXT) \
-	fir_lp_filter.$(OBJEXT) iir_lp_filter.$(OBJEXT) \
-	javiator_port.$(OBJEXT) main.$(OBJEXT) median_filter.$(OBJEXT) \
-	outlier_filter.$(OBJEXT) pidd_controller.$(OBJEXT) \
-	position_ekf.$(OBJEXT) serial_channel.$(OBJEXT) \
-	tcp_socket_channel.$(OBJEXT) terminal_port.$(OBJEXT) \
-	transformation.$(OBJEXT) ubisense_port.$(OBJEXT) \
-	udp_socket_channel.$(OBJEXT) us_timer.$(OBJEXT)
+am_control_OBJECTS = attitude_ekf.$(OBJEXT) average_filter.$(OBJEXT) \
+	communication.$(OBJEXT) controller.$(OBJEXT) \
+	control_loop.$(OBJEXT) fir_lp_filter.$(OBJEXT) \
+	iir_lp_filter.$(OBJEXT) javiator_port.$(OBJEXT) main.$(OBJEXT) \
+	median_filter.$(OBJEXT) outlier_filter.$(OBJEXT) \
+	pidd_controller.$(OBJEXT) position_ekf.$(OBJEXT) \
+	serial_channel.$(OBJEXT) tcp_socket_channel.$(OBJEXT) \
+	terminal_port.$(OBJEXT) transformation.$(OBJEXT) \
+	ubisense_port.$(OBJEXT) udp_socket_channel.$(OBJEXT) \
+	us_timer.$(OBJEXT)
 control_OBJECTS = $(am_control_OBJECTS)
 control_DEPENDENCIES = libcontroller-platform.a
 control_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(control_LDFLAGS) \
@@ -192,7 +192,6 @@ noinst_LIBRARIES = libcontroller-platform.a
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
-    altitude_kf.c \
     attitude_ekf.c \
     average_filter.c \
     communication.c \
@@ -288,7 +287,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/altitude_kf.Po
 include ./$(DEPDIR)/attitude_ekf.Po
 include ./$(DEPDIR)/average_filter.Po
 include ./$(DEPDIR)/communication.Po

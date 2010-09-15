@@ -43,7 +43,7 @@ typedef struct
    Returns 0 if successful, -1 otherwise.
 */
 int    attitude_ekf_init( attitude_ekf_t *filter,
-    char *name, double proc_noise, double data_noise, double period );
+    char *name, double std_e, double std_w, double ph_sh, double period );
 
 /* Destroys an attitude EKF.
    Returns 0 if successful, -1 otherwise.

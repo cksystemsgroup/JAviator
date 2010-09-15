@@ -53,7 +53,7 @@ static inline att_state_t *get_att_state( const attitude_ekf_t *filter )
    Returns 0 if successful, -1 otherwise.
 */
 int attitude_ekf_init( attitude_ekf_t *filter,
-    char *name, double proc_noise, double data_noise, double period )
+    char *name, double std_e, double std_w, double ph_sh, double period )
 {
     att_state_t *state;
 
@@ -71,9 +71,9 @@ int attitude_ekf_init( attitude_ekf_t *filter,
         return( -1 );
     }
 
-    state->dt     = period * 2; /* forces ahead projection of 2 periods */
-    state->q      = proc_noise;
-    state->r      = data_noise * state->dt;
+    state->dt     = period + ph_sh * period;
+    state->q      = std_w * state->dt * state->dt;
+    state->r      = std_e;
     filter->name  = name;
     filter->state = state;
     return attitude_ekf_reset( filter );

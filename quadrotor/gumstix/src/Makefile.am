@@ -8,7 +8,6 @@ bin_PROGRAMS = control
 control_LDADD = libcontroller-platform.a
 control_LDFLAGS = -lrt -lm -lpthread
 control_SOURCES = \
-    altitude_kf.c \
     attitude_ekf.c \
     average_filter.c \
     communication.c \

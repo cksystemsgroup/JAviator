@@ -44,7 +44,7 @@ typedef struct
    Returns 0 if successful, -1 otherwise.
 */
 int    position_ekf_init( position_ekf_t *filter,
-    char *name, double proc_noise, double data_noise, double period );
+    char *name, double std_p, double std_v, double std_a, double period );
 
 /* Destroys a position EKF.
    Returns 0 if successful, -1 otherwise.
@@ -56,16 +56,16 @@ int    position_ekf_destroy( position_ekf_t *filter );
 */
 int    position_ekf_reset( position_ekf_t *filter );
 
-/* Estimates the position s and velocity v based on the acceleration a.
-   Parameter <s> is expected to be given in [mm] and <a> in [mm/s^2].
+/* Estimates the position p and velocity v based on the acceleration a.
+   Parameter <p> is expected to be given in [mm] and <a> in [mm/s^2].
    Returns 0 if successful, -1 otherwise.
 */
-int    position_ekf_update( position_ekf_t *filter, double s, double a,
+int    position_ekf_update( position_ekf_t *filter, double p, double a,
     int new_observation );
 
-/* Returns the estimated position s in [mm] if successful, -1 otherwise.
+/* Returns the estimated position p in [mm] if successful, -1 otherwise.
 */
-double position_ekf_get_S( position_ekf_t *filter );
+double position_ekf_get_P( position_ekf_t *filter );
 
 /* Returns the estimated velocity v in [mm/s] if successful, -1 otherwise.
 */

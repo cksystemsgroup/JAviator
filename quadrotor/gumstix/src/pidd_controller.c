@@ -42,7 +42,7 @@ struct ctrl_state
     double kdd;        /* Gain for second derivative of tracking error */
     double integral;   /* Running integral of the tracking error [mrad*s] */
     double int_limit;  /* Integral limit [mrad*s] */
-    double last_value[2]; /* Stores a controller-dependent last value */
+    double last_value; /* Stores a controller-dependent last value */
     double p;
     double i;
     double d;
@@ -86,15 +86,6 @@ static inline double get_v_error(
     return( v_error );
 }
 
-static inline double get_a_error(
-    double velocity, double last_velocity, double acceleration, double period )
-{
-    double desired_acceleration = (velocity - last_velocity) / period;
-    double a_error = desired_acceleration - acceleration;
-
-    return( a_error );
-}
-
 /* PIDD controller for a single degree of freedom.
  *
  * Computes linear feedback control effort.  Initially used PID (proportional,
@@ -116,14 +107,12 @@ static double pidd_do_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = get_v_error( desired, state->last_value[0], velocity, state->dt );
-    //double a_error = get_a_error( velocity, state->last_value[1], acceleration, state->dt );
+    double v_error = get_v_error( desired, state->last_value, velocity, state->dt );
 
     state->integral  += s_error * state->dt;
-    state->last_value[0] = desired;
-    state->last_value[1] = velocity;
+    state->last_value = desired;
 
-    return pidd_compute( state, s_error, v_error, acceleration );//a_error );
+    return pidd_compute( state, s_error, v_error, acceleration );
 }
 
 static double pidd_x_y_control( controller_t *controller,
@@ -132,9 +121,9 @@ static double pidd_x_y_control( controller_t *controller,
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = (current - state->last_value[0]) / delay;
+    double v_error = (current - state->last_value) / delay;
 
-    if( abs( s_error ) > abs( get_s_error( desired, state->last_value[0] ) ) )
+    if( abs( s_error ) > abs( get_s_error( desired, state->last_value ) ) )
     {
         state->integral += s_error * state->dt;
     }
@@ -143,7 +132,7 @@ static double pidd_x_y_control( controller_t *controller,
         state->integral -= s_error * state->dt;
     }
 
-    state->last_value[0] = current;
+    state->last_value = current;
 
     return pidd_compute( state, s_error, v_error, velocity );
 }
@@ -190,8 +179,7 @@ int pidd_def_controller_init( controller_t *controller, double period )
 
     state->dt         = period;
     state->int_limit  = MOTOR_MAX;
-    state->last_value[0] = 0;
-    state->last_value[1] = 0;
+    state->last_value = 0;
 
     controller->do_control = pidd_do_control;
     controller->set_params = pidd_set_params;

@@ -1,6 +1,5 @@
 
 nobase_noinst_HEADERS = \
-    altitude_kf.h \
     attitude_ekf.h \
     average_filter.h \
     command_data.h \
