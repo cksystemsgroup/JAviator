@@ -57,6 +57,10 @@ public class InfoDialog extends Dialog
         {
             Instance = new InfoDialog( parent, title, type );
         }
+        else
+        {
+            Instance.toFront( );
+        }
 
         return( Instance );
     }

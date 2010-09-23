@@ -149,7 +149,6 @@ public abstract class Transceiver extends javiator.util.Transceiver
     {
         switch( packet.type )
         {
-       
 	        case PacketType.COMM_SENSOR_DATA:
 	        	parent.getCommandData( ).copyTo( commandData );
                 sendPacket( commandData.toPacket( PacketType.COMM_COMMAND_DATA ) );

@@ -134,7 +134,7 @@ static double pidd_x_y_control( controller_t *controller,
 
     state->last_value = current;
 
-    return pidd_compute( state, s_error, v_error, velocity );
+    return pidd_compute( state, s_error, velocity, v_error );
 }
 
 static int pidd_set_params( controller_t *controller,

@@ -30,7 +30,7 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Color;
-import java.awt.Rectangle;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.MediaTracker;
 import java.awt.AWTEvent;
@@ -62,6 +62,9 @@ import javiator.util.PacketType;
 
 import com.centralnexus.input.Joystick;
 
+import java.io.FileReader;
+import java.io.BufferedReader;
+
 /*****************************************************************************/
 /*                                                                           */
 /* Class ControlTerminal                                                     */
@@ -75,10 +78,11 @@ public class ControlTerminal extends Frame
     public static final boolean SMALL_DISPLAY = true;
     public static final boolean SHOW_3DWINDOW = false;
 
-    public static final Rectangle UBI_RECT    = new Rectangle(    0,    0, 7130, 8470 );
-    public static final Rectangle MAX_RECT    = new Rectangle( 2000, 2000, 3130, 4470 );
+    public static final Dimension UBI_RECT    = new Dimension( 7130, 8470 );
+    public static final Dimension MAX_RECT    = new Dimension( 3000, 4000 );
 
-    public static final String LOG_FILE_NAME  = "traces/test_.csv";
+    public static final String LOG_FILE_PATH  = "traces/";
+    public static final String LOG_FILE_NAME  = LOG_FILE_PATH + "position_test_.csv";
 
     public static final String LOG_TITLE_STR  = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
     	                                        "ekf-roll,ekf-pitch,ekf-yaw," +
@@ -97,6 +101,13 @@ public class ControlTerminal extends Frame
                                                 "true-c-roll,true-c-pitch," +
                                                 "fir-c-roll,fir-c-pitch," +
                                                 "rot-c-roll,rot-c-pitch";
+
+    public static final String[] PLOT_LIST = {  "xy_scatter_1200x800.csv",	
+                                                "xy_scatter_1000x900.csv",
+                                                "xy_scatter_900x1200.csv",
+                                                "xy_scatter_900x1000.csv",
+                                                "xy_scatter_800x1100.csv",
+                                                "xy_scatter_700x700.csv"  };
 
     public ControlTerminal( )
     {
@@ -129,15 +140,12 @@ public class ControlTerminal extends Frame
 
         if( showPosition[0] )
         {
+        	/* IMPORTANT: Ubisense location data refer to Cartesian coordinates,
+               whereas JAviator location data refer to aircraft coordinates,
+               hence x and y must be exchanged when accessing the data. */
         	Point desired = positionDialog.getDesired( );
         	data.roll     = (short) desired.x;
         	data.pitch    = (short) desired.y;
-        }
-        else
-        if( digitalMeter.getHeliMode( ) == ControllerConstants.HELI_MODE_POS_CTRL )
-        {
-            data.roll  = (short)( posOffsetY + meterRoll.getDesired( ) );
-            data.pitch = (short)( meterPitch.getDesired( ) - posOffsetX );
         }
         else
         {
@@ -283,13 +291,6 @@ public class ControlTerminal extends Frame
                hence x and y must be exchanged when accessing the data. */
         	Point current = new Point( data.y, data.x );
         	positionDialog.setCurrent( current );
-        }
-        else
-        if( digitalMeter.getHeliMode( )  == ControllerConstants.HELI_MODE_POS_CTRL &&
-            digitalMeter.getHeliState( ) != ControllerConstants.HELI_STATE_FLYING )
-        {
-            posOffsetX = data.x;
-            posOffsetY = data.y;
         }
 
         meterRoll     .setCurrent( data.roll );
@@ -439,12 +440,7 @@ public class ControlTerminal extends Frame
             if( showPosition[0] )
             {
             	positionDialog.setDesired( positionDialog.getCurrent( ) );
-            }
-            else
-            if( digitalMeter.getHeliMode( ) == ControllerConstants.HELI_MODE_POS_CTRL )
-            {
-            	meterRoll  .setDesired( remote.sensorData.y - posOffsetY );
-            	meterPitch .setDesired( posOffsetX - remote.sensorData.x );
+                positionDialog.clearWindow( true, true, true );
             }
             else
             {
@@ -461,6 +457,7 @@ public class ControlTerminal extends Frame
             	Point zero = new Point( 0, 0 );
             	positionDialog.setDesired( zero );
             	positionDialog.setCurrent( zero );
+                positionDialog.clearWindow( true, true, true );
             }
 
             meterRoll     .setDesired( 0 );
@@ -733,6 +730,10 @@ public class ControlTerminal extends Frame
             	doSwitchHeliMode( );
                 break;
 
+            case KeyEvent.VK_P:
+                doPlotPositionData( );
+                break;
+
             case KeyEvent.VK_F1:
                 if( showKeyAssist.isEnabled( ) )
                 {
@@ -888,8 +889,7 @@ public class ControlTerminal extends Frame
     private Label                  logDataLabel   = null;
     private short[]                controlParams  = null;
     private int[]                  changedParamID = null;
-    private int             	   posOffsetX     = 0;
-	private int                    posOffsetY     = 0;
+    private int                    plotIndex      = 0;
     private boolean[]              showPosition   = null;
     private boolean                newIdlingSpeed = false;
     private boolean                new_R_P_Params = false;
@@ -1331,7 +1331,7 @@ public class ControlTerminal extends Frame
 
     private void doShowAboutInfo( )
     {
-    	InfoDialog.createInstance( this, ABOUT_TERMINAL, InfoDialog.TYPE_ABOUT_TERMINAL );
+        InfoDialog.createInstance( this, ABOUT_TERMINAL, InfoDialog.TYPE_ABOUT_TERMINAL );
     }
 /*
     private void doToggleDiagram( )
@@ -1412,6 +1412,55 @@ public class ControlTerminal extends Frame
     	{
             remote.sendPacket( clearTrimPacket );
     	}
+    }
+
+    private void doPlotPositionData( )
+    {
+    	if( positionDialog == null )
+    	{
+    		return;
+    	}
+
+        String str = new String( );
+
+        try
+        {
+            BufferedReader buf = new BufferedReader( new FileReader(
+                LOG_FILE_PATH + PLOT_LIST[ plotIndex ] ) );
+            int ch;
+
+            while( (ch = buf.read( ) ) != -1 )
+            {
+            	str += (char) ch;
+            }
+        }
+        catch( IOException e )
+        {
+        	System.err.println( "ControlTerminal.doPlotPositionData: " + e.getMessage( ) );
+            return;
+        }
+
+        if( ++plotIndex >= PLOT_LIST.length )
+        {
+        	plotIndex = 0;
+        }
+
+        int p = 0;
+        int c = 0;
+        int q = str.indexOf( '\n' );
+        int eof = str.lastIndexOf( '\n' );
+
+        positionDialog.clearWindow( true, false, false );
+
+        while( q < eof )
+        {
+	        String substr = str.substring( p, q + 1 );
+	        c = substr.indexOf( ',' );
+	        positionDialog.setCurrent( new Point( Integer.parseInt( substr.substring( 0, c ) ),
+                Integer.parseInt( substr.substring( c + 1, substr.indexOf( '\n' ) ) ) ) );
+	        p = q + 1;
+	        q = str.indexOf( '\n', p );
+        }
     }
 
     /*************************************************************************/

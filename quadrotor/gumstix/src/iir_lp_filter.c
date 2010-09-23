@@ -110,7 +110,7 @@ double iir_lp_filter_update( iir_lp_filter_t *filter, double update )
         return( -1 );
     }
 
-    state->value = state->value + state->gain * (update - state->value);
+    state->value += state->gain * (update - state->value);
     return( state->value );
 }
 

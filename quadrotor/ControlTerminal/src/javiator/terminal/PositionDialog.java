@@ -28,6 +28,7 @@ import java.awt.Dialog;
 import java.awt.GraphicsEnvironment;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.Point;
 
@@ -47,23 +48,27 @@ public class PositionDialog extends Dialog
     public static final long serialVersionUID = 1;
 
     public static PositionDialog createInstance( ControlTerminal parent, String title,
-    		Rectangle ubiRect, Rectangle maxRect, boolean[] showPosition )
+        Dimension ubiRect, Dimension maxRect, boolean[] showPosition )
     {
         if( Instance == null )
         {
             Instance = new PositionDialog( parent, title,
                 ubiRect, maxRect, showPosition );
         }
+        else
+        {
+            Instance.toFront( );
+        }
 
         return( Instance );
     }
 
-    public Rectangle getUbiRect( )
+    public Dimension getUbiRect( )
     {
         return positionMeter.getUbiRect( );
     }
 
-    public Rectangle getMaxRect( )
+    public Dimension getMaxRect( )
     {
         return positionMeter.getMaxRect( );
     }
@@ -78,14 +83,14 @@ public class PositionDialog extends Dialog
         return positionMeter.getCurrent( );
     }
 
-    public boolean isValidUbiRect( Rectangle rect )
+    public boolean isValidUbiRect( Dimension dim )
     {
-        return positionMeter.isValidUbiRect( rect );
+        return positionMeter.isValidUbiRect( dim );
     }
 
-    public boolean isValidMaxRect( Rectangle rect )
+    public boolean isValidMaxRect( Dimension dim )
     {
-        return positionMeter.isValidMaxRect( rect );
+        return positionMeter.isValidMaxRect( dim );
     }
 
     public boolean isValidDesired( Point pnt )
@@ -98,12 +103,12 @@ public class PositionDialog extends Dialog
         return positionMeter.isValidCurrent( pnt );
     }
 
-    public void setUbiRect( Rectangle ubiRect )
+    public void setUbiRect( Dimension ubiRect )
     {
     	positionMeter.setUbiRect( ubiRect );
     }
 
-    public void setMaxRect( Rectangle maxRect )
+    public void setMaxRect( Dimension maxRect )
     {
     	positionMeter.setMaxRect( maxRect );
     }
@@ -118,6 +123,12 @@ public class PositionDialog extends Dialog
     	positionMeter.setCurrent( current );
     }
 
+    public void clearWindow( boolean drawBackgnd,
+        boolean drawDesired, boolean drawCurrent)
+    {
+        positionMeter.clearWindow( drawBackgnd, drawDesired, drawCurrent );
+    }
+
     /*************************************************************************/
     /*                                                                       */
     /*   Private Section                                                     */
@@ -129,7 +140,7 @@ public class PositionDialog extends Dialog
     private boolean[]             showPosition  = null;
 
     private PositionDialog( ControlTerminal parent, String title,
-        Rectangle ubiRect, Rectangle maxRect, boolean[] showPosition )
+        Dimension ubiRect, Dimension maxRect, boolean[] showPosition )
     {
         super( parent, title, false );
 

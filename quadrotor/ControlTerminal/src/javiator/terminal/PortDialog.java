@@ -59,6 +59,10 @@ public class PortDialog extends Dialog
         {
             Instance = new PortDialog( parent, title );
         }
+        else
+        {
+            Instance.toFront( );
+        }
 
         return( Instance );
     }

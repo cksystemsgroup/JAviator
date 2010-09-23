@@ -26,9 +26,10 @@ package javiator.terminal;
 
 import java.awt.Canvas;
 import java.awt.Color;
-import java.awt.Rectangle;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Graphics;
+import java.awt.Font;
 
 import java.util.Vector;
 import java.util.Enumeration;
@@ -48,12 +49,12 @@ public class PositionMeter extends Canvas
         initWindow( );
     }
 
-    public Rectangle getUbiRect( )
+    public Dimension getUbiRect( )
     {
         return( ubiRect );
     }
 
-    public Rectangle getMaxRect( )
+    public Dimension getMaxRect( )
     {
         return( maxRect );
     }
@@ -68,10 +69,9 @@ public class PositionMeter extends Canvas
         return( current );
     }
 
-    public boolean isValidUbiRect( Rectangle rect )
+    public boolean isValidUbiRect( Dimension dim )
     {
-    	if( rect.x < 0 || rect.width  < GRID_SPACE ||
-            rect.y < 0 || rect.height < GRID_SPACE )
+    	if( dim.width < GRID_SPACE || dim.height < GRID_SPACE )
     	{
             return( false );
     	}
@@ -79,10 +79,9 @@ public class PositionMeter extends Canvas
         return( true );
     }
 
-    public boolean isValidMaxRect( Rectangle rect )
+    public boolean isValidMaxRect( Dimension dim )
     {
-    	if( rect.x < ubiRect.x || rect.x + rect.width  > ubiRect.x + ubiRect.width ||
-            rect.y < ubiRect.y || rect.y + rect.height > ubiRect.y + ubiRect.height )
+    	if( dim.width > ubiRect.width || dim.height > ubiRect.height )
         {
     		return( false );
     	}
@@ -92,8 +91,8 @@ public class PositionMeter extends Canvas
 
     public boolean isValidDesired( Point pnt )
     {
-    	if( pnt.x < maxRect.x || pnt.x > maxRect.x + maxRect.width ||
-            pnt.y < maxRect.y || pnt.y > maxRect.y + maxRect.height )
+    	if( pnt.x < -maxRect.width / 2  || pnt.x > maxRect.width / 2 ||
+            pnt.y < -maxRect.height / 2 || pnt.y > maxRect.height / 2 )
         {
             return( false );
         }
@@ -106,27 +105,29 @@ public class PositionMeter extends Canvas
         return( true ); /* every location is valid */
     }
 
-    public void setUbiRect( Rectangle ubiRect )
+    public void setUbiRect( Dimension ubiRect )
     {
-        if( (this.ubiRect.x != ubiRect.x || this.ubiRect.width  != ubiRect.width   ||
-             this.ubiRect.y != ubiRect.y || this.ubiRect.height != ubiRect.height) &&
+        if( (this.ubiRect.width != ubiRect.width || this.ubiRect.height != ubiRect.height) &&
             isValidUbiRect( ubiRect ) )
         {
-        	this.ubiRect = ubiRect;
+        	this.ubiRect.width  = ubiRect.width;
+        	this.ubiRect.height = ubiRect.height;
+        	drawBackgnd         = true;
+
         	computeScaledBackground( );
-        	drawBackgnd  = true;
         	redraw( );
         }
     }
 
-    public void setMaxRect( Rectangle maxRect )
+    public void setMaxRect( Dimension maxRect )
     {
-        if( (this.maxRect.x != maxRect.x || this.maxRect.width  != maxRect.width   ||
-             this.maxRect.y != maxRect.y || this.maxRect.height != maxRect.height) &&
+        if( (this.maxRect.width != maxRect.width || this.maxRect.height != maxRect.height) &&
             isValidMaxRect( maxRect ) )
         {
-        	this.maxRect = maxRect;
-        	drawBackgnd  = true;
+        	this.maxRect.width  = maxRect.width;
+        	this.maxRect.height = maxRect.height;
+        	drawBackgnd         = true;
+
         	redraw( );
         }
     }
@@ -136,19 +137,25 @@ public class PositionMeter extends Canvas
         if( (this.desired.x != desired.x || this.desired.y != desired.y) &&
             isValidDesired( desired ) )
         {
-        	this.desired = desired;        
-            drawDesired  = true;
+        	this.desired.x = desired.x;
+        	this.desired.y = desired.y;
+            drawDesired    = true;
+
             redraw( );
+            cmdPoints.add( desired );
         }
     }
 
     public void setCurrent( Point current )
     {
         if( this.current.x != current.x || this.current.y != current.y )
-        {                           /* Do not check for validity, since this point */
-        	this.current = current; /* represents heli data, and thus, must always */
-            drawCurrent  = true;    /* be accepted as it is, even if out of range. */
+        {
+        	this.current.x = current.x; /* Do not check for validity, since this point */
+        	this.current.y = current.y; /* represents heli data, and thus, must always */
+            drawCurrent    = true;      /* be accepted as it is, even if out of range. */
+
             redraw( );
+            posPoints.add( current );
         }
     }
 
@@ -157,33 +164,77 @@ public class PositionMeter extends Canvas
         if( drawBackgnd )
         {
         	Enumeration en;
-        	int linePos;
+        	String unitStr;
+        	double unitNum;
+        	int linePos, halfFontHeight = (g.getFontMetrics( g.getFont( ) ).getHeight( ) - 5) / 2;
 
     		g.setColor( colorGrid );
 
     		for( en = gridLinesX.elements( ); en.hasMoreElements( ); )
     		{
     			linePos = ( (Integer) en.nextElement( ) ).intValue( );
-    			g.drawLine( linePos, 0, linePos, getHeight( ) );
+    			g.drawLine( linePos, getPaintY( ), linePos, getPaintY( ) + getPaintH( ) );
     		}
 
     		for( en = gridLinesY.elements( ); en.hasMoreElements( ); )
     		{
     			linePos = ( (Integer) en.nextElement( ) ).intValue( );
-    			g.drawLine( 0, linePos, getWidth( ), linePos );
+    			g.drawLine( getPaintX( ), linePos, getPaintX( ) + getPaintW( ), linePos );
     		}
+
+    		g.setColor( colorUnits );
+
+    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 10 ) );
+
+    		for( en = gridLinesX.elements( ), unitNum = -gridLinesX.size( ) / 2 * GRID_SPACE;
+    		    en.hasMoreElements( ); unitNum += GRID_SPACE )
+    		{
+                linePos = ( (Integer) en.nextElement( ) ).intValue( );
+                unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
+    			g.drawString( unitStr, linePos -
+                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
+                    getPaintY( ) + getPaintH( ) + 3 * halfFontHeight + 1 );
+    		}
+
+    		for( en = gridLinesY.elements( ), unitNum = -gridLinesY.size( ) / 2 * GRID_SPACE;
+                en.hasMoreElements( ); unitNum += GRID_SPACE )
+			{
+	            linePos = ( (Integer) en.nextElement( ) ).intValue( );
+	            unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
+				g.drawString( unitStr, getPaintX( ) - halfFontHeight -
+                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ),
+                    linePos + halfFontHeight );
+			}
+
+    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 12 ) );
+
+			linePos = (Integer) gridLinesX.elementAt( gridLinesX.size( ) / 2 );
+            unitStr = "X (m)";
+			g.drawString( unitStr, linePos -
+                g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
+                getPaintY( ) - halfFontHeight - 1 );
+
+            linePos = (Integer) gridLinesY.elementAt( gridLinesY.size( ) / 2 );
+            unitStr = "Y (m)";
+			g.drawString( unitStr, getPaintX( ) + getPaintW( ) + halfFontHeight + 1,
+                linePos + halfFontHeight );
+
+			g.drawRect( getPaintX( ),
+					    getPaintY( ),
+					    getPaintW( ),
+					    getPaintH( ) );
 
 			g.setColor( colorUbiRect );
 
-			g.drawRect( ubiOrigin.x,
-                        ubiOrigin.y,
-                        (int)( gridFactor * ubiRect.width ) - 1,
-                        (int)( gridFactor * ubiRect.height ) - 1 );
+			g.drawRect( plotOrigin.x - (int)( gridFactor * ubiRect.width ) / 2,
+					    plotOrigin.y - (int)( gridFactor * ubiRect.height ) / 2,
+                        (int)( gridFactor * ubiRect.width ),
+                        (int)( gridFactor * ubiRect.height ) );
 
 			g.setColor( colorMaxRect );
 
-			g.drawRect( ubiOrigin.x + (int)( gridFactor * maxRect.x ),
-        		        ubiOrigin.y + (int)( gridFactor * maxRect.y ),
+			g.drawRect( plotOrigin.x - (int)( gridFactor * maxRect.width ) / 2,
+				        plotOrigin.y - (int)( gridFactor * maxRect.height ) / 2,
                         (int)( gridFactor * maxRect.width ),
                         (int)( gridFactor * maxRect.height ) );
 
@@ -194,32 +245,70 @@ public class PositionMeter extends Canvas
 	    {
 	    	g.setColor( colorDesired );
 
-            g.fillOval( ubiOrigin.x + (int)( gridFactor * desired.x ) - pointSize / 2,
-            		    ubiOrigin.y + (int)( gridFactor * (ubiRect.height - desired.y) ) - pointSize / 2,
+            g.fillOval( plotOrigin.x + (int)( gridFactor * desired.x ) - pointSize / 2,
+                        plotOrigin.y - (int)( gridFactor * desired.y ) - pointSize / 2,
                         pointSize,
                         pointSize );
 
             drawDesired = false;
 	    }
-	        
+
 	    if( drawCurrent )
 	    {
 			g.setColor( colorCurrent );
 
-            g.fillOval( ubiOrigin.x + (int)( gridFactor * current.x ) - pointSize / 2,
-            		    ubiOrigin.y + (int)( gridFactor * (ubiRect.height - current.y) ) - pointSize / 2,
+            g.fillOval( plotOrigin.x + (int)( gridFactor * current.x ) - pointSize / 2,
+                        plotOrigin.y - (int)( gridFactor * current.y ) - pointSize / 2,
                         pointSize,
                         pointSize );
 
             drawCurrent = false;
         }
     }
-    
+
+    public void clearWindow( boolean drawBackgnd,
+        boolean drawDesired, boolean drawCurrent )
+    {
+        Graphics g = getGraphics( );
+
+        if( g != null )
+        {
+            g.clearRect( 0, 0, getWidth( ), getHeight( ) );
+        	this.drawBackgnd = drawBackgnd;
+            this.drawDesired = drawDesired;
+            this.drawCurrent = drawCurrent;
+            update( g );
+        }
+
+        cmdPoints.clear( );
+        posPoints.clear( );
+    }
+
     public void paint( Graphics g )
     {
-    	computeScaledBackground( );
+    	Enumeration en;
+
     	drawBackgnd = true;
+    	computeScaledBackground( );
         update( g );
+
+		for( en = cmdPoints.elements( ); en.hasMoreElements( ); )
+		{
+            Point point = (Point) en.nextElement( );
+            desired.x   = point.x;
+            desired.y   = point.y;
+        	drawDesired = true;
+            update( g );
+		}
+
+		for( en = posPoints.elements( ); en.hasMoreElements( ); )
+		{
+            Point point = (Point) en.nextElement( );
+            current.x   = point.x;
+            current.y   = point.y;
+        	drawCurrent = true;
+            update( g );
+		}
     }
 
     /*************************************************************************/
@@ -228,22 +317,26 @@ public class PositionMeter extends Canvas
     /*                                                                       */
     /*************************************************************************/
 
-    private static final int GRID_SPACE   = 1000; /* mm */
-    private static final int POINT_SIZE   = 100;
+    private static final int GRID_SPACE   = 500; /* mm */
+    private static final int UNIT_SPACE   = 40;  /* pt */
+    private static final int POINT_SIZE   = 16;  /* pt */
 
-    private Rectangle        ubiRect      = null;
-    private Rectangle        maxRect      = null;
+    private Dimension        ubiRect      = null;
+    private Dimension        maxRect      = null;
     private Point            desired      = null;
     private Point            current      = null;
-    private Point            ubiOrigin    = null;
+    private Point            plotOrigin   = null;
     private Vector<Integer>  gridLinesX   = null;
     private Vector<Integer>  gridLinesY   = null;
+    private Vector<Point>    cmdPoints    = null;
+    private Vector<Point>    posPoints    = null;
     private Color            colorGrid    = null;
+    private Color            colorUnits   = null;
     private Color            colorUbiRect = null;
     private Color            colorMaxRect = null;
     private Color            colorDesired = null;
     private Color            colorCurrent = null;
-    private double           gridFactor   = 0.0;
+    private double           gridFactor   = 0;
     private int              pointSize    = 0;
     private boolean          drawBackgnd  = false;
     private boolean          drawDesired  = false;
@@ -253,25 +346,53 @@ public class PositionMeter extends Canvas
     {
         setFocusable( false );
 
-        ubiRect      = new Rectangle( );
-        maxRect      = new Rectangle( );
-        desired      = new Point( 2000, 2000 );
+        ubiRect      = new Dimension( );
+        maxRect      = new Dimension( );
+        desired      = new Point( );
         current      = new Point( );
-        ubiOrigin    = new Point( );
+        plotOrigin   = new Point( );
         gridLinesX   = new Vector<Integer>( );
         gridLinesY   = new Vector<Integer>( );
+        cmdPoints    = new Vector<Point>( );
+        posPoints    = new Vector<Point>( );
         colorGrid    = Color.LIGHT_GRAY;
-        colorUbiRect = Color.ORANGE;
+        colorUnits   = Color.BLACK;
+        colorUbiRect = Color.RED;
         colorMaxRect = Color.GREEN;
         colorDesired = Color.GREEN;
         colorCurrent = Color.RED;
     }
 
+    private int getPaintX( )
+    {
+    	return( UNIT_SPACE );
+    }
+
+    private int getPaintY( )
+    {
+    	return( UNIT_SPACE );
+    }
+
+    private int getPaintW( )
+    {
+    	return( getWidth( ) - 2 * UNIT_SPACE );
+    }
+
+    private int getPaintH( )
+    {
+    	return( getHeight( ) - 2 * UNIT_SPACE );
+    }
+
     private void computeScaledBackground( )
     {
-    	double factorWidth  = (double) getWidth( ) / ubiRect.width;
-    	double factorHeight = (double) getHeight( ) / ubiRect.height;
-    	
+    	if( getPaintW( ) == 0 || getPaintH( ) == 0 )
+    	{
+    		return;
+    	}
+
+    	double factorWidth  = (double) getPaintW( ) / ubiRect.width;
+    	double factorHeight = (double) getPaintH( ) / ubiRect.height;
+
     	if( factorWidth < factorHeight )
     	{
     		gridFactor = factorWidth;
@@ -281,44 +402,34 @@ public class PositionMeter extends Canvas
     		gridFactor = factorHeight;
     	}
 
-		ubiOrigin.x = (getWidth( ) - (int)( gridFactor * ubiRect.width )) / 2;
-		ubiOrigin.y = (getHeight( ) - (int)( gridFactor * ubiRect.height )) / 2;
-    	pointSize   = (int)( gridFactor * POINT_SIZE );
+		plotOrigin.x = getWidth( ) / 2;
+		plotOrigin.y = getHeight( ) / 2;
+    	pointSize    = (int)( gridFactor * POINT_SIZE ) + 1;
 
     	int linePos, space = (int)( gridFactor * GRID_SPACE );
 
     	gridLinesX.clear( );
 
-    	for( linePos = getWidth( ) / 2; linePos > 0; linePos -= space )
+    	for( linePos = (getPaintW( ) / 2) % space; linePos < getPaintW( ); linePos += space )
     	{
-    		gridLinesX.add( (Integer) linePos );
-    	}
-
-    	for( linePos = getWidth( ) / 2; linePos < getWidth( ); linePos += space )
-    	{
-    		gridLinesX.add( (Integer) linePos );
+    		gridLinesX.add( (Integer)( getPaintX( ) + linePos ) );
     	}
 
     	gridLinesY.clear( );
 
-    	for( linePos = getHeight( ) / 2; linePos > 0; linePos -= space )
+    	for( linePos = getPaintH( ) - (getPaintH( ) / 2) % space; linePos >= 0; linePos -= space )
     	{
-    		gridLinesY.add( (Integer) linePos );
-    	}
-
-    	for( linePos = getHeight( ) / 2; linePos < getHeight( ); linePos += space )
-    	{
-    		gridLinesY.add( (Integer) linePos );
+    		gridLinesY.add( (Integer)( getPaintY( ) + linePos ) );
     	}
     }
     
     private void redraw( )
     {
-        Graphics graphics = getGraphics( );
+        Graphics g = getGraphics( );
 
-        if( graphics != null )
+        if( g != null )
         {
-            update( graphics );
+            update( g );
         }
     }
 }

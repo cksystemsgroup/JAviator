@@ -59,6 +59,10 @@ public class ParamDialog extends Dialog
             Instance = new ParamDialog( parent,
             	title, controlParams, changedParamID );
         }
+        else
+        {
+            Instance.toFront( );
+        }
 
         return( Instance );
     }

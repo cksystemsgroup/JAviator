@@ -124,11 +124,11 @@ public class DigitalMeter extends Panel
     	/* IMPORTANT: Ubisense location data refer to Cartesian coordinates,
            whereas JAviator location data refer to aircraft coordinates,
            hence x and y must be exchanged when copying the data. */
-        positionX.setText( ControlTerminal.NIL + ( (double) data.y / 10.0 ) );
-        positionY.setText( ControlTerminal.NIL + ( (double) data.x / 10.0 ) );
-        mapsLabel.setText( ControlTerminal.NIL + ( (double) data.maps / 10.0 ) );
-        tempLabel.setText( ControlTerminal.NIL + ( (double)(data.temp / 10) / 10.0 ) );
-        battLabel.setText( ControlTerminal.NIL + ( (double)(data.batt / 100) / 10.0 ) );
+        positionX.setText( ControlTerminal.NIL + ( (double) data.y / 10 ) );
+        positionY.setText( ControlTerminal.NIL + ( (double) data.x / 10 ) );
+        mapsLabel.setText( ControlTerminal.NIL + ( (double) data.z / 10 ) );
+        tempLabel.setText( ControlTerminal.NIL + ( (double)( data.temp / 10 ) / 10 ) );
+        battLabel.setText( ControlTerminal.NIL + ( (double)( data.batt / 100 ) / 10 ) );
 
         if( battLabel.getForeground( ) == colorAllRight )
         {
