@@ -73,7 +73,7 @@ public class ParamDialog extends Dialog
     /*                                                                       */
     /*************************************************************************/
 
-    private static final String[] PARAMETERS     = { "Kp", "Ki", "Kd", "Kdd" };
+    private static final String[] PARAMETERS     = { "Kp", "Ki", "Kd", "Kd2" };
     private static final int      SCALING_FACTOR = 1000;
     private static final int      MOTION_DELAY   = 50; /* ms */
     private static final int      PARAM_STEP     = 1;
@@ -94,7 +94,6 @@ public class ParamDialog extends Dialog
         paramFields         = new EditField[ controlParams.length ];
         motionThread        = new MotionThread( );
 
-        setBackground( Color.WHITE );
         makePanel( );
         pack( );
 

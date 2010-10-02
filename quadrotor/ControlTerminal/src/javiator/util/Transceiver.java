@@ -354,11 +354,11 @@ public abstract class Transceiver implements Runnable, Port
             case PacketType.COMM_SHUT_DOWN:
             case PacketType.COMM_EN_SENSORS:
 
-                if( relay != null && relay.isConnected( ) )
-                {
-                    relay.sendPacket( packet );
-                }
-                break;
+            if( relay != null && relay.isConnected( ) )
+            {
+                relay.sendPacket( packet );
+            }
+            break;
 
             default:
                 System.err.println( "processPacket WARNING: unkown packet type "

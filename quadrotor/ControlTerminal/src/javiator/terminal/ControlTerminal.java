@@ -41,9 +41,11 @@ import java.awt.event.WindowEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.IOException;
@@ -62,9 +64,6 @@ import javiator.util.PacketType;
 
 import com.centralnexus.input.Joystick;
 
-import java.io.FileReader;
-import java.io.BufferedReader;
-
 /*****************************************************************************/
 /*                                                                           */
 /* Class ControlTerminal                                                     */
@@ -75,7 +74,8 @@ public class ControlTerminal extends Frame
 {
     public static final long serialVersionUID = 1;
 
-    public static final boolean SMALL_DISPLAY = true;
+    public static final boolean SMALL_METER   = true;
+    public static final boolean SMALL_FONT    = true;
     public static final boolean SHOW_3DWINDOW = false;
 
     public static final Dimension UBI_RECT    = new Dimension( 7130, 8470 );
@@ -111,11 +111,13 @@ public class ControlTerminal extends Frame
 
     public ControlTerminal( )
     {
+        super( );
     	initWindow( );
     }
 
     public static void main( String args[] ) throws IOException
     {
+        new UIManagerColor( );
         new ControlTerminal( );
     }
 /*
@@ -599,7 +601,8 @@ public class ControlTerminal extends Frame
     protected static final String _FAILED          = " failed";
     protected static final String _DATA            = " Data";
     protected static final String PORT_SETTINGS    = "Port Settings";
-    protected static final String SET_PARAMETERS   = "Set Parameters";
+    protected static final String SET_             = "Set ";
+    protected static final String PARAMETERS       = "Parameters";
     protected static final String RESET_NEEDLES    = "Reset Needles";
     protected static final String KEY_ASSISTANCE   = "Key Assistance";
     protected static final String ABOUT_TERMINAL   = "About Terminal";
@@ -642,7 +645,7 @@ public class ControlTerminal extends Frame
 
             if( !saveUserLimits( ) )
             {
-                System.err.println( "failed" );
+                System.out.println( "failed" );
             }
             else
             {
@@ -667,7 +670,6 @@ public class ControlTerminal extends Frame
         meterPitch    .processFocusEvent( fe );
         meterYaw      .processFocusEvent( fe );
         meterAltitude .processFocusEvent( fe );
-        digitalMeter  .processFocusEvent( fe );
     }
 
     protected void processKeyEvent( KeyEvent ke )
@@ -903,8 +905,8 @@ public class ControlTerminal extends Frame
     {
         motionThread   = new MotionThread( );
         controlParams  = new short[ CTRL_PARAMS ];
-        changedParamID = new int[ 1 ];
-        showPosition   = new boolean[ 1 ];
+        changedParamID = new int[1];
+        showPosition   = new boolean[1];
 
         for( int i = 0; i < controlParams.length; ++i )
         {
@@ -915,7 +917,8 @@ public class ControlTerminal extends Frame
         showPosition[0]   = false;
 
         setTitle( "JAviator Control Terminal" );
-        setBackground( Color.WHITE );
+        setBackground( UIManagerColor.getButtonBackground( ) );
+        setForeground( UIManagerColor.getButtonForeground( ) );
         setLayout( new BorderLayout( ) );
         add( makeNorthPanel( ), BorderLayout.NORTH );
         add( makeCenterPanel( ), BorderLayout.CENTER );
@@ -927,7 +930,7 @@ public class ControlTerminal extends Frame
 
         if( !loadUserLimits( ) )
         {
-            System.err.println( "failed" );
+            System.out.println( "failed" );
             setDefaultLimits( );
             System.out.println( "Default limits have been set" );
         }
@@ -950,7 +953,7 @@ public class ControlTerminal extends Frame
 */
         try
         {
-            iconImage = AnalogMeter.getImage( "pilot_icon.jpg" );
+            iconImage = AnalogMeter.getImage( "pilot_icon.png" );
         }
         catch( Exception e )
         {
@@ -983,13 +986,13 @@ public class ControlTerminal extends Frame
 
     private Panel makeCenterPanel( )
     {
-        meterRoll     = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_ROLL );
-        meterPitch    = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_PITCH );
-        meterYaw      = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_YAW );
-        meterAltitude = new AnalogMeter( SMALL_DISPLAY, AnalogMeter.TYPE_ALTITUDE );
+        meterRoll     = new AnalogMeter( SMALL_METER, SMALL_FONT, AnalogMeter.TYPE_ROLL );
+        meterPitch    = new AnalogMeter( SMALL_METER, SMALL_FONT, AnalogMeter.TYPE_PITCH );
+        meterYaw      = new AnalogMeter( SMALL_METER, SMALL_FONT, AnalogMeter.TYPE_YAW );
+        meterAltitude = new AnalogMeter( SMALL_METER, SMALL_FONT, AnalogMeter.TYPE_ALTITUDE );
         digitalMeter  = new DigitalMeter( this );
         logDataLabel  = new Label( LOGGING + _DATA, Label.CENTER );
-        logDataLabel  .setForeground( Color.LIGHT_GRAY );
+        logDataLabel.setForeground( Color.LIGHT_GRAY );
 
         HiddenButton incAltitudeLimit = new HiddenButton( HiddenButton.SYMBOL_PLUS );
         incAltitudeLimit.setForeground( Color.GRAY );
@@ -1161,7 +1164,7 @@ public class ControlTerminal extends Frame
             }
         } );
 
-        setParameters = new HiddenButton( SET_PARAMETERS );
+        setParameters = new HiddenButton( SET_ + PARAMETERS );
         setParameters.addMouseListener( new MouseAdapter( )
         {
             public void mouseClicked( MouseEvent me )
@@ -1230,13 +1233,13 @@ public class ControlTerminal extends Frame
             }
 
             stickControl = true;
-            toggleControl.setForeground( Color.BLACK );
+            toggleControl.setForeground( UIManagerColor.getButtonForeground( ) );
             toggleControl.setText( KEYBOARD + _MODE );
         }
         else
         {
             stickControl = false;
-            toggleControl.setForeground( Color.BLACK );
+            toggleControl.setForeground( UIManagerColor.getButtonForeground( ) );
             toggleControl.setText( JOYSTICK + _MODE );
         }
     }
@@ -1316,7 +1319,7 @@ public class ControlTerminal extends Frame
 
     private void doSetParameters( )
     {
-        ParamDialog.createInstance( this, SET_PARAMETERS, controlParams, changedParamID );
+        ParamDialog.createInstance( this, PARAMETERS, controlParams, changedParamID );
     }
 
     private void doResetNeedles( )

@@ -29,7 +29,6 @@ import java.awt.Panel;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.GraphicsEnvironment;
 
@@ -96,7 +95,7 @@ public class InfoDialog extends Dialog
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._STATE, "F8",
         ControlTerminal.SHUT_DOWN + ControlTerminal._HELI,                       "F9",
         ControlTerminal.PORT_SETTINGS,                                           "F10",
-        ControlTerminal.SET_PARAMETERS,                                          "F11",
+        ControlTerminal.SET_ + ControlTerminal.PARAMETERS,                       "F11",
         ControlTerminal.RESET_NEEDLES,                                           "F12"
     };
 
@@ -133,8 +132,6 @@ public class InfoDialog extends Dialog
     private InfoDialog( ControlTerminal parent, String title, byte type )
     {
         super( parent, title, false );
-
-        setBackground( Color.WHITE );
 
         if( type == TYPE_KEY_ASSISTANCE )
         {
@@ -177,7 +174,7 @@ public class InfoDialog extends Dialog
         } );
 
         Point center = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getCenterPoint( );
-        setLocation( center.x - ( getWidth( ) >> 1 ), center.y - ( getHeight( ) >> 1 ) );
+        setLocation( center.x - getWidth( ) / 2, center.y - getHeight( ) / 2 );
         setResizable( false );
         setVisible( true );
     }
@@ -192,7 +189,7 @@ public class InfoDialog extends Dialog
     {
         int i, items = KEYBOARD_LIST.length;
 
-        Panel keyboardPanel = new Panel( new GridLayout( items >> 1, 2, 50, 0 ) );
+        Panel keyboardPanel = new Panel( new GridLayout( items / 2, 2, 50, 0 ) );
 
         for( i = 0; i < items; ++i )
         {
@@ -201,7 +198,7 @@ public class InfoDialog extends Dialog
 
         items = JOYSTICK_LIST.length;
 
-        Panel joystickPanel = new Panel( new GridLayout( items >> 1, 2, 50, 0 ) );
+        Panel joystickPanel = new Panel( new GridLayout( items / 2, 2, 50, 0 ) );
 
         for( i = 0; i < items; ++i )
         {

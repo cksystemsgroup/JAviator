@@ -1,8 +1,7 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   EditField.java		Constructs an edit field that can be sized/resized   */
-/*                      completely independent of its font settings.         */
+/*   UIManagerColor.java	Provides specific UIManager colors.              */
 /*                                                                           */
 /*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
@@ -24,86 +23,53 @@
 
 package javiator.terminal;
 
-import java.awt.TextField;
-import java.awt.Dimension;
+import java.awt.Color;
+import javax.swing.UIManager;
 
-/*************************************************************************/
-/*                                                                       */
-/* Class EditField                                                       */
-/*                                                                       */
-/*************************************************************************/
+/*****************************************************************************/
+/*                                                                           */
+/*   Class UIManagerColor                                                    */
+/*                                                                           */
+/*****************************************************************************/
 
-public class EditField extends TextField
+public class UIManagerColor
 {
     public static final long serialVersionUID = 1;
 
-    public EditField( String text )
-  	{
-   		super( );
-   		initWindow( text, super.getWidth( ), super.getHeight( ) );
-   	}
+    public UIManagerColor( )
+    {
+    	initColors( );
+    }
 
-    public EditField( String text, Dimension size )
-  	{
-   		super( );
-   		initWindow( text, size.width, size.height );
-   	}
+    public static Color getButtonBackground( )
+    {
+        return( buttonBackground );
+    }
 
-    public EditField( String text, int width, int height )
-  	{
-   		super( );
-   		initWindow( text, width, height );
-   	}
+    public static Color getButtonDarkShadow( )
+    {
+        return( buttonDarkShadow );
+    }
 
-   	public Dimension getPreferredSize( )
-   	{
-   		return( size );
-   	}
+    public static Color getButtonForeground( )
+    {
+        return( buttonForeground );
+    }
 
-   	public Dimension getMaximumSize( )
-   	{
-   		return( size );
-   	}
+    public static Color getButtonHighlight( )
+    {
+        return( buttonHighlight );
+    }
 
-   	public Dimension getMinimumSize( )
-   	{
-   		return( size );
-   	}
+    public static Color getButtonLight( )
+    {
+        return( buttonLight );
+    }
 
-   	public Dimension getSize( )
-   	{
-   		return( size );
-   	}
-
-   	public void setPreferredSize( Dimension size )
-   	{
-   		this.size.width  = size.width;
-   		this.size.height = size.height;
-   	}
-
-   	public void setMaximumSize( Dimension size )
-   	{
-   		this.size.width  = size.width;
-   		this.size.height = size.height;
-   	}
-
-   	public void setMinimumSize( Dimension size )
-   	{
-   		this.size.width  = size.width;
-   		this.size.height = size.height;
-   	}
-
-   	public void setSize( Dimension size )
-   	{
-   		this.size.width  = size.width;
-   		this.size.height = size.height;
-   	}
-
-   	public void setSize( int width, int height )
-   	{
-   		this.size.width  = width;
-   		this.size.height = height;
-   	}
+    public static Color getButtonShadow( )
+    {
+        return( buttonShadow );
+    }
 
     /*************************************************************************/
     /*                                                                       */
@@ -111,14 +77,29 @@ public class EditField extends TextField
     /*                                                                       */
     /*************************************************************************/
 
-   	private Dimension size = null;
+    private static Color buttonBackground = null;
+    private static Color buttonDarkShadow = null;
+    private static Color buttonForeground = null;
+    private static Color buttonHighlight  = null;
+    private static Color buttonLight      = null;
+    private static Color buttonShadow     = null;
 
-    private void initWindow( String text, int width, int height )
+    private void initColors( )
     {
-        size = new Dimension( width, height );
+        try
+        {
+            UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName( ) );
+		}
+		catch( Exception e )
+		{
+		}
 
-        setForeground( UIManagerColor.getButtonForeground( ) );
-        setText( text );
+        buttonBackground = UIManager.getColor( "Button.background" );
+        buttonDarkShadow = UIManager.getColor( "Button.darkShadow" );
+        buttonForeground = UIManager.getColor( "Button.foreground" );
+        buttonHighlight  = UIManager.getColor( "Button.highlight" );
+        buttonLight      = UIManager.getColor( "Button.light" );
+        buttonShadow     = UIManager.getColor( "Button.shadow" );
     }
 }
 

@@ -25,12 +25,11 @@
 package javiator.terminal;
 
 import java.awt.Dialog;
-import java.awt.GraphicsEnvironment;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.Point;
+import java.awt.GraphicsEnvironment;
 
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -131,25 +130,41 @@ public class PositionDialog extends Dialog
 
     /*************************************************************************/
     /*                                                                       */
+    /* Protected Section                                                     */
+    /*                                                                       */
+    /*************************************************************************/
+
+    protected void processKeyEvent( KeyEvent ke )
+    {
+        if( ke.getID( ) == KeyEvent.KEY_PRESSED &&
+        	ke.getKeyCode( ) == KeyEvent.VK_F3 )
+        {
+            parent.toFront( );
+        }
+    }
+
+    /*************************************************************************/
+    /*                                                                       */
     /*   Private Section                                                     */
     /*                                                                       */
     /*************************************************************************/
 
-    private static PositionDialog Instance      = null;
-    private PositionMeter         positionMeter = null;
-    private boolean[]             showPosition  = null;
+    private static PositionDialog  Instance      = null;
+    private        ControlTerminal parent        = null;
+    private        PositionMeter   positionMeter = null;
+    private        boolean[]       showPosition  = null;
 
     private PositionDialog( ControlTerminal parent, String title,
         Dimension ubiRect, Dimension maxRect, boolean[] showPosition )
     {
         super( parent, title, false );
 
+        this.parent       = parent;
         this.showPosition = showPosition;
         positionMeter     = new PositionMeter( );
         positionMeter.setUbiRect( ubiRect );
         positionMeter.setMaxRect( maxRect );
 
-        setBackground( Color.WHITE );
         setLayout( new BorderLayout( ) );
         add( positionMeter, BorderLayout.CENTER );
         pack( );

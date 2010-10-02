@@ -46,6 +46,7 @@ public class PositionMeter extends Canvas
     
     public PositionMeter( )
     {
+        super( );
         initWindow( );
     }
 
@@ -161,108 +162,146 @@ public class PositionMeter extends Canvas
 
     public void update( Graphics g )
     {
-        if( drawBackgnd )
+        if( g != null )
         {
-        	Enumeration en;
-        	String unitStr;
-        	double unitNum;
-        	int linePos, halfFontHeight = (g.getFontMetrics( g.getFont( ) ).getHeight( ) - 5) / 2;
+	        if( drawBackgnd )
+	        {
+	        	Enumeration en;
+	        	String unitStr;
+	        	double unitNum;
+	        	int linePos, halfFontHeight = (g.getFontMetrics( g.getFont( ) ).getHeight( ) - 5) / 2;
 
-    		g.setColor( colorGrid );
+	    		g.setColor( colorMeter );
+				g.fillRect( getPaintX( ),
+						    getPaintY( ),
+						    getPaintW( ) + 1,
+						    getPaintH( ) + 1 );
+	    		g.setColor( colorGrid );
 
-    		for( en = gridLinesX.elements( ); en.hasMoreElements( ); )
-    		{
-    			linePos = ( (Integer) en.nextElement( ) ).intValue( );
-    			g.drawLine( linePos, getPaintY( ), linePos, getPaintY( ) + getPaintH( ) );
-    		}
+	    		for( en = gridLinesX.elements( ); en.hasMoreElements( ); )
+	    		{
+	    			linePos = ( (Integer) en.nextElement( ) ).intValue( );
+	    			g.drawLine( linePos, getPaintY( ), linePos, getPaintY( ) + getPaintH( ) );
+	    		}
 
-    		for( en = gridLinesY.elements( ); en.hasMoreElements( ); )
-    		{
-    			linePos = ( (Integer) en.nextElement( ) ).intValue( );
-    			g.drawLine( getPaintX( ), linePos, getPaintX( ) + getPaintW( ), linePos );
-    		}
+	    		for( en = gridLinesY.elements( ); en.hasMoreElements( ); )
+	    		{
+	    			linePos = ( (Integer) en.nextElement( ) ).intValue( );
+	    			g.drawLine( getPaintX( ), linePos, getPaintX( ) + getPaintW( ), linePos );
+	    		}
 
-    		g.setColor( colorUnits );
+	    		g.setColor( colorUnits );
+	    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 10 ) );
 
-    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 10 ) );
+	    		for( en = gridLinesX.elements( ), unitNum = -gridLinesX.size( ) / 2 * GRID_SPACE;
+	    		    en.hasMoreElements( ); unitNum += GRID_SPACE )
+	    		{
+	                linePos = ( (Integer) en.nextElement( ) ).intValue( );
+	                unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
+	    			g.drawString( unitStr, linePos -
+	                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
+	                    getPaintY( ) + getPaintH( ) + 3 * halfFontHeight + 2 );
+	    		}
 
-    		for( en = gridLinesX.elements( ), unitNum = -gridLinesX.size( ) / 2 * GRID_SPACE;
-    		    en.hasMoreElements( ); unitNum += GRID_SPACE )
-    		{
-                linePos = ( (Integer) en.nextElement( ) ).intValue( );
-                unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
-    			g.drawString( unitStr, linePos -
-                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
-                    getPaintY( ) + getPaintH( ) + 3 * halfFontHeight + 1 );
-    		}
+	    		for( en = gridLinesY.elements( ), unitNum = -gridLinesY.size( ) / 2 * GRID_SPACE;
+	                en.hasMoreElements( ); unitNum += GRID_SPACE )
+				{
+		            linePos = ( (Integer) en.nextElement( ) ).intValue( );
+		            unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
+					g.drawString( unitStr, getPaintX( ) - halfFontHeight -
+	                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) - 2,
+	                    linePos + halfFontHeight );
+				}
 
-    		for( en = gridLinesY.elements( ), unitNum = -gridLinesY.size( ) / 2 * GRID_SPACE;
-                en.hasMoreElements( ); unitNum += GRID_SPACE )
-			{
-	            linePos = ( (Integer) en.nextElement( ) ).intValue( );
-	            unitStr = "" + ( (double)( unitNum / 100 ) / 10 );
-				g.drawString( unitStr, getPaintX( ) - halfFontHeight -
-                    g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ),
-                    linePos + halfFontHeight );
-			}
+	    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 12 ) );
 
-    		g.setFont( new Font( Font.DIALOG, Font.PLAIN, 12 ) );
+				linePos = (Integer) gridLinesX.elementAt( gridLinesX.size( ) / 2 );
+	            unitStr = "X (m)";
+				g.drawString( unitStr, linePos -
+	                g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
+	                getPaintY( ) - halfFontHeight - 3 );
 
-			linePos = (Integer) gridLinesX.elementAt( gridLinesX.size( ) / 2 );
-            unitStr = "X (m)";
-			g.drawString( unitStr, linePos -
-                g.getFontMetrics( g.getFont( ) ).stringWidth( unitStr ) / 2,
-                getPaintY( ) - halfFontHeight - 1 );
+	            linePos = (Integer) gridLinesY.elementAt( gridLinesY.size( ) / 2 );
+	            unitStr = "Y (m)";
+				g.drawString( unitStr, getPaintX( ) + getPaintW( ) + halfFontHeight + 4,
+	                linePos + halfFontHeight );
 
-            linePos = (Integer) gridLinesY.elementAt( gridLinesY.size( ) / 2 );
-            unitStr = "Y (m)";
-			g.drawString( unitStr, getPaintX( ) + getPaintW( ) + halfFontHeight + 1,
-                linePos + halfFontHeight );
+				g.setColor( colorUbiRect );
+				g.drawRect( plotOrigin.x - (int)( gridFactor * ubiRect.width ) / 2,
+						    plotOrigin.y - (int)( gridFactor * ubiRect.height ) / 2,
+	                        (int)( gridFactor * ubiRect.width ),
+	                        (int)( gridFactor * ubiRect.height ) );
 
-			g.drawRect( getPaintX( ),
-					    getPaintY( ),
-					    getPaintW( ),
-					    getPaintH( ) );
+				g.setColor( colorMaxRect );
+				g.drawRect( plotOrigin.x - (int)( gridFactor * maxRect.width ) / 2,
+					        plotOrigin.y - (int)( gridFactor * maxRect.height ) / 2,
+	                        (int)( gridFactor * maxRect.width ),
+	                        (int)( gridFactor * maxRect.height ) );
 
-			g.setColor( colorUbiRect );
+		        g.setColor( UIManagerColor.getButtonDarkShadow( ) );
+		        g.drawLine( getPaintX( ) - 2,
+		        		    getPaintY( ) - 2,
+		        		    getPaintX( ) - 2,
+		        		    getPaintY( ) + getPaintH( ) + 1 );
+		        g.drawLine( getPaintX( ) - 2,
+		        		    getPaintY( ) - 2,
+		        		    getPaintX( ) + getPaintW( ) + 1,
+		        		    getPaintY( ) - 2 );
 
-			g.drawRect( plotOrigin.x - (int)( gridFactor * ubiRect.width ) / 2,
-					    plotOrigin.y - (int)( gridFactor * ubiRect.height ) / 2,
-                        (int)( gridFactor * ubiRect.width ),
-                        (int)( gridFactor * ubiRect.height ) );
+		        g.setColor( UIManagerColor.getButtonShadow( ) );
+		        g.drawLine( getPaintX( ) - 1,
+		        		    getPaintY( ) - 1,
+		        		    getPaintX( ) - 1,
+		        		    getPaintY( ) + getPaintH( ) );
+		        g.drawLine( getPaintX( ) - 1,
+		        		    getPaintY( ) - 1,
+		        		    getPaintX( ) + getPaintW( ),
+		        		    getPaintY( ) - 1 );
 
-			g.setColor( colorMaxRect );
+		        g.setColor( UIManagerColor.getButtonLight( ) );
+		        g.drawLine( getPaintX( ) + getPaintW( ) + 1,
+		        		    getPaintY( ) - 1,
+		        		    getPaintX( ) + getPaintW( ) + 1,
+		        		    getPaintY( ) + getPaintH( ) + 1);
+		        g.drawLine( getPaintX( ) - 1,
+		        		    getPaintY( ) + getPaintH( ) + 1,
+		        		    getPaintX( ) + getPaintW( ) + 1,
+		        		    getPaintY( ) + getPaintH( ) + 1);
 
-			g.drawRect( plotOrigin.x - (int)( gridFactor * maxRect.width ) / 2,
-				        plotOrigin.y - (int)( gridFactor * maxRect.height ) / 2,
-                        (int)( gridFactor * maxRect.width ),
-                        (int)( gridFactor * maxRect.height ) );
+		        g.setColor( UIManagerColor.getButtonHighlight( ) );
+		        g.drawLine( getPaintX( ) + getPaintW( ) + 2,
+		        		    getPaintY( ) - 2,
+		        		    getPaintX( ) + getPaintW( ) + 2,
+		        		    getPaintY( ) + getPaintH( ) + 2 );
+		        g.drawLine( getPaintX( ) - 2,
+		        		    getPaintY( ) + getPaintH( ) + 2,
+		        		    getPaintX( ) + getPaintW( ) + 2,
+		        		    getPaintY( ) + getPaintH( ) + 2 );
 
-            drawBackgnd = false;
-        }
+	            drawBackgnd = false;
+	        }
 
-	    if( drawDesired )
-	    {
-	    	g.setColor( colorDesired );
+		    if( drawDesired )
+		    {
+		    	g.setColor( colorDesired );
+	            g.fillOval( plotOrigin.x + (int)( gridFactor * desired.x ) - pointSize / 2,
+	                        plotOrigin.y - (int)( gridFactor * desired.y ) - pointSize / 2,
+	                        pointSize,
+	                        pointSize );
 
-            g.fillOval( plotOrigin.x + (int)( gridFactor * desired.x ) - pointSize / 2,
-                        plotOrigin.y - (int)( gridFactor * desired.y ) - pointSize / 2,
-                        pointSize,
-                        pointSize );
+	            drawDesired = false;
+		    }
 
-            drawDesired = false;
-	    }
+		    if( drawCurrent )
+		    {
+				g.setColor( colorCurrent );
+	            g.fillOval( plotOrigin.x + (int)( gridFactor * current.x ) - pointSize / 2,
+	                        plotOrigin.y - (int)( gridFactor * current.y ) - pointSize / 2,
+	                        pointSize,
+	                        pointSize );
 
-	    if( drawCurrent )
-	    {
-			g.setColor( colorCurrent );
-
-            g.fillOval( plotOrigin.x + (int)( gridFactor * current.x ) - pointSize / 2,
-                        plotOrigin.y - (int)( gridFactor * current.y ) - pointSize / 2,
-                        pointSize,
-                        pointSize );
-
-            drawCurrent = false;
+	            drawCurrent = false;
+	        }
         }
     }
 
@@ -273,15 +312,17 @@ public class PositionMeter extends Canvas
 
         if( g != null )
         {
-            g.clearRect( 0, 0, getWidth( ), getHeight( ) );
-        	this.drawBackgnd = drawBackgnd;
-            this.drawDesired = drawDesired;
-            this.drawCurrent = drawCurrent;
-            update( g );
+	        this.drawBackgnd = drawBackgnd;
+	        this.drawDesired = drawDesired;
+	        this.drawCurrent = drawCurrent;
+	
+	        g.clearRect( 0, 0, getWidth( ), getHeight( ) );
+	        update( g );
+	        g.dispose();
+	
+	        cmdPoints.clear( );
+	        posPoints.clear( );
         }
-
-        cmdPoints.clear( );
-        posPoints.clear( );
     }
 
     public void paint( Graphics g )
@@ -330,6 +371,7 @@ public class PositionMeter extends Canvas
     private Vector<Integer>  gridLinesY   = null;
     private Vector<Point>    cmdPoints    = null;
     private Vector<Point>    posPoints    = null;
+    private Color            colorMeter   = null;
     private Color            colorGrid    = null;
     private Color            colorUnits   = null;
     private Color            colorUbiRect = null;
@@ -344,8 +386,6 @@ public class PositionMeter extends Canvas
 
     private void initWindow( )
     {
-        setFocusable( false );
-
         ubiRect      = new Dimension( );
         maxRect      = new Dimension( );
         desired      = new Point( );
@@ -355,12 +395,15 @@ public class PositionMeter extends Canvas
         gridLinesY   = new Vector<Integer>( );
         cmdPoints    = new Vector<Point>( );
         posPoints    = new Vector<Point>( );
+        colorMeter   = Color.WHITE;
         colorGrid    = Color.LIGHT_GRAY;
-        colorUnits   = Color.BLACK;
+        colorUnits   = UIManagerColor.getButtonForeground( );
         colorUbiRect = Color.RED;
         colorMaxRect = Color.GREEN;
         colorDesired = Color.GREEN;
         colorCurrent = Color.RED;
+
+        setFocusable( false );
     }
 
     private int getPaintX( )
@@ -430,6 +473,7 @@ public class PositionMeter extends Canvas
         if( g != null )
         {
             update( g );
+            g.dispose( );
         }
     }
 }

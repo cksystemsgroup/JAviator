@@ -79,7 +79,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
     {
         super.terminate( );
         parent.setConnected( false );
-        parent.toggleConnect.setForeground( Color.BLACK );
+        parent.toggleConnect.setForeground( UIManagerColor.getButtonForeground( ) );
         parent.toggleConnect.setText( ControlTerminal.CONNECT_TO + ControlTerminal._HELI );
         Instance = null;
     }
@@ -120,7 +120,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
                 parent.toggleConnect.setForeground( Color.BLUE );
                 parent.toggleConnect.setText( "JAviator connected" );
                 Thread.sleep( 2000 );
-                parent.toggleConnect.setForeground( Color.BLACK );
+                parent.toggleConnect.setForeground( UIManagerColor.getButtonForeground( ) );
                 parent.toggleConnect.setText( ControlTerminal.DISCONNECT + ControlTerminal._HELI );
             }
             else
@@ -135,7 +135,7 @@ public abstract class Transceiver extends javiator.util.Transceiver
                     Thread.sleep( 250 );
                 }
 
-                parent.toggleConnect.setForeground( Color.BLACK );
+                parent.toggleConnect.setForeground( UIManagerColor.getButtonForeground( ) );
                 parent.toggleConnect.setText( ControlTerminal.CONNECT_TO + ControlTerminal._HELI );
             }
         }

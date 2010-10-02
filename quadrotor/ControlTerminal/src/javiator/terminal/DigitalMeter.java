@@ -29,8 +29,6 @@ import java.awt.Label;
 import java.awt.GridLayout;
 import java.awt.Color;
 
-import java.awt.event.FocusEvent;
-
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 import javiator.util.MotorOffsets;
@@ -48,17 +46,8 @@ public class DigitalMeter extends Panel
 
     public DigitalMeter( ControlTerminal parent )
     {
+        super( );
         initWindow( parent );
-    }
-
-    public MotorSignals getMotorSignals( )
-    {
-        return( motorSignals );
-    }
-
-    public MotorOffsets getMotorOffsets( )
-    {
-        return( motorOffsets );
     }
 
     public byte getHeliState( )
@@ -71,6 +60,16 @@ public class DigitalMeter extends Panel
         return( javiatorMode );
     }
 
+    public MotorSignals getMotorSignals( )
+    {
+        return( motorSignals );
+    }
+
+    public MotorOffsets getMotorOffsets( )
+    {
+        return( motorOffsets );
+    }
+
     public void setStateAndMode( byte state, byte mode )
     {
         if( javiatorState != state )
@@ -78,22 +77,22 @@ public class DigitalMeter extends Panel
             switch( state )
             {
                 case ControllerConstants.HELI_STATE_GROUND:
-                    heliState.setForeground( colorOffsets );
+                    heliState.setForeground( getForeground( ) );
                     heliState.setText( "Ground" );
                     break;
 
                 case ControllerConstants.HELI_STATE_FLYING:
-                	heliState.setForeground( colorOffsets );
+                	heliState.setForeground( Color.BLUE );
                     heliState.setText( "Flying" );
                     break;
 
                 case ControllerConstants.HELI_STATE_SHUTDOWN:
-                    heliState.setForeground( colorAlerting );
+                    heliState.setForeground( Color.RED );
                     heliState.setText( "Halt" );
                     break;
 
                 default:
-                    heliState.setForeground( colorDefault );
+                    heliState.setForeground( getForeground( ) );
                     heliState.setText( ControlTerminal.NIL );
             }
 
@@ -107,11 +106,11 @@ public class DigitalMeter extends Panel
             {
                 if( (mode & ControllerConstants.HELI_MODE_POS_CTRL) != 0 )
                 {
-                    heliMode.setForeground( colorAlerting );
+                    heliMode.setForeground( Color.RED );
                 }
                 else
                 {
-                    heliMode.setForeground( colorManCtrl );
+                    heliMode.setForeground( Color.LIGHT_GRAY );
                 }
             }
 
@@ -130,37 +129,37 @@ public class DigitalMeter extends Panel
         tempLabel.setText( ControlTerminal.NIL + ( (double)( data.temp / 10 ) / 10 ) );
         battLabel.setText( ControlTerminal.NIL + ( (double)( data.batt / 100 ) / 10 ) );
 
-        if( battLabel.getForeground( ) == colorAllRight )
+        if( battLabel.getForeground( ) == Color.GREEN )
         {
 	        if( data.batt < 14000 )
 	        {
-	        	battLabel.setForeground( colorWarning );
+	        	battLabel.setForeground( Color.ORANGE );
 	        }
         }
         else
-        if( battLabel.getForeground( ) == colorWarning )
+        if( battLabel.getForeground( ) == Color.ORANGE )
         {
 	        if( data.batt < 13500 )
 	        {
-	        	battLabel.setForeground( colorAlerting );
+	        	battLabel.setForeground( Color.RED );
 	        }
 	        else
 	        if( data.batt > 14000 )
 	        {
-	        	battLabel.setForeground( colorAllRight );
+	        	battLabel.setForeground( Color.GREEN );
 	        }
         }
         else
-        if( battLabel.getForeground( ) == colorAlerting )
+        if( battLabel.getForeground( ) == Color.RED )
         {
 	        if( data.batt > 13500 )
 	        {
-	        	battLabel.setForeground( colorWarning );
+	        	battLabel.setForeground( Color.ORANGE );
 	        }
         }
         else
         {
-	        battLabel.setForeground( colorAlerting );
+	        battLabel.setForeground( Color.RED );
         }
     }
 
@@ -230,33 +229,17 @@ public class DigitalMeter extends Panel
 
     public void resetMotorMeter( )
     {
+        javiatorState = 0;
+        javiatorMode  = 0;
+
         motorSignals .reset( );
         motorOffsets .reset( );
 
-        heliState    .setForeground( colorDefault );
-        heliMode     .setForeground( colorManCtrl );
-        positionX    .setForeground( colorDefault );
-        positionY    .setForeground( colorDefault );
-        mapsLabel    .setForeground( colorDefault );
-        tempLabel    .setForeground( colorDefault );
-        battLabel    .setForeground( colorDefault );
+        heliState    .setForeground( getForeground( ) );
+        heliMode     .setForeground( Color.LIGHT_GRAY );
+        battLabel    .setForeground( getForeground( ) );
 
-        signalFront  .setForeground( colorDefault );
-        signalRight  .setForeground( colorDefault );
-        signalRear   .setForeground( colorDefault );
-        signalLeft   .setForeground( colorDefault );
-
-        offsetFront  .setForeground( colorDefault );
-        offsetRight  .setForeground( colorDefault );
-        offsetRear   .setForeground( colorDefault );
-        offsetLeft   .setForeground( colorDefault );
-
-        offsetRoll   .setForeground( colorOffsets );
-        offsetPitch  .setForeground( colorOffsets );
-        offsetYaw    .setForeground( colorOffsets );
-        offsetAlt    .setForeground( colorOffsets );
-
-        heliState     .setText( ControlTerminal.NIL );
+        heliState    .setText( ControlTerminal.NIL );
         positionX    .setText( ControlTerminal.ZERO );
         positionY    .setText( ControlTerminal.ZERO );
         mapsLabel    .setText( ControlTerminal.ZERO );
@@ -277,68 +260,6 @@ public class DigitalMeter extends Panel
         offsetPitch  .setText( ControlTerminal.ZERO );
         offsetYaw    .setText( ControlTerminal.ZERO );
         offsetAlt    .setText( ControlTerminal.ZERO );
-
-        javiatorState = 0;
-        javiatorMode  = 0;
-    }
-
-    public void setGrayed( boolean grayed )
-    {
-        if( grayed )
-        {
-            colorDefault  = Color.DARK_GRAY;
-            colorOffsets  = Color.GRAY;
-            colorAllRight = Color.GRAY;
-            colorWarning  = Color.GRAY;
-            colorAlerting = Color.GRAY;
-        }
-        else
-        {
-            colorDefault  = Color.BLACK;
-            colorOffsets  = Color.BLUE;
-            colorAllRight = Color.GREEN;
-            colorWarning  = Color.ORANGE;
-            colorAlerting = Color.RED;
-        }
-
-        update( );
-    }
-
-    public void update( )
-    {
-        byte state = javiatorState;
-        byte mode  = javiatorMode;
-
-        setStateAndMode( (byte) 0, (byte) 0 );
-        setStateAndMode( state, mode );
-
-        offsetRoll  .setForeground( colorOffsets );
-        offsetPitch .setForeground( colorOffsets );
-        offsetYaw   .setForeground( colorOffsets );
-        offsetAlt   .setForeground( colorOffsets );
-    }
-
-    /*************************************************************************/
-    /*                                                                       */
-    /*   Protected Section                                                   */
-    /*                                                                       */
-    /*************************************************************************/
-
-    protected void processFocusEvent( FocusEvent fe )
-    {
-        switch( fe.getID( ) )
-        {
-            case FocusEvent.FOCUS_GAINED:
-                setGrayed( false );
-                break;
-
-            case FocusEvent.FOCUS_LOST:
-                setGrayed( true );
-                break;
-
-            default:
-                return;
-        }
     }
 
     /*************************************************************************/
@@ -374,57 +295,43 @@ public class DigitalMeter extends Panel
     private Label           offsetYaw     = null;
     private Label           offsetAlt     = null;
 
-    private Color           colorDefault  = null;
-    private Color           colorManCtrl  = null;
-    private Color           colorOffsets  = null;
-    private Color           colorAllRight = null;
-    private Color           colorWarning  = null;
-    private Color           colorAlerting = null;
-
     private byte            javiatorState = 0;
     private byte            javiatorMode  = 0;
 
     private void initWindow( ControlTerminal parent )
     {
-        //this.parent   = parent;
-        motorSignals  = new MotorSignals( );
-        motorOffsets  = new MotorOffsets( );
+        //this.parent  = parent;
+        motorSignals = new MotorSignals( );
+        motorOffsets = new MotorOffsets( );
 
-        heliState     = new Label( ControlTerminal.NIL,  Label.CENTER );
-        heliMode      = new Label( ControlTerminal.POS,  Label.CENTER );
-        positionX     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        positionY     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        mapsLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        tempLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        battLabel     = new Label( ControlTerminal.ZERO, Label.CENTER );
+        heliState    = new Label( ControlTerminal.NIL,  Label.CENTER );
+        heliMode     = new Label( ControlTerminal.POS,  Label.CENTER );
+        positionX    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        positionY    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        mapsLabel    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        tempLabel    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        battLabel    = new Label( ControlTerminal.ZERO, Label.CENTER );
 
-        signalFront   = new Label( ControlTerminal.ZERO, Label.CENTER );
-        signalRight   = new Label( ControlTerminal.ZERO, Label.CENTER );
-        signalRear    = new Label( ControlTerminal.ZERO, Label.CENTER );
-        signalLeft    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        signalFront  = new Label( ControlTerminal.ZERO, Label.CENTER );
+        signalRight  = new Label( ControlTerminal.ZERO, Label.CENTER );
+        signalRear   = new Label( ControlTerminal.ZERO, Label.CENTER );
+        signalLeft   = new Label( ControlTerminal.ZERO, Label.CENTER );
 
-        offsetFront   = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetRight   = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetRear    = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetLeft    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetFront  = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetRight  = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetRear   = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetLeft   = new Label( ControlTerminal.ZERO, Label.CENTER );
 
-        offsetRoll    = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetPitch   = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetYaw     = new Label( ControlTerminal.ZERO, Label.CENTER );
-        offsetAlt     = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetRoll   = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetPitch  = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetYaw    = new Label( ControlTerminal.ZERO, Label.CENTER );
+        offsetAlt    = new Label( ControlTerminal.ZERO, Label.CENTER );
 
-        colorDefault  = Color.BLACK;
-        colorManCtrl  = Color.LIGHT_GRAY;
-        colorOffsets  = Color.BLUE;
-        colorAllRight = Color.GREEN;
-        colorWarning  = Color.ORANGE;
-        colorAlerting = Color.RED;
-
-        heliMode    .setForeground( colorManCtrl );
-        offsetRoll  .setForeground( colorOffsets );
-        offsetPitch .setForeground( colorOffsets );
-        offsetYaw   .setForeground( colorOffsets );
-        offsetAlt   .setForeground( colorOffsets );
+        heliMode    .setForeground( Color.LIGHT_GRAY );
+        offsetRoll  .setForeground( Color.GRAY );
+        offsetPitch .setForeground( Color.GRAY );
+        offsetYaw   .setForeground( Color.GRAY );
+        offsetAlt   .setForeground( Color.GRAY );
 
         Panel controlDisplay = new Panel( new GridLayout( 6, 3 ) );
         controlDisplay.add( new Label( "State:", Label.LEFT ) );
@@ -441,7 +348,7 @@ public class DigitalMeter extends Panel
         controlDisplay.add( new Label( "cm", Label.CENTER ) );
         controlDisplay.add( new Label( "Temp:", Label.LEFT ) );
         controlDisplay.add( tempLabel );
-        controlDisplay.add( new Label( "C", Label.CENTER ) );
+        controlDisplay.add( new Label( "ºC", Label.CENTER ) );
         controlDisplay.add( new Label( "Power:", Label.LEFT ) );
         controlDisplay.add( battLabel );
         controlDisplay.add( new Label( "V", Label.CENTER ) );
@@ -472,6 +379,8 @@ public class DigitalMeter extends Panel
         add( signalsDisplay );
         add( controlDisplay );
         add( offsetsDisplay );
+
+        setFocusable( false );
     }
 }
 

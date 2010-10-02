@@ -30,11 +30,17 @@ import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.MediaTracker;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsEnvironment;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 
-import java.awt.event.FocusEvent;
+import java.awt.image.BufferedImage;
 
 import java.awt.geom.AffineTransform;
+
+import java.awt.event.FocusEvent;
 
 /*****************************************************************************/
 /*                                                                           */
@@ -60,15 +66,21 @@ public class AnalogMeter extends Canvas
     public static final byte   TYPE_ALTITUDE    = 4;
     public static final byte   TYPE_THRUST      = 5;
     
-    public AnalogMeter( boolean smallDisplay, byte meterType )
+    public AnalogMeter( boolean smallMeter, boolean smallFont, byte meterType )
     {
-        initWindow( smallDisplay, meterType );
+        super( );
+        initWindow( smallMeter, smallFont, meterType );
     }
 
     public static Image getImage( String filename )
     {
         return Toolkit.getDefaultToolkit( ).createImage(
             AnalogMeter.class.getResource( "/img/" + filename ) );
+    }
+
+    public String getMeterName( )
+    {
+        return( meterName );
     }
 
     public byte getMeterType( )
@@ -97,7 +109,8 @@ public class AnalogMeter extends Canvas
         {
             angle = (int)( (double) angle * MRAD_TO_MM );
         }
-        else if( meterType == TYPE_THRUST )
+        else
+        if( meterType == TYPE_THRUST )
         {
             angle = (int)( (double) angle * MRAD_TO_PER );
         }
@@ -138,9 +151,10 @@ public class AnalogMeter extends Canvas
     {
         if( meterType == TYPE_ALTITUDE )
         {
-            angle = (int)( (double)angle * MRAD_TO_MM );
+            angle = (int)( (double) angle * MRAD_TO_MM );
         }
-        else if( meterType == TYPE_THRUST )
+        else
+        if( meterType == TYPE_THRUST )
         {
             angle = (int)( (double) angle * MRAD_TO_PER );
         }
@@ -172,7 +186,8 @@ public class AnalogMeter extends Canvas
             {
                 setDesired( -maximum );
             }
-            else if( desired > 0 && desired > maximum )
+            else
+            if( desired > 0 && desired > maximum )
             {
                 setDesired( maximum );
             }
@@ -199,62 +214,78 @@ public class AnalogMeter extends Canvas
 
     public void update( Graphics g )
     {
-        if( redrawMeter )
+        if( redrawMeter && g != null )
         {
-			g.drawImage( meterImage, 0, 0, this );
-			g.setColor( colorDesired );
-
-			if( meterType != TYPE_YAW )
-			{
-				rotateNeedle( needleMaximum, maximum );
-				g.drawLine( needleMaximum.xpoints[0],
-                            needleMaximum.ypoints[0],
-                            needleMaximum.xpoints[3],
-                            needleMaximum.ypoints[3] );
-
-				if( meterType == TYPE_PITCH || meterType == TYPE_ROLL )
+            Graphics2D g2 = (Graphics2D) paintImage.getGraphics( );
+            
+            if( g2 != null )
+            {
+	            g2.setRenderingHint( RenderingHints.KEY_ANTIALIASING,
+	                                 RenderingHints.VALUE_ANTIALIAS_ON );
+	            g2.drawImage( meterImage, 0, 0, this );
+				g2.setColor( colorDesired );
+	
+				if( meterType != TYPE_YAW )
 				{
-				    g.drawLine( offsetW - needleMaximum.xpoints[0],
-                                needleMaximum.ypoints[0],
-                                offsetW - needleMaximum.xpoints[3],
-                                needleMaximum.ypoints[3] );
+					rotateNeedle( needleMaximum, maximum );
+					g2.drawLine( needleMaximum.xpoints[0],
+	                             needleMaximum.ypoints[0],
+	                             needleMaximum.xpoints[3],
+	                             needleMaximum.ypoints[3] );
+	
+					if( meterType == TYPE_ROLL || meterType == TYPE_PITCH )
+					{
+					    g2.drawLine( needleOffsetW - needleMaximum.xpoints[0],
+	                                 needleMaximum.ypoints[0],
+	                                 needleOffsetW - needleMaximum.xpoints[3],
+	                                 needleMaximum.ypoints[3] );
+					}
 				}
-			}
-
-            rotateNeedle( needleDesired, desired );
-            g.setColor( colorDesired );
-            g.fillPolygon( needleDesired );
-            g.setColor( colorOutline );
-            g.drawPolygon( needleDesired );
-    
-            rotateNeedle( needleCurrent, current );
-            g.setColor( colorCurrent );
-            g.fillPolygon( needleCurrent );
-            g.setColor( colorOutline );
-            g.drawPolygon( needleCurrent );
-    
-            redrawMeter = false;
+	
+	            rotateNeedle( needleDesired, desired );
+	            g2.setColor( colorDesired );
+	            g2.fillPolygon( needleDesired );
+	            g2.setColor( colorOutline );
+	            g2.drawPolygon( needleDesired );
+	
+	            rotateNeedle( needleCurrent, current );
+	            g2.setColor( colorCurrent );
+	            g2.fillPolygon( needleCurrent );
+	            g2.setColor( colorOutline );
+	            g2.drawPolygon( needleCurrent );
+	
+	            g.drawImage( paintImage, 0, 0, this );
+	            redrawMeter = false;
+	            g2.dispose( );
+            }
         }
     }
 
     public void setGrayed( boolean grayed )
     {
-        if( grayed )
-        {
-            colorDesired = Color.LIGHT_GRAY;
-            colorCurrent = Color.GRAY;
-            colorOutline = Color.DARK_GRAY;
-        }
-        else
-        {
-            colorDesired = Color.GREEN;
-            colorCurrent = Color.RED;
-            colorOutline = Color.BLACK;
-        }
+        Graphics g = getGraphics( );
 
-        paint( getGraphics( ) );
+        if( g != null )
+        {
+	        if( grayed )
+		    {
+		        colorDesired = Color.LIGHT_GRAY;
+		        colorCurrent = Color.GRAY;
+		        colorOutline = Color.DARK_GRAY;
+		    }
+		    else
+		    {
+		        colorDesired = Color.GREEN;
+		        colorCurrent = Color.RED;
+		        colorOutline = Color.BLACK;
+		    }
+		
+		    redrawMeter = true;
+		    update( g );
+	        g.dispose( );
+        }
     }
-    
+
     public void paint( Graphics g )
     {
         redrawMeter = true;
@@ -295,6 +326,8 @@ public class AnalogMeter extends Canvas
 
     private static PaintThread paintThread    = null;
     private AnalogMeter        nextMeter      = null;
+    private String             meterName      = null;
+    private Image              paintImage     = null;
     private Image              meterImage     = null;
     private AffineTransform    transformation = null;
     private Polygon            needleMaximum  = null;
@@ -305,35 +338,33 @@ public class AnalogMeter extends Canvas
     private Color              colorDesired   = null;
     private Color              colorCurrent   = null;
     private Color              colorOutline   = null;
-    private int                originX        = 0;
-    private int                originY        = 0;
-    private int                offsetW        = 0;
+    private int                needleOriginX  = 0;
+    private int                needleOriginY  = 0;
+    private int                needleOffsetW  = 0;
     private int                maximum        = 0;
     private int                desired        = 0;
     private int                current        = 0;
     private byte               meterType      = 0;
     private boolean            redrawMeter    = true;
 
-    private void initWindow( boolean smallDisplay, byte meterType )
+    private void initWindow( boolean smallMeter, boolean smallFont, byte meterType )
     {
-        String name;
-
         switch( meterType )
         {
             case TYPE_ROLL:
-                name = "roll";
+            	meterName = "roll";
                 break;
             case TYPE_PITCH:
-                name = "pitch";
+            	meterName = "pitch";
                 break;
             case TYPE_YAW:
-                name = "yaw";
+            	meterName = "yaw";
                 break;
             case TYPE_ALTITUDE:
-                name = "altitude";
+            	meterName = "altitude";
                 break;
             case TYPE_THRUST:
-                name = "thrust";
+            	meterName = "thrust";
                 break;
             default:
                 setIgnoreRepaint( true );
@@ -342,9 +373,11 @@ public class AnalogMeter extends Canvas
 
         this.meterType = meterType;
 
+        Image tmpImage;
+
         try
         {
-            meterImage = getImage( (smallDisplay ? "small_" : "large_") + name + ".jpg" );
+        	tmpImage = getImage( (smallFont ? "small_" : "large_") + meterName + ".png" );
         }
         catch( Exception e )
         {
@@ -354,7 +387,7 @@ public class AnalogMeter extends Canvas
         }
 
         MediaTracker tracker = new MediaTracker( this );
-        tracker.addImage( meterImage, 0 );
+        tracker.addImage( tmpImage, 0 );
 
         try
         {
@@ -374,91 +407,110 @@ public class AnalogMeter extends Canvas
             return;
         }
 
-    	paintThread    = new PaintThread( );
-        transformation = new AffineTransform( );
-        int[] xpoints  = new int[ N_POINTS ];
-        int[] ypoints  = new int[ N_POINTS ];
+        GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment( ).
+            getDefaultScreenDevice( ).getDefaultConfiguration( );
+        BufferedImage bufImage = gc.createCompatibleImage( tmpImage.getWidth( this ),
+            tmpImage.getHeight( this ) );
+        Graphics2D g2 = bufImage.createGraphics( );
 
-        if( smallDisplay )
+    	g2.setXORMode( Color.BLACK );
+		g2.drawImage( tmpImage, 0, 0, this );
+    	g2.setXORMode( Color.WHITE );
+        g2.setColor( UIManagerColor.getButtonBackground( ) );
+        g2.fillRect( 0, 0, bufImage.getWidth( ), bufImage.getHeight( ) );
+		g2.dispose( );
+
+        double factor = smallMeter ? 0.375 : 0.5;
+        int w = (int)( factor * bufImage.getWidth( ) );
+        int h = (int)( factor * bufImage.getHeight( ) );
+        paintImage = gc.createCompatibleImage( w, h );
+        meterImage = gc.createCompatibleImage( w, h );
+        meterImage.getGraphics( ).drawImage(
+            bufImage.getScaledInstance( w, h, Image.SCALE_SMOOTH ), 0, 0, this );
+
+        int[] xpoints = new int[ N_POINTS ];
+        int[] ypoints = new int[ N_POINTS ];
+		needleOriginX = w / 2;
+		needleOffsetW = w - 1;
+
+        if( smallMeter )
         {
-            originX = 150;
-            originY = 143;
-            offsetW = 299;
+    		needleOriginY = needleOriginX - 8;
 
             if( meterType == TYPE_ALTITUDE || meterType == TYPE_THRUST )
             {
-                xpoints[0] = originX + 4;
-                ypoints[0] = originY;
-                xpoints[1] = originX + 2;
-                ypoints[1] = originY - 2;
-                xpoints[2] = originX - 92;
-                ypoints[2] = originY - 2;
-                xpoints[3] = originX - 101;
-                ypoints[3] = originY;
-                xpoints[4] = originX - 92;
-                ypoints[4] = originY + 2;
-                xpoints[5] = originX + 2;
-                ypoints[5] = originY + 2;
+                xpoints[0] = needleOriginX + 4;
+                ypoints[0] = needleOriginY;
+                xpoints[1] = needleOriginX + 2;
+                ypoints[1] = needleOriginY - 2;
+                xpoints[2] = needleOriginX - 92;
+                ypoints[2] = needleOriginY - 2;
+                xpoints[3] = needleOriginX - 101;
+                ypoints[3] = needleOriginY;
+                xpoints[4] = needleOriginX - 92;
+                ypoints[4] = needleOriginY + 2;
+                xpoints[5] = needleOriginX + 2;
+                ypoints[5] = needleOriginY + 2;
             }
             else
             {
-                xpoints[0] = originX;
-                ypoints[0] = originY + 4;
-                xpoints[1] = originX + 2;
-                ypoints[1] = originY + 2;
-                xpoints[2] = originX + 2;
-                ypoints[2] = originY - 92;
-                xpoints[3] = originX;
-                ypoints[3] = originY - 101;
-                xpoints[4] = originX - 2;
-                ypoints[4] = originY - 92;
-                xpoints[5] = originX - 2;
-                ypoints[5] = originY + 2;
+                xpoints[0] = needleOriginX;
+                ypoints[0] = needleOriginY + 4;
+                xpoints[1] = needleOriginX + 2;
+                ypoints[1] = needleOriginY + 2;
+                xpoints[2] = needleOriginX + 2;
+                ypoints[2] = needleOriginY - 92;
+                xpoints[3] = needleOriginX;
+                ypoints[3] = needleOriginY - 101;
+                xpoints[4] = needleOriginX - 2;
+                ypoints[4] = needleOriginY - 92;
+                xpoints[5] = needleOriginX - 2;
+                ypoints[5] = needleOriginY + 2;
             }
         }
         else
         {
-            originX = 200;
-            originY = 190;
-            offsetW = 399;
+    		needleOriginY = needleOriginX - 10;
 
             if( meterType == TYPE_ALTITUDE || meterType == TYPE_THRUST )
             {
-                xpoints[0] = originX + 4;
-                ypoints[0] = originY;
-                xpoints[1] = originX + 3;
-                ypoints[1] = originY - 3;
-                xpoints[2] = originX - 126;
-                ypoints[2] = originY - 3;
-                xpoints[3] = originX - 135;
-                ypoints[3] = originY;
-                xpoints[4] = originX - 126;
-                ypoints[4] = originY + 3;
-                xpoints[5] = originX + 3;
-                ypoints[5] = originY + 3;
+                xpoints[0] = needleOriginX + 4;
+                ypoints[0] = needleOriginY;
+                xpoints[1] = needleOriginX + 3;
+                ypoints[1] = needleOriginY - 3;
+                xpoints[2] = needleOriginX - 126;
+                ypoints[2] = needleOriginY - 3;
+                xpoints[3] = needleOriginX - 135;
+                ypoints[3] = needleOriginY;
+                xpoints[4] = needleOriginX - 126;
+                ypoints[4] = needleOriginY + 3;
+                xpoints[5] = needleOriginX + 3;
+                ypoints[5] = needleOriginY + 3;
             }
             else
             {
-                xpoints[0] = originX;
-                ypoints[0] = originY + 4;
-                xpoints[1] = originX + 3;
-                ypoints[1] = originY + 3;
-                xpoints[2] = originX + 3;
-                ypoints[2] = originY - 126;
-                xpoints[3] = originX;
-                ypoints[3] = originY - 135;
-                xpoints[4] = originX - 3;
-                ypoints[4] = originY - 126;
-                xpoints[5] = originX - 3;
-                ypoints[5] = originY + 3;
+                xpoints[0] = needleOriginX;
+                ypoints[0] = needleOriginY + 4;
+                xpoints[1] = needleOriginX + 3;
+                ypoints[1] = needleOriginY + 3;
+                xpoints[2] = needleOriginX + 3;
+                ypoints[2] = needleOriginY - 126;
+                xpoints[3] = needleOriginX;
+                ypoints[3] = needleOriginY - 135;
+                xpoints[4] = needleOriginX - 3;
+                ypoints[4] = needleOriginY - 126;
+                xpoints[5] = needleOriginX - 3;
+                ypoints[5] = needleOriginY + 3;
             }
         }
 
-        needleMaximum = new Polygon( xpoints, ypoints, N_POINTS );
-        needleDesired = new Polygon( xpoints, ypoints, N_POINTS );
-        needleCurrent = new Polygon( xpoints, ypoints, N_POINTS );
-        srcPoints     = new double[ N_POINTS << 1 ];
-        dstPoints     = new double[ N_POINTS << 1 ];
+    	paintThread    = new PaintThread( );
+        transformation = new AffineTransform( );
+        needleMaximum  = new Polygon( xpoints, ypoints, N_POINTS );
+        needleDesired  = new Polygon( xpoints, ypoints, N_POINTS );
+        needleCurrent  = new Polygon( xpoints, ypoints, N_POINTS );
+        srcPoints      = new double[ 2 * N_POINTS ];
+        dstPoints      = new double[ 2 * N_POINTS ];
 
         for( int i = 0, j = 0; j < N_POINTS; i += 2, ++j )
         {
@@ -471,6 +523,8 @@ public class AnalogMeter extends Canvas
         colorOutline = Color.BLACK;
 
         setSize( meterImage.getWidth( this ), meterImage.getHeight( this ) );
+        //setBackground( UIManagerColor.getButtonBackground( ) );
+        //setForeground( UIManagerColor.getButtonForeground( ) );
         setFocusable( false );
 
         paintThread.addMeter( this );
@@ -479,27 +533,26 @@ public class AnalogMeter extends Canvas
 
     private void rotateNeedle( Polygon needle, double angle )
     {
-        if( needle == null || transformation == null )
+        if( needle != null && transformation != null )
         {
-            return;
-        }
-
-        if( meterType == TYPE_ALTITUDE )
-        {
-            angle *= MRAD_TO_MM;
-        }
-        else if( meterType == TYPE_THRUST )
-        {
-            angle *= MRAD_TO_PER;
-        }
-
-        transformation.setToRotation( angle / 1000, originX, originY );
-        transformation.transform( srcPoints, 0, dstPoints, 0, N_POINTS );
-
-        for( int i = 0, j = 0; i < N_POINTS; ++i, j += 2 )
-        {
-            needle.xpoints[i] = (int) dstPoints[j];
-            needle.ypoints[i] = (int) dstPoints[j+1];
+	        if( meterType == TYPE_ALTITUDE )
+	        {
+	            angle *= MRAD_TO_MM;
+	        }
+	        else
+            if( meterType == TYPE_THRUST )
+	        {
+	            angle *= MRAD_TO_PER;
+	        }
+	
+	        transformation.setToRotation( angle / 1000, needleOriginX, needleOriginY );
+	        transformation.transform( srcPoints, 0, dstPoints, 0, N_POINTS );
+	
+	        for( int i = 0, j = 0; i < N_POINTS; ++i, j += 2 )
+	        {
+	            needle.xpoints[i] = (int) dstPoints[j];
+	            needle.ypoints[i] = (int) dstPoints[j+1];
+	        }
         }
     }
 
@@ -528,7 +581,7 @@ public class AnalogMeter extends Canvas
     	public void run( )
     	{
     		AnalogMeter meter;
-    		Graphics    graphics;
+    		Graphics    g;
 
     		while( true )
     		{
@@ -536,14 +589,15 @@ public class AnalogMeter extends Canvas
 
 				while( meter != null )
 				{
-					graphics = meter.getGraphics( );
+                    g = meter.getGraphics( );
 
-					if( graphics != null )
-					{
-						meter.update( graphics );
-					}
+                    if( g != null )
+                    {
+                    	meter.update( g );
+                    	g.dispose( );
+                    }
 
-					meter = meter.getNextMeter( );
+                    meter = meter.getNextMeter( );
 				}
 
 				try

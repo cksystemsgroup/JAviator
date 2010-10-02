@@ -31,7 +31,6 @@ import java.awt.GridLayout;
 import java.awt.Button;
 import java.awt.Label;
 import java.awt.Font;
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.GraphicsEnvironment;
 
@@ -66,7 +65,7 @@ public class PortDialog extends Dialog
 
         return( Instance );
     }
-
+ 
     /*************************************************************************/
     /*                                                                       */
     /*   Private Section                                                     */
@@ -86,7 +85,6 @@ public class PortDialog extends Dialog
         hostField   = new EditField( parent.relayHost, 130, 10 );
         portField   = new EditField( ControlTerminal.NIL + parent.relayPort, 50, 10 );
 
-        setBackground( Color.WHITE );
         makePanel( );
         pack( );
 
@@ -99,7 +97,7 @@ public class PortDialog extends Dialog
         } );
 
         Point center = GraphicsEnvironment.getLocalGraphicsEnvironment( ).getCenterPoint( );
-        setLocation( center.x - ( getWidth( ) >> 1 ), center.y - ( getHeight( ) >> 1 ) );
+        setLocation( center.x - getWidth( ) / 2, center.y - getHeight( ) / 2 );
         setResizable( false );
         setVisible( true );
     }
