@@ -52,6 +52,8 @@ struct ctrl_state
 static double pidd_compute( ctrl_state_t *state,
     double s_error, double v_error, double acceleration )
 {
+    state->integral += s_error * state->dt;
+
     /* Saturate the integral (anti-windup) */
     if( state->integral > state->int_limit )
     {
@@ -109,7 +111,6 @@ static double pidd_do_control( controller_t *controller,
     double s_error = get_s_error( desired, current );
     double v_error = get_v_error( desired, state->last_value, velocity, state->dt );
 
-    state->integral  += s_error * state->dt;
     state->last_value = desired;
 
     return pidd_compute( state, s_error, v_error, acceleration );
@@ -122,15 +123,6 @@ static double pidd_x_y_control( controller_t *controller,
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
     double v_error = (current - state->last_value) / delay;
-
-    if( abs( s_error ) > abs( get_s_error( desired, state->last_value ) ) )
-    {
-        state->integral += s_error * state->dt;
-    }
-    else
-    {
-        state->integral -= s_error * state->dt;
-    }
 
     state->last_value = current;
 

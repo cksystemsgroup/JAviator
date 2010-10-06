@@ -72,7 +72,7 @@
 #define IIR_GAIN_LACC           0.1                     /* gain for linear accelerations */
 #define FIR_GAIN_UPOS           0.7                     /* gain for Ubisense position data */
 #define IIR_GAIN_CCMD           0.1                     /* gain for control commands */
-#define IIR_GAIN_PCMD           0.5                     /* gain for position commands */
+#define IIR_GAIN_PCMD           0.7                     /* gain for position commands */
 #define AVG_SIZE_MAPS           1                       /* buffer size for pressure data */
 #define MED_SIZE_TEMP           15                      /* buffer size for temperature data */
 #define MED_SIZE_BATT           15                      /* buffer size for battery data */
@@ -127,9 +127,6 @@ static int                      heli_mode;
 static int                      heli_settled;
 static int                      yaw_wn_imu;
 static int                      yaw_wn_cmd;
-static int                      new_data_x;
-static int                      new_data_y;
-static int                      new_data_z;
 static double *                 offset_roll;
 static double *                 offset_pitch;
 static double                   cmd_roll;
@@ -234,9 +231,6 @@ int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
     heli_settled        = 1;
     yaw_wn_imu          = 0;
     yaw_wn_cmd          = 0;
-    new_data_x          = 0;
-    new_data_y          = 0;
-    new_data_z          = 0;
     offset_roll         = offset_r;
     offset_pitch        = offset_p;
     cmd_roll            = 0;
@@ -310,6 +304,7 @@ static int get_javiator_data( void )
     static double last_sensor_y   = 0;
     static double last_sensor_z   = 0;
 
+    int new_data_x, new_data_y, new_data_z;
     int res = javiator_port_get_data( &javiator_data );
 
     if( res )

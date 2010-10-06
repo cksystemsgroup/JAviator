@@ -29,12 +29,12 @@
 /* State of a position EKF */
 struct pos_state
 {
-    double dt, od;
+    double dt;
     double q11, q12, q21, q22;
     double r11, r22;
     double x1, x2;
-    double y1, y2;
     double p11, p12, p21, p22;
+    double od, y1, y2;
 };
 
 
@@ -105,22 +105,22 @@ int position_ekf_reset( position_ekf_t *filter )
         return( -1 );
     }
 
-    /* clear observation delay */
-    state->od  = 0;
-
     /* clear state vector */
     state->x1  = 0;
     state->x2  = 0;
-
-    /* clear observation vector */
-    state->y1  = 0;
-    state->y2  = 0;
 
     /* clear covariance matrix */
     state->p11 = 0;
     state->p12 = 0;
     state->p21 = 0;
     state->p22 = 0;
+
+    /* clear observation delay */
+    state->od  = 0;
+
+    /* clear observation vector */
+    state->y1  = 0;
+    state->y2  = 0;
 
     return( 0 );
 }
@@ -140,17 +140,6 @@ int position_ekf_update( position_ekf_t *filter, double p, double a,
         return( -1 );
     }
 
-    /* increment observation delay */
-    state->od += state->dt;
-
-    /* check for new position data */
-    if( new_observation )
-    {
-        state->y2 = (p - state->y1) / state->od;
-        state->y1 = p;
-        state->od = 0;
-    }
-
     /* predict state estimate */
     state->x1 += state->x2 * state->dt + a * state->dt * state->dt / 2;
     state->x2 += a * state->dt;
@@ -162,47 +151,59 @@ int position_ekf_update( position_ekf_t *filter, double p, double a,
     state->p21 += state->p22 * state->dt + state->q21;
     state->p22 += state->q22;
 
-    /* compute optimal Kalman gain */
-    k11 = state->p11 + state->r11;
-    k12 = state->p12;
-    k21 = state->p21;
-    k22 = state->p22 + state->r22;
-    det = k11 * k22 - k12 * k21;
+    /* increment observation delay */
+    state->od += state->dt;
 
-    /* check for non-zero determinante */
-    if( det == 0 )
+    /* check for new position data */
+    if( new_observation )
     {
-        det = 1.0e+015; /* ~ 1 / 1.0e-015 */
+        /* update observation vector */
+        state->y2 = (p - state->y1) / state->od;
+        state->y1 = p;
+        state->od = 0;
+
+        /* compute optimal Kalman gain */
+        k11 = state->p11 + state->r11;
+        k12 = state->p12;
+        k21 = state->p21;
+        k22 = state->p22 + state->r22;
+        det = k11 * k22 - k12 * k21;
+
+        /* check for non-zero determinante */
+        if( det == 0 )
+        {
+            det = 1.0e+015; /* ~ 1 / 1.0e-015 */
+        }
+        else
+        {
+            det = 1 / det;
+        }
+
+        s11 = k22 * det;
+        s12 = k12 * det;
+        s21 = k21 * det;
+        s22 = k11 * det;
+        k11 = state->p11 * s11 - state->p12 * s21;
+        k12 = state->p12 * s22 - state->p11 * s12;
+        k21 = state->p21 * s11 - state->p22 * s21;
+        k22 = state->p22 * s22 - state->p21 * s12;
+
+        /* update state estimate */
+        s11 = state->y1 - state->x1;
+        s22 = state->y2 - state->x2;
+        state->x1 += k11 * s11 + k12 * s22;
+        state->x2 += k21 * s11 + k22 * s22;
+
+        /* update error covariance */
+        s11 = state->p11;
+        s12 = state->p12;
+        s21 = state->p21;
+        s22 = state->p22;
+        state->p11 = (1 - k11) * s11 - k12 * s21;
+        state->p12 = (1 - k11) * s12 - k12 * s22;
+        state->p21 = (1 - k22) * s21 - k21 * s11;
+        state->p22 = (1 - k22) * s22 - k21 * s12;
     }
-    else
-    {
-        det = 1 / det;
-    }
-
-    s11 = k22 * det;
-    s12 = k12 * det;
-    s21 = k21 * det;
-    s22 = k11 * det;
-    k11 = state->p11 * s11 - state->p12 * s21;
-    k12 = state->p12 * s22 - state->p11 * s12;
-    k21 = state->p21 * s11 - state->p22 * s21;
-    k22 = state->p22 * s22 - state->p21 * s12;
-
-    /* update state estimate */
-    s11 = state->y1 - state->x1;
-    s22 = state->y2 - state->x2;
-    state->x1 += k11 * s11 + k12 * s22;
-    state->x2 += k21 * s11 + k22 * s22;
-
-    /* update error covariance */
-    s11 = state->p11;
-    s12 = state->p12;
-    s21 = state->p21;
-    s22 = state->p22;
-    state->p11 = (1 - k11) * s11 - k12 * s21;
-    state->p12 = (1 - k11) * s12 - k12 * s22;
-    state->p21 = (1 - k22) * s21 - k21 * s11;
-    state->p22 = (1 - k22) * s22 - k21 * s12;
 
     return( 0 );
 }
