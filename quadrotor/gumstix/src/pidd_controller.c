@@ -117,16 +117,16 @@ static double pidd_do_control( controller_t *controller,
 }
 
 static double pidd_x_y_control( controller_t *controller,
-    double desired, double current, double velocity, double delay )
+    double desired, double current, double velocity, double acceleration )//delay )
 {
     /* Local definition to avoid double indirection in use */
     ctrl_state_t *state = controller->state;
     double s_error = get_s_error( desired, current );
-    double v_error = (current - state->last_value) / delay;
+    //double v_error = (current - state->last_value) / delay;
 
     state->last_value = current;
 
-    return pidd_compute( state, s_error, velocity, v_error );
+    return pidd_compute( state, s_error, velocity, acceleration );//v_error );
 }
 
 static int pidd_set_params( controller_t *controller,

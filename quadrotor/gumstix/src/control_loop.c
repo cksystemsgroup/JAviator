@@ -45,7 +45,6 @@
 #include "trace_data.h"
 #include "outlier_filter.h"
 #include "iir_lp_filter.h"
-#include "fir_lp_filter.h"
 #include "average_filter.h"
 #include "median_filter.h"
 #include "attitude_ekf.h"
@@ -69,10 +68,8 @@
 /* filter parameters */
 #define COF_MDIFF_POS           500                     /* [mm] maximum allowed position difference */
 #define COF_LIMIT_POS           2                       /* limit for counting position outliers */
-#define IIR_GAIN_LACC           0.1                     /* gain for linear accelerations */
-#define FIR_GAIN_UPOS           0.7                     /* gain for Ubisense position data */
-#define IIR_GAIN_CCMD           0.1                     /* gain for control commands */
-#define IIR_GAIN_PCMD           0.7                     /* gain for position commands */
+#define IIR_GAIN_LACC           0.2                     /* gain for linear accelerations */
+#define IIR_GAIN_RCMD           0.2                     /* gain for reference commands */
 #define AVG_SIZE_MAPS           1                       /* buffer size for pressure data */
 #define MED_SIZE_TEMP           15                      /* buffer size for temperature data */
 #define MED_SIZE_BATT           15                      /* buffer size for battery data */
@@ -143,13 +140,9 @@ static outlier_filter_t         cof_out_y;
 static iir_lp_filter_t          iir_acc_x;
 static iir_lp_filter_t          iir_acc_y;
 static iir_lp_filter_t          iir_acc_z;
-static fir_lp_filter_t          fir_ubi_x;
-static fir_lp_filter_t          fir_ubi_y;
 static iir_lp_filter_t          iir_cmd_roll;
 static iir_lp_filter_t          iir_cmd_pitch;
 static iir_lp_filter_t          iir_cmd_yaw;
-static iir_lp_filter_t          iir_cmd_x;
-static iir_lp_filter_t          iir_cmd_y;
 static iir_lp_filter_t          iir_cmd_z;
 static average_filter_t         avg_bmu_maps;
 static median_filter_t          med_bmu_temp;
@@ -253,14 +246,10 @@ int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
     iir_lp_filter_init ( &iir_acc_x,     "ACC_X",     IIR_GAIN_LACC );
     iir_lp_filter_init ( &iir_acc_y,     "ACC_Y",     IIR_GAIN_LACC );
     iir_lp_filter_init ( &iir_acc_z,     "ACC_Z",     IIR_GAIN_LACC );
-    fir_lp_filter_init ( &fir_ubi_x,     "UBI_X",     FIR_GAIN_UPOS );
-    fir_lp_filter_init ( &fir_ubi_y,     "UBI_Y",     FIR_GAIN_UPOS );
-    iir_lp_filter_init ( &iir_cmd_roll,  "CMD_Roll",  IIR_GAIN_CCMD );
-    iir_lp_filter_init ( &iir_cmd_pitch, "CMD_Pitch", IIR_GAIN_CCMD );
-    iir_lp_filter_init ( &iir_cmd_yaw,   "CMD_Yaw",   IIR_GAIN_CCMD );
-    iir_lp_filter_init ( &iir_cmd_x,     "CMD_X",     IIR_GAIN_PCMD );
-    iir_lp_filter_init ( &iir_cmd_y,     "CMD_Y",     IIR_GAIN_PCMD );
-    iir_lp_filter_init ( &iir_cmd_z,     "CMD_Z",     IIR_GAIN_CCMD );
+    iir_lp_filter_init ( &iir_cmd_roll,  "CMD_Roll",  IIR_GAIN_RCMD );
+    iir_lp_filter_init ( &iir_cmd_pitch, "CMD_Pitch", IIR_GAIN_RCMD );
+    iir_lp_filter_init ( &iir_cmd_yaw,   "CMD_Yaw",   IIR_GAIN_RCMD );
+    iir_lp_filter_init ( &iir_cmd_z,     "CMD_Z",     IIR_GAIN_RCMD );
     average_filter_init( &avg_bmu_maps,  "BMU_MAPS",  AVG_SIZE_MAPS );
     median_filter_init ( &med_bmu_temp,  "BMU_Temp",  MED_SIZE_TEMP );
     median_filter_init ( &med_bmu_batt,  "BMU_Batt",  MED_SIZE_BATT );
@@ -312,9 +301,6 @@ static int get_javiator_data( void )
         fprintf( stderr, "ERROR: data from JAviator not available\n" );
         return( res );
     }
-
-    /* trace controller period */
-    trace_data.value_1 = (int16_t)( period * 1000 ); /* [s] --> [ms] */
 
     /* scale Euler angles */
     sensor_data.roll   = FACTOR_EULER_ANGLE * javiator_data.roll;
@@ -378,11 +364,6 @@ static int get_javiator_data( void )
        coordinate system, hence the sign of ddZ must be changed */
     sensor_data.ddz     = -sensor_data.ddz;
 
-    /* trace original linear accelerations */
-    trace_data.value_8  = (int16_t)( sensor_data.ddx );
-    trace_data.value_9  = (int16_t)( sensor_data.ddy );
-    trace_data.value_10 = (int16_t)( sensor_data.ddz );
-
     /* apply low-pass filters */
     sensor_data.ddx     = iir_lp_filter_update( &iir_acc_x, sensor_data.ddx );
     sensor_data.ddy     = iir_lp_filter_update( &iir_acc_y, sensor_data.ddy );
@@ -396,8 +377,6 @@ static int get_javiator_data( void )
             ubisense_port_get_data( &sensor_data );
             sensor_data.x = outlier_filter_update( &cof_out_x, sensor_data.x );
             sensor_data.y = outlier_filter_update( &cof_out_y, sensor_data.y );
-            sensor_data.x = fir_lp_filter_update ( &fir_ubi_x, sensor_data.x );
-            sensor_data.y = fir_lp_filter_update ( &fir_ubi_y, sensor_data.y );
             last_sensor_x = sensor_data.x;
             last_sensor_y = sensor_data.y;
         }
@@ -487,11 +466,6 @@ static int get_javiator_data( void )
         }
     }
 
-    /* trace original attitude */
-    trace_data.value_2 = (int16_t)( sensor_data.roll );
-    trace_data.value_3 = (int16_t)( sensor_data.pitch );
-    trace_data.value_4 = (int16_t)( sensor_data.yaw );
-
     /* compute winded yaw angle */
     last_scaled_yaw    = sensor_data.yaw;
     sensor_data.yaw   += yaw_wn_imu * MRAD_2PI;
@@ -505,11 +479,6 @@ static int get_javiator_data( void )
     sensor_data.roll   = attitude_ekf_get_E( &ekf_att_roll );
     sensor_data.pitch  = attitude_ekf_get_E( &ekf_att_pitch );
     sensor_data.yaw    = attitude_ekf_get_E( &ekf_att_yaw );
-
-    /* trace original position */
-    trace_data.value_5 = (int16_t)( sensor_data.x * new_data_x );
-    trace_data.value_6 = (int16_t)( sensor_data.y * new_data_y );
-    trace_data.value_7 = (int16_t)( sensor_data.z * new_data_z );
 
     /* update position filters */
     position_ekf_update( &ekf_pos_x, sensor_data.x, sensor_data.ddx, new_data_x );
@@ -796,7 +765,7 @@ static int compute_motor_signals( void )
         if( ++delay_roll >= pos_ctrl_gain / ((int) fabs( command_data.roll - sensor_data.y ) + 1) )
         {
             cmd_roll = controller_do_control( &ctrl_y, command_data.roll,
-                sensor_data.y, sensor_data.dy, delay_roll );
+                sensor_data.y, sensor_data.dy, sensor_data.ddy );//delay_roll );
 
             /* saturate roll command */
             if( cmd_roll > ROLL_PITCH_LIMIT )
@@ -809,21 +778,14 @@ static int compute_motor_signals( void )
                 cmd_roll = -ROLL_PITCH_LIMIT;
             }
 
-            /* trace unfiltered roll command */
-            trace_data.value_11 = (int16_t)( cmd_roll );
-
-            cmd_roll   = iir_lp_filter_update( &iir_cmd_y, cmd_roll );
             delay_roll = 0;
-
-            /* trace filtered roll command */
-            trace_data.value_13 = (int16_t)( cmd_roll );
         }
 
         /* check for x-controller invokation */
         if( ++delay_pitch >= pos_ctrl_gain / ((int) fabs( command_data.pitch - sensor_data.x ) + 1) )
         {
             cmd_pitch = -controller_do_control( &ctrl_x, command_data.pitch,
-                sensor_data.x, sensor_data.dx, delay_pitch );
+                sensor_data.x, sensor_data.dx, sensor_data.ddx );//delay_pitch );
 
             /* saturate pitch command */
             if( cmd_pitch > ROLL_PITCH_LIMIT )
@@ -836,14 +798,7 @@ static int compute_motor_signals( void )
                 cmd_pitch = -ROLL_PITCH_LIMIT;
             }
 
-            /* trace unfiltered pitch command */
-            trace_data.value_12 = (int16_t)( cmd_pitch );
-
-            cmd_pitch   = iir_lp_filter_update( &iir_cmd_x, cmd_pitch );
             delay_pitch = 0;
-
-            /* trace filtered pitch command */
-            trace_data.value_14 = (int16_t)( cmd_pitch );
         }
     }
     else
@@ -859,8 +814,8 @@ static int compute_motor_signals( void )
                        - cmd_roll  * transformation_get_sin_Yaw( );
 
     /* trace roll/pitch command after rotation */
-    trace_data.value_15 = (int16_t)( command_data.roll );
-    trace_data.value_16 = (int16_t)( command_data.pitch );
+    trace_data.value_1 = (int16_t)( command_data.roll );
+    trace_data.value_2 = (int16_t)( command_data.pitch );
 
     /* compute motor offsets based on EKF estimate */
     if( motor_speed_revving < motor_speed_liftoff )
@@ -1018,28 +973,39 @@ static void int_handler( int num )
 	running = 0;
 }
 
+#define SLEEP_TIME 2000
+
 int control_loop_run( void )
 {
     int first_time = 1;
-    long long start, end;
+    long long offset, start, end;
 	long long loop_start;
 
     next_period = get_utime( ) + us_period;
 
     while( running )
     {
-        start = get_utime( );
-        loop_start = start;
+        /* trace sampling period and controller state */
+        trace_data.value_3 = (int16_t)( period * 1000 );
+        trace_data.value_4 = (int16_t)( heli_state );
+
+        offset             = get_utime( );
+        start              = 0;
+        loop_start         = 0;
+        trace_data.value_5 = (int16_t)( start );
 
         if( send_motor_signals( ) )
         {
             break;
         }
 
-        end = get_utime( );
+        end = get_utime( ) - offset;
+        trace_data.value_6 = (int16_t)( end );
         calc_stats( end - start, STAT_TO_JAV );
 
-	    start = get_utime( );
+        sleep_until( offset + SLEEP_TIME * 1 );
+	    start = get_utime( ) - offset;
+        trace_data.value_7 = (int16_t)( start );
 
 	    if( get_javiator_data( ) )
         {
@@ -1049,10 +1015,13 @@ int control_loop_run( void )
             break;
 	    }
 
-	    end = get_utime( );
+	    end = get_utime( ) - offset;
+        trace_data.value_8 = (int16_t)( end );
 	    calc_stats( end - start, STAT_FROM_JAV );
 
-        start = get_utime( );
+        sleep_until( offset + SLEEP_TIME * 2 );
+        start = get_utime( ) - offset;
+        trace_data.value_9 = (int16_t)( start );
 
         if( check_terminal_connection( ) )
         {
@@ -1072,10 +1041,13 @@ int control_loop_run( void )
         get_command_data( );
         get_control_params( );
 
-        end = get_utime( );
+        end = get_utime( ) - offset;
+        trace_data.value_10 = (int16_t)( end );
         calc_stats( end - start, STAT_FROM_TERM );
 
-        start = get_utime( );
+        sleep_until( offset + SLEEP_TIME * 3 );
+        start = get_utime( ) - offset;
+        trace_data.value_11 = (int16_t)( start );
  
         switch( heli_state )
         {
@@ -1095,24 +1067,31 @@ int control_loop_run( void )
                 fprintf( stderr, "ERROR: invalid altitude mode %d\n", heli_state );
         }
 
-        end = get_utime( );
+        end = get_utime( ) - offset;
+        trace_data.value_12 = (int16_t)( end );
         calc_stats( end - start, STAT_CONTROL );
 
-        start = get_utime( );
+        sleep_until( offset + SLEEP_TIME * 4 );
+        start = get_utime( ) - offset;
+        trace_data.value_13 = (int16_t)( start );
 
         send_report_to_terminal( );
         send_trace_data_to_terminal( );
 
-        end = get_utime( );
+        end = get_utime( ) - offset;
+        trace_data.value_14 = (int16_t)( end );
         calc_stats( end - start, STAT_TO_TERM );
 
         calc_stats( end - loop_start, STAT_ALL );
 
-        start = get_utime( );
+        sleep_until( offset + SLEEP_TIME * 5 );
+        start = get_utime( ) - offset;
+        trace_data.value_15 = (int16_t)( start );
 
         wait_for_next_period( );
 
-        end = get_utime( );
+        end = get_utime( ) - offset;
+        trace_data.value_16 = (int16_t)( end );
         calc_stats( end - start, STAT_SLEEP );
 
         if( ++loop_count < 0 )
@@ -1128,13 +1107,9 @@ int control_loop_run( void )
     iir_lp_filter_destroy ( &iir_acc_x );
     iir_lp_filter_destroy ( &iir_acc_y );
     iir_lp_filter_destroy ( &iir_acc_z );
-    fir_lp_filter_destroy ( &fir_ubi_x );
-    fir_lp_filter_destroy ( &fir_ubi_y );
     iir_lp_filter_destroy ( &iir_cmd_roll );
     iir_lp_filter_destroy ( &iir_cmd_pitch );
     iir_lp_filter_destroy ( &iir_cmd_yaw );
-    iir_lp_filter_destroy ( &iir_cmd_x );
-    iir_lp_filter_destroy ( &iir_cmd_y );
     iir_lp_filter_destroy ( &iir_cmd_z );
     average_filter_destroy( &avg_bmu_maps );
     median_filter_destroy ( &med_bmu_temp );

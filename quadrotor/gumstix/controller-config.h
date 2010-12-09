@@ -62,13 +62,13 @@
 #define STDC_HEADERS 1
 
 /* Target CPU arch */
-#define TARGET_CPU_ARM 1
+/* #undef TARGET_CPU_ARM */
 
 /* Target CPU arch */
 /* #undef TARGET_CPU_POWERPC */
 
 /* Target CPU arch */
-/* #undef TARGET_CPU_X86 */
+#define TARGET_CPU_X86 1
 
 /* Target CPU arch */
 /* #undef TARGET_CPU_X86_64 */

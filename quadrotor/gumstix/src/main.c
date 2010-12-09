@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include "comm_channel.h"
@@ -36,13 +38,20 @@
 #include "terminal_port.h"
 #include "ubisense_port.h"
 #include "control_loop.h"
+#include "controller-config.h"
 
 #define CONTROLLER_PERIOD   15      /* main control period in ms that serves as central clock */
 #define EXEC_CONTROL_LOOP   1       /* execute control loop (needed for setting priorities) */
 #define PERIOD_MULTIPLIER   1       /* communicate with control terminal every <value> period */
 #define ACTIVATE_UBISENSE   0       /* activate socket for receiving Ubisense position data */
 #define REDUCED_CTRL_CMDS   1000    /* reduce control commands when error less than <value> mm */
+#ifdef TARGET_CPU_X86
+#define SERIAL_DEVICE       "/dev/ttyS0"
+#elif TARGET_CPU_ARM
 #define SERIAL_DEVICE       "/dev/ttyS2"
+#else
+#error Unknown target CPU
+#endif
 #define SERIAL_BAUDRATE     115200
 #define TERMINAL_PORT       7000
 #define UBISENSE_PORT       9000
@@ -303,7 +312,7 @@ int main( int argc, char **argv )
 
 	printf( "saving configuration ... " );
 
-    if( (fd = open( CFG_FILENAME, O_WRONLY | O_CREAT )) < 0 )
+    if( (fd = open( CFG_FILENAME, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR )) < 0 )
     {
         printf( "failed\n" );
         fprintf( stderr, "ERROR: could not open file %s\n", CFG_FILENAME );

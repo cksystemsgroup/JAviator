@@ -82,32 +82,29 @@ public class ControlTerminal extends Frame
     public static final Dimension MAX_RECT    = new Dimension( 3000, 4000 );
 
     public static final String LOG_FILE_PATH  = "traces/";
-    public static final String LOG_FILE_NAME  = LOG_FILE_PATH + "position_test_.csv";
+    public static final String LOG_FILE_NAME  = LOG_FILE_PATH + "onboard_execution_.csv";
 
-    public static final String LOG_TITLE_STR  = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," +
-    	                                        "ekf-roll,ekf-pitch,ekf-yaw," +
-											    "droll,dpitch,dyaw," +
-											    "ddroll,ddpitch,ddyaw," +
-											    "ekf-x,ekf-y,ekf-z," +
-											    "ekf-dx,ekf-dy,ekf-dz," +
-											    "iir-ddx,iir-ddy,iir-ddz," +
-											    "maps,temp,batt," +
-											    "front,right,rear,left," +
-											    "u-roll,u-pitch,u-yaw,u-z," +
-											    "period," +
-											    "true-roll,true-pitch,true-yaw," +
-											    "true-x,true-y,true-z," +
-											    "true-ddx,true-ddy,true-ddz," +
-                                                "true-c-roll,true-c-pitch," +
-                                                "fir-c-roll,fir-c-pitch," +
-                                                "rot-c-roll,rot-c-pitch";
+    public static final String LOG_TITLE_STR
+        = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," /* 4-DOF (6-DOF) command reference */
+        + "ekf-roll,ekf-pitch,ekf-yaw,"       /* EKF-estimated attitude */
+        + "droll,dpitch,dyaw,"                /* angular velocity */
+        + "ddroll,ddpitch,ddyaw,"             /* angular acceleration */
+        + "ekf-x,ekf-y,ekf-z,"                /* EKF-estimated position */
+        + "ekf-dx,ekf-dy,ekf-dz,"             /* EKF-estimated velocity */
+        + "iir-ddx,iir-ddy,iir-ddz,"          /* IIR-filtered acceleration */
+        + "maps,temp,batt,"                   /* air pressure, air temperature, battery level */
+        + "front,right,rear,left,"            /* front, right, rear, and left motor signal */
+        + "u-roll,u-pitch,u-yaw,u-z,"         /* roll, pitch, yaw, and z control effort */
+        + "rot-c-roll,rot-c-pitch,"           /* yaw-rotated y and x control effort */
+        + "period,state,"                     /* sampling period and controller state */
+        + "start-sms,end-sms,"                /* start/end of send_motor_signals( ) */
+        + "start-gjd,end-gjd,"                /* start/end of get_javiator_data( ) */
+        + "start-gcd,end-gcd,"                /* start/end of get_command_data( ) */
+        + "start-cms,end-cms,"                /* start/end of compute_motor_signals( ) */
+        + "start-srtt,end-srtt,"              /* start/end of send_report_to_terminal( ) */
+        + "start-wfnp,end-wfnp";              /* start/end of wait_for_next_period( ) */
 
-    public static final String[] PLOT_LIST = {  "xy_scatter_1200x800.csv",	
-                                                "xy_scatter_1000x900.csv",
-                                                "xy_scatter_900x1200.csv",
-                                                "xy_scatter_900x1000.csv",
-                                                "xy_scatter_800x1100.csv",
-                                                "xy_scatter_700x700.csv"  };
+    public static final String[] PLOT_LIST = {  ""  };
 
     public ControlTerminal( )
     {
