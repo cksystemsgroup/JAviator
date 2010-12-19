@@ -82,7 +82,7 @@ public class ControlTerminal extends Frame
     public static final Dimension MAX_RECT    = new Dimension( 3000, 4000 );
 
     public static final String LOG_FILE_PATH  = "traces/";
-    public static final String LOG_FILE_NAME  = LOG_FILE_PATH + "onboard_execution_.csv";
+    public static final String LOG_FILE_NAME  = LOG_FILE_PATH + "timing_.csv";
 
     public static final String LOG_TITLE_STR
         = "cmd-roll,cmd-pitch,cmd-yaw,cmd-z," /* 4-DOF (6-DOF) command reference */
@@ -97,12 +97,12 @@ public class ControlTerminal extends Frame
         + "u-roll,u-pitch,u-yaw,u-z,"         /* roll, pitch, yaw, and z control effort */
         + "rot-c-roll,rot-c-pitch,"           /* yaw-rotated y and x control effort */
         + "period,state,"                     /* sampling period and controller state */
-        + "start-sms,end-sms,"                /* start/end of send_motor_signals( ) */
-        + "start-gjd,end-gjd,"                /* start/end of get_javiator_data( ) */
-        + "start-gcd,end-gcd,"                /* start/end of get_command_data( ) */
-        + "start-cms,end-cms,"                /* start/end of compute_motor_signals( ) */
-        + "start-srtt,end-srtt,"              /* start/end of send_report_to_terminal( ) */
-        + "start-wfnp,end-wfnp";              /* start/end of wait_for_next_period( ) */
+        + "start-to-jap,"                     /* start of 'To JAviator Plant' */
+        + "end-to-jap,"                       /* end of 'To JAviator Plant' */
+        + "end-from-jap,"                     /* end of 'From JAviator Plant' */
+        + "end-from-gcs,"                     /* end of 'From Ground Control System' */
+        + "end-control,"                      /* end of 'Control Signals Computation' */
+        + "end-to-gcs";                       /* end of 'To Ground Control System' */
 
     public static final String[] PLOT_LIST = {  ""  };
 
@@ -407,18 +407,12 @@ public class ControlTerminal extends Frame
 			+ ',' + (short) traceData.value_2
 			+ ',' + (short) traceData.value_3
 			+ ',' + (short) traceData.value_4
-			+ ',' + (short) traceData.value_5
-			+ ',' + (short) traceData.value_6
-			+ ',' + (short) traceData.value_7
-			+ ',' + (short) traceData.value_8
-			+ ',' + (short) traceData.value_9
-			+ ',' + (short) traceData.value_10
-			+ ',' + (short) traceData.value_11
-			+ ',' + (short) traceData.value_12
-			+ ',' + (short) traceData.value_13
-			+ ',' + (short) traceData.value_14
-			+ ',' + (short) traceData.value_15
-			+ ',' + (short) traceData.value_16
+			+ ',' + (int)( (traceData.value_5  << 16) | (traceData.value_6  & 0xFFFF) )
+			+ ',' + (int)( (traceData.value_7  << 16) | (traceData.value_8  & 0xFFFF) )
+			+ ',' + (int)( (traceData.value_9  << 16) | (traceData.value_10 & 0xFFFF) )
+			+ ',' + (int)( (traceData.value_11 << 16) | (traceData.value_12 & 0xFFFF) )
+			+ ',' + (int)( (traceData.value_13 << 16) | (traceData.value_14 & 0xFFFF) )
+			+ ',' + (int)( (traceData.value_15 << 16) | (traceData.value_16 & 0xFFFF) )
 			+ '\n';
 
 			try

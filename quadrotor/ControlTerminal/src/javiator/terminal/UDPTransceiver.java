@@ -38,8 +38,7 @@ import javiator.util.PacketType;
 public class UDPTransceiver extends Transceiver
 {
 	private static final boolean DEBUG = false;
-	private DatagramSocket sendSocket, recvSocket;
-	private int listenPort;
+	private DatagramSocket sendSocket;
 	private InetSocketAddress socketAddress;
 	private boolean haveTraffic;
 	
@@ -52,8 +51,7 @@ public class UDPTransceiver extends Transceiver
 	 */
 	public UDPTransceiver(ControlTerminal parent, String sendHost, int sendPort)
 	{
-		super(parent);
-		this.listenPort = sendPort;
+		super(parent);		
 		socketAddress = new InetSocketAddress(sendHost, sendPort);
 	}
 
@@ -62,22 +60,19 @@ public class UDPTransceiver extends Transceiver
 	 */
 	public void connect()
 	{
-		try {
-		//	recvSocket = new DatagramSocket(listenPort);
-			sendSocket = new DatagramSocket(listenPort);
+		try {		
+			sendSocket = new DatagramSocket();
 			haveTraffic = false;
 			setConnected(true);
-	    setLinked(true);
-	   
-	    
+	        setLinked(true);
 	    	Packet packet = new Packet(PacketType.COMM_SWITCH_STATE, 0);
 	    	sendPacket(packet);   	
 	    	
 	    	
 		} catch (SocketException e) {
 			e.printStackTrace();
-	    setConnected(false);
-	    setLinked(false);
+			setConnected(false);
+			setLinked(false);
 		}
 	}
 
@@ -85,17 +80,12 @@ public class UDPTransceiver extends Transceiver
 	 * @see javiator.util.Transceiver#disconnect()
 	 */
 	public void disconnect()
-	{
-		
-		if (recvSocket != null) {
-			recvSocket.close();
-			recvSocket = null;
-		}
-		
+	{		
 		if (sendSocket != null) {
 			sendSocket.close();
 			sendSocket = null;
 		}
+
 		setConnected(false);
 		haveTraffic = false;
 	}

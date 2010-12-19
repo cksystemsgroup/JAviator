@@ -124,6 +124,9 @@ static int                      heli_mode;
 static int                      heli_settled;
 static int                      yaw_wn_imu;
 static int                      yaw_wn_cmd;
+static int                      new_data_x;
+static int                      new_data_y;
+static int                      new_data_z;
 static double *                 offset_roll;
 static double *                 offset_pitch;
 static double                   cmd_roll;
@@ -224,6 +227,9 @@ int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
     heli_settled        = 1;
     yaw_wn_imu          = 0;
     yaw_wn_cmd          = 0;
+    new_data_x          = 0;
+    new_data_y          = 0;
+    new_data_z          = 0;
     offset_roll         = offset_r;
     offset_pitch        = offset_p;
     cmd_roll            = 0;
@@ -282,7 +288,168 @@ int control_loop_setup( int ms_period, int ctrl_gain, int ubisense,
     return( 0 );
 }
 
-static int get_javiator_data( void )
+static int check_terminal_connection( void )
+{
+    static int command_data_delay = 0;
+
+    if( terminal_port_is_new_command_data( ) )
+    {
+        command_data_delay = 0;
+    }
+    else
+    if( ++command_data_delay > COMMAND_THRESHOLD )
+    {
+        return( -1 );
+    }
+
+    return( 0 );
+}
+
+static int get_command_data( void )
+{
+    static double last_command_yaw = 0;
+
+    if( terminal_port_is_shut_down( ) )
+    {
+        heli_state = HELI_STATE_SHUTDOWN;
+        terminal_port_reset_shut_down( );
+    }
+    else
+    if( terminal_port_is_state_switch( ) )
+    {
+		fprintf( stdout, "State Switch...\n" );
+		print_stats( );
+
+		loop_count = 0;
+		memset( stats, 0, sizeof( stats ) );
+		memset( max_stats, 0, sizeof( max_stats ) );
+
+        switch( heli_state )
+        {
+            case HELI_STATE_GROUND:
+                heli_state = HELI_STATE_FLYING;
+                heli_settled = 0;
+                break;
+
+            case HELI_STATE_FLYING:
+                heli_state = HELI_STATE_GROUND;
+                break;
+
+            case HELI_STATE_SHUTDOWN:
+                heli_state = HELI_STATE_GROUND;
+                break;
+
+            default:
+                heli_state = HELI_STATE_SHUTDOWN;
+        }
+    }
+    else
+    if( terminal_port_is_new_command_data( ) )
+    {
+        terminal_port_get_command_data( &command_data );
+
+        /* compute winding number of yaw command */
+        if( heli_settled )
+        {
+            yaw_wn_cmd = 0;
+        }
+        else
+        if( last_command_yaw - command_data.yaw < -MRAD_PI )
+        {
+            --yaw_wn_cmd;
+        }
+        else
+        if( last_command_yaw - command_data.yaw > MRAD_PI )
+        {
+            ++yaw_wn_cmd;
+        }
+
+        /* compute winded yaw command */
+        last_command_yaw   = command_data.yaw;
+        command_data.yaw  += yaw_wn_cmd * MRAD_2PI;
+
+        /* apply low-pass filters */
+        command_data.roll  = iir_lp_filter_update( &iir_cmd_roll,  command_data.roll );
+        command_data.pitch = iir_lp_filter_update( &iir_cmd_pitch, command_data.pitch );
+        command_data.yaw   = iir_lp_filter_update( &iir_cmd_yaw,   command_data.yaw );
+        command_data.z     = iir_lp_filter_update( &iir_cmd_z,     command_data.z );
+    }
+
+    if( terminal_port_is_mode_switch( ) )
+    {
+        switch( heli_mode )
+        {
+            case HELI_MODE_MAN_CTRL:
+                heli_mode = HELI_MODE_POS_CTRL;
+                break;
+
+            case HELI_MODE_POS_CTRL:
+                heli_mode = HELI_MODE_MAN_CTRL;
+                break;
+
+            default:
+                heli_mode = HELI_MODE_MAN_CTRL;
+        }
+    }
+
+    return( 0 );
+}
+
+static void set_control_params( ctrl_params_t *params,
+    controller_t *ctrl_1, controller_t *ctrl_2 )
+{
+    double kp  = params->kp  * FACTOR_PARAMETER;
+    double ki  = params->ki  * FACTOR_PARAMETER;
+    double kd  = params->kd  * FACTOR_PARAMETER;
+    double kdd = params->kdd * FACTOR_PARAMETER;
+
+    if( ctrl_1 != NULL )
+    {
+        controller_set_params( ctrl_1, kp, ki, kd, kdd );
+        fprintf( stdout, "parameter update: %s", ctrl_1->name );
+
+        if( ctrl_2 != NULL )
+        {
+            controller_set_params( ctrl_2, kp, ki, kd, kdd );
+            fprintf( stdout, "/%s", ctrl_2->name );
+        }
+
+        fprintf( stdout, "\n--> Kp: %+3.3f   Ki: %+3.3f   "
+            "Kd: %+3.3f   Kdd: %+3.3f\n", kp, ki, kd, kdd );
+        fflush( stdout );
+    }
+}
+
+static void get_control_params( void )
+{
+    ctrl_params_t params;
+
+    if( terminal_port_is_new_r_p_params( ) )
+    {
+        terminal_port_get_r_p_params( &params );
+        set_control_params( &params, &ctrl_roll, &ctrl_pitch );
+    }
+
+    if( terminal_port_is_new_yaw_params( ) )
+    {
+        terminal_port_get_yaw_params( &params );
+        set_control_params( &params, &ctrl_yaw, NULL );
+    }
+
+    if( terminal_port_is_new_x_y_params( ) )
+    {
+        terminal_port_get_x_y_params( &params );
+        set_control_params( &params, &ctrl_x, &ctrl_y );
+    }
+
+    if( terminal_port_is_new_alt_params( ) )
+    {
+        terminal_port_get_alt_params( &params );
+        set_control_params( &params, &ctrl_z, NULL );
+    }
+}
+
+static int prepare_sensor_data( void )
 {
     static double last_scaled_yaw = 0;
     static double data_offset_yaw = 0;
@@ -292,15 +459,6 @@ static int get_javiator_data( void )
     static double last_sensor_x   = 0;
     static double last_sensor_y   = 0;
     static double last_sensor_z   = 0;
-
-    int new_data_x, new_data_y, new_data_z;
-    int res = javiator_port_get_data( &javiator_data );
-
-    if( res )
-    {
-        fprintf( stderr, "ERROR: data from JAviator not available\n" );
-        return( res );
-    }
 
     /* scale Euler angles */
     sensor_data.roll   = FACTOR_EULER_ANGLE * javiator_data.roll;
@@ -372,9 +530,8 @@ static int get_javiator_data( void )
     /* transform x/y-position */
     if( ubisense_enabled )
     {
-        if( (new_data_x = new_data_y = ubisense_port_is_new_data( )) )
+        if( new_data_x && new_data_y )
         {
-            ubisense_port_get_data( &sensor_data );
             sensor_data.x = outlier_filter_update( &cof_out_x, sensor_data.x );
             sensor_data.y = outlier_filter_update( &cof_out_y, sensor_data.y );
             last_sensor_x = sensor_data.x;
@@ -512,167 +669,6 @@ static int get_javiator_data( void )
                                sensor_data.yaw   / 1000 );
 
     return( 0 );
-}
-
-static int check_terminal_connection( void )
-{
-    static int command_data_delay = 0;
-
-    if( terminal_port_is_new_command_data( ) )
-    {
-        command_data_delay = 0;
-    }
-    else
-    if( ++command_data_delay > COMMAND_THRESHOLD )
-    {
-        return( -1 );
-    }
-
-    return( 0 );
-}
-
-static int get_command_data( void )
-{
-    static double last_command_yaw = 0;
-
-    if( terminal_port_is_shut_down( ) )
-    {
-        heli_state = HELI_STATE_SHUTDOWN;
-        terminal_port_reset_shut_down( );
-    }
-    else
-    if( terminal_port_is_state_switch( ) )
-    {
-		fprintf( stdout, "State Switch...\n" );
-		print_stats( );
-
-		loop_count = 0;
-		memset( stats, 0, sizeof( stats ) );
-		memset( max_stats, 0, sizeof( max_stats ) );
-
-        switch( heli_state )
-        {
-            case HELI_STATE_GROUND:
-                heli_state = HELI_STATE_FLYING;
-                heli_settled = 0;
-                break;
-
-            case HELI_STATE_FLYING:
-                heli_state = HELI_STATE_GROUND;
-                break;
-
-            case HELI_STATE_SHUTDOWN:
-                heli_state = HELI_STATE_GROUND;
-                break;
-
-            default:
-                heli_state = HELI_STATE_SHUTDOWN;
-        }
-    }
-    else
-    if( terminal_port_is_new_command_data( ) )
-    {
-        terminal_port_get_command_data( &command_data );
-
-        /* compute winding number of yaw command */
-        if( heli_settled )
-        {
-            yaw_wn_cmd = 0;
-        }
-        else
-        if( last_command_yaw - command_data.yaw < -MRAD_PI )
-        {
-            --yaw_wn_cmd;
-        }
-        else
-        if( last_command_yaw - command_data.yaw > MRAD_PI )
-        {
-            ++yaw_wn_cmd;
-        }
-
-        /* compute winded yaw command */
-        last_command_yaw  = command_data.yaw;
-        command_data.yaw += yaw_wn_cmd * MRAD_2PI;
-
-        /* apply low-pass filters */
-        command_data.roll  = iir_lp_filter_update( &iir_cmd_roll,  command_data.roll );
-        command_data.pitch = iir_lp_filter_update( &iir_cmd_pitch, command_data.pitch );
-        command_data.yaw   = iir_lp_filter_update( &iir_cmd_yaw,   command_data.yaw );
-        command_data.z     = iir_lp_filter_update( &iir_cmd_z,     command_data.z );
-    }
-
-    if( terminal_port_is_mode_switch( ) )
-    {
-        switch( heli_mode )
-        {
-            case HELI_MODE_MAN_CTRL:
-                heli_mode = HELI_MODE_POS_CTRL;
-                break;
-
-            case HELI_MODE_POS_CTRL:
-                heli_mode = HELI_MODE_MAN_CTRL;
-                break;
-
-            default:
-                heli_mode = HELI_MODE_MAN_CTRL;
-        }
-    }
-
-    return( 0 );
-}
-
-static void set_control_params( ctrl_params_t *params,
-    controller_t *ctrl_1, controller_t *ctrl_2 )
-{
-    double kp  = params->kp  * FACTOR_PARAMETER;
-    double ki  = params->ki  * FACTOR_PARAMETER;
-    double kd  = params->kd  * FACTOR_PARAMETER;
-    double kdd = params->kdd * FACTOR_PARAMETER;
-
-    if( ctrl_1 != NULL )
-    {
-        controller_set_params( ctrl_1, kp, ki, kd, kdd );
-        fprintf( stdout, "parameter update: %s", ctrl_1->name );
-
-        if( ctrl_2 != NULL )
-        {
-            controller_set_params( ctrl_2, kp, ki, kd, kdd );
-            fprintf( stdout, "/%s", ctrl_2->name );
-        }
-
-        fprintf( stdout, "\n--> Kp: %+3.3f   Ki: %+3.3f   "
-            "Kd: %+3.3f   Kdd: %+3.3f\n", kp, ki, kd, kdd );
-        fflush( stdout );
-    }
-}
-
-static void get_control_params( void )
-{
-    ctrl_params_t params;
-
-    if( terminal_port_is_new_r_p_params( ) )
-    {
-        terminal_port_get_r_p_params( &params );
-        set_control_params( &params, &ctrl_roll, &ctrl_pitch );
-    }
-
-    if( terminal_port_is_new_yaw_params( ) )
-    {
-        terminal_port_get_yaw_params( &params );
-        set_control_params( &params, &ctrl_yaw, NULL );
-    }
-
-    if( terminal_port_is_new_x_y_params( ) )
-    {
-        terminal_port_get_x_y_params( &params );
-        set_control_params( &params, &ctrl_x, &ctrl_y );
-    }
-
-    if( terminal_port_is_new_alt_params( ) )
-    {
-        terminal_port_get_alt_params( &params );
-        set_control_params( &params, &ctrl_z, NULL );
-    }
 }
 
 static inline void reset_motors( void )
@@ -973,41 +969,44 @@ static void int_handler( int num )
 	running = 0;
 }
 
-#define SLEEP_TIME 2000
+#define MAX_TIME 1000000000 /* microseconds */
 
 int control_loop_run( void )
 {
     int first_time = 1;
-    long long offset, start, end;
+    long long start, end;
 	long long loop_start;
+    uint32_t  rem_time;
 
     next_period = get_utime( ) + us_period;
 
     while( running )
     {
-        /* trace sampling period and controller state */
         trace_data.value_3 = (int16_t)( period * 1000 );
         trace_data.value_4 = (int16_t)( heli_state );
 
-        offset             = get_utime( );
-        start              = 0;
-        loop_start         = 0;
-        trace_data.value_5 = (int16_t)( start );
+        /* start of STAT_TO_JAV */
+        start              = get_utime( );
+        loop_start         = start;
+        rem_time           = (uint32_t)( start % MAX_TIME );
+        trace_data.value_5 = (int16_t)( rem_time >> 16 );
+        trace_data.value_6 = (int16_t)( rem_time );
 
         if( send_motor_signals( ) )
         {
             break;
         }
 
-        end = get_utime( ) - offset;
-        trace_data.value_6 = (int16_t)( end );
+        end = get_utime( );
+        rem_time           = (uint32_t)( end % MAX_TIME );
+        trace_data.value_7 = (int16_t)( rem_time >> 16 );
+        trace_data.value_8 = (int16_t)( rem_time );
         calc_stats( end - start, STAT_TO_JAV );
 
-        sleep_until( offset + SLEEP_TIME * 1 );
-	    start = get_utime( ) - offset;
-        trace_data.value_7 = (int16_t)( start );
+        /* start of STAT_FROM_JAV */
+	    start = get_utime( );
 
-	    if( get_javiator_data( ) )
+	    if( javiator_port_get_data( &javiator_data ) )
         {
             fprintf( stderr, "ERROR: connection to JAviator broken\n" );
             heli_state = HELI_STATE_SHUTDOWN;
@@ -1015,13 +1014,22 @@ int control_loop_run( void )
             break;
 	    }
 
-	    end = get_utime( ) - offset;
-        trace_data.value_8 = (int16_t)( end );
+        if( ubisense_enabled )
+        {
+            if( (new_data_x = new_data_y = ubisense_port_is_new_data( )) )
+            {
+                ubisense_port_get_data( &sensor_data );
+            }
+        }
+
+	    end = get_utime( );
+        rem_time            = (uint32_t)( end % MAX_TIME );
+        trace_data.value_9  = (int16_t)( rem_time >> 16 );
+        trace_data.value_10 = (int16_t)( rem_time );
 	    calc_stats( end - start, STAT_FROM_JAV );
 
-        sleep_until( offset + SLEEP_TIME * 2 );
-        start = get_utime( ) - offset;
-        trace_data.value_9 = (int16_t)( start );
+        /* start of STAT_FROM_TERM */
+        start = get_utime( );
 
         if( check_terminal_connection( ) )
         {
@@ -1029,7 +1037,7 @@ int control_loop_run( void )
 
             if( first_time )
             {
-                fprintf( stderr, "ERROR: connection to terminal broken\n" );
+                fprintf( stderr, "ERROR: connection to Terminal broken\n" );
                 first_time = 0;
             }
         }
@@ -1041,13 +1049,16 @@ int control_loop_run( void )
         get_command_data( );
         get_control_params( );
 
-        end = get_utime( ) - offset;
-        trace_data.value_10 = (int16_t)( end );
+        end = get_utime( );
+        rem_time            = (uint32_t)( end % MAX_TIME );
+        trace_data.value_11 = (int16_t)( rem_time >> 16 );
+        trace_data.value_12 = (int16_t)( rem_time );
         calc_stats( end - start, STAT_FROM_TERM );
 
-        sleep_until( offset + SLEEP_TIME * 3 );
-        start = get_utime( ) - offset;
-        trace_data.value_11 = (int16_t)( start );
+        /* start of STAT_CONTROL */
+        start = get_utime( );
+
+        prepare_sensor_data( );
  
         switch( heli_state )
         {
@@ -1067,31 +1078,31 @@ int control_loop_run( void )
                 fprintf( stderr, "ERROR: invalid altitude mode %d\n", heli_state );
         }
 
-        end = get_utime( ) - offset;
-        trace_data.value_12 = (int16_t)( end );
+        end = get_utime( );
+        rem_time            = (uint32_t)( end % MAX_TIME );
+        trace_data.value_13 = (int16_t)( rem_time >> 16 );
+        trace_data.value_14 = (int16_t)( rem_time );
         calc_stats( end - start, STAT_CONTROL );
 
-        sleep_until( offset + SLEEP_TIME * 4 );
-        start = get_utime( ) - offset;
-        trace_data.value_13 = (int16_t)( start );
+        /* start of STAT_TO_TERM */
+        start = get_utime( );
 
         send_report_to_terminal( );
         send_trace_data_to_terminal( );
 
-        end = get_utime( ) - offset;
-        trace_data.value_14 = (int16_t)( end );
+        end = get_utime( );
+        rem_time            = (uint32_t)( end % MAX_TIME );
+        trace_data.value_15 = (int16_t)( rem_time >> 16 );
+        trace_data.value_16 = (int16_t)( rem_time );
         calc_stats( end - start, STAT_TO_TERM );
-
         calc_stats( end - loop_start, STAT_ALL );
 
-        sleep_until( offset + SLEEP_TIME * 5 );
-        start = get_utime( ) - offset;
-        trace_data.value_15 = (int16_t)( start );
+        /* start of STAT_SLEEP */
+        start = get_utime( );
 
         wait_for_next_period( );
 
-        end = get_utime( ) - offset;
-        trace_data.value_16 = (int16_t)( end );
+        end = get_utime( );
         calc_stats( end - start, STAT_SLEEP );
 
         if( ++loop_count < 0 )
