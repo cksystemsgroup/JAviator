@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator Videos: JAviator V2 Attitude Controller Tests</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-videos";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>JAviator V2 Attitude Controller Tests</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span12">
+          <h3>Initial Controller Experiments</h3>
+          <p>
+            At this point, we can fly the JAviator with automatic attitude control but manual positioning via a standard 4-axis joystick. We currently use PD control for roll and pitch, and PID control for yaw. We have also experimented with automatic altitude control but decided to use manual thrust control in our experiments for safety reasons. In order to change the controllers' behavior during flight without the need for landing and re-programming, we have implemented a means for dynamic adjustment of all controller parameters. This helped in finding a basic parameter setting that served as a starting point for fine-tuning each individual controller. The JAviator was powered autonomously by its onboard battery during all experiments. However, we had to connect it via Ethernet cable with the ground station due to unreliable connectivity via the onboard WLAN module. Nevertheless, we performed Ethernet-tethered indoor flights to adjust the controllers and also to reveal the JAviator's true payload capacity. Within a limited space of roughly 5 times 5 meters, we succeeded in flying the JAviator several times for several minutes without interruption. Note that the controllers were adjusted dynamically during these flights, and therefore, we tried to keep the JAviator as close to the ground as possible to avoid serious crashes.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/hk_6khVFS3Y" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/_3YAek8oToo" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/AccZDw7Apms" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/1mAvkHOPRJw" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span12">
+          <h4>Acknowledgements</h4>
+          <p>
+            Many thanks to Silviu Craciunas for taking pictures and videos.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

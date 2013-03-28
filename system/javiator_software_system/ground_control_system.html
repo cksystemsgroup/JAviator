@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: Ground Control System</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>Ground Control System</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="text-center">
+        <img src="sw_stack_gcs.png" alt="">
+      </div>
+      <br>
+      <p>
+        The GCS consists of an application for piloting the JAviator and displaying its status, which we call the Control Terminal, and a separate logging system that collects trace data (time-stamped values of program variables) received from the onboard computer system.
+      </p>
+
+      <h3>JAviator Control Terminal</h3>
+      <p>
+        The Control Terminal, presented in the figure below, displays the sensor data received from the FCS graphically and provides a means for piloting the connected Plant, either the real JAviator or the MockJAviator. The main functionality lies in monitoring and modifying the Plant's attitude and altitude. This is accomplished with four meters that indicate the 'current' and 'desired' roll, pitch, yaw, and altitude values through red and green needles, respectively. In case of the altitude meter, it is also possible to display and set the thrust directly without involving an altitude controller. Except for the yaw meter, each meter contains a safety option that allows to set a limit for the green needle. Accordingly, the user controls the connected Plant by changing the green needles, either by using the keyboard or, preferably, via a 4-axis joystick. Because the red needles refer to the Plant, they cannot be influenced by the user.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="control_terminal.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        The Control Terminal also displays the following controller information:
+      </p>
+      <ul>
+        <li>
+          <strong>Mode</strong> indicates the current mode of the controller (Ground, Ascend, Hover, Descend, or Halt).
+        </li>
+        <li>
+          <strong>Left</strong>, <strong>Right</strong>, <strong>Front</strong>, and <strong>Rear</strong> are indicators that change their color depending on the current controller state (adjusting for roll, pitch, and/or yaw deviation that is out of tolerance).
+        </li>
+        <li>
+          <strong>Offsets</strong> are composed of displaying both the relative motor offsets (differences between the previous and current motor signals) and the partial motor offsets (contribution of the roll, pitch, yaw, and altitude controller).
+        </li>
+        <li>
+          <strong>Signals</strong> represent the four computed values that are assigned currently to the motors.
+        </li>
+      </ul>
+      <p>
+        Further functionalities provided by the Control Terminal include a test mode for dynamically activating a specific controller module. This helps to test controller code that is under development. Another feature of the Control Terminal is a means for dynamically adjusting the controllers. More precisely, each parameter of each controller can be changed arbitrarily during flight without the need for landing and re-programming. There is also an emergency shutdown button available for stopping the motors. In our effort to provide a more advanced visualization and interaction with the connected Plant, the Control Terminal has been extended with a 3D environment. This feature enables visual comparisons of the airborne JAviator against the computed flight behavior. There are also activatable helper planes that describe the desired attitude and altitude of the JAviator. These planes are activated in both figures below, depicting the settled and airborne JAviator, respectively.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span5">
+          <div class="text-center">
+            <img src="3d_simulation_1.png" alt="">
+          </div>
+        </div>
+        <div class="span5">
+          <div class="text-center">
+            <img src="3d_simulation_2.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        The Control Terminal also supports recording and replaying of arbitrary flights, which allows for studying the behavior of the airborne JAviator. Any recorded flight can thus be visualized while replaying. Moreover, the 3D environment provides the opportunity to view a flight from different perspectives in the 3D scene, freely adjustable via the rotation, scaling, and translation settings. In this sense, the 3D representation extends the navigation environment by offering full 3D motion tracking and close-to-reality JAviator visualization effects.
+      </p>
+
+      <h3>Ground Logging System</h3>
+      <p>
+        In order to study and improve flight stability and system performance, we have extended the GCS with a logging system that enables real-time tracing during flights. This logging system makes use of IBM's <a href="http://domino.research.ibm.com/comm/research_projects.nsf/pages/metronome.tenedor.html">TuningFork</a>, an Eclipse-based performance analysis and visualization tool for real-time applications with support for Java, JVM, C++, and Linux. The figure below shows the TuningFork application displaying sensed roll, pitch, and altitude data in its visualization window.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="tuningfork.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        TuningFork features a powerful data processing mechanism and user interface. It was designed originally for diagnosing IBM's real-time JVM and real-time Linux. Nonetheless, because of its scripting capabilities, it can also be used for tracing user-specified system data. Connectivity within the GCS environment is established via sockets. All logged data and events are saved in a trace file together with the current controller parameters. Due to the additional parameter saving, it is possible to restore the exact controller setup for any logged flight. We are interested in both the system-specific values, such as memory mutator utilization and garbage collection activity, as well as the sensor and actuator data transmitted from and to the JAviator. TuningFork's logging mechanism thus allows us to analyze and interpret various data streams in both real-time and hindsight.
+      </p>
+
+      <h3>Controller-Ground Interface</h3>
+      <p>
+        The Controller-Ground Interface defines the communication protocol between the FCS and the GCS. Again, only the FCS initiates communication. The FCS requests new navigation data by sending a packet containing current sensor data (received from the Plant) to the GCS. In response to this packet, the GCS generates a packet containing new navigation data and sends it back to the FCS. The sensor data packet sent by the FCS contains roll, pitch, yaw, and altitude values and their first derivatives as well as x- and y-position data and their second derivatives. Upon receiving a sensor data packet, the GCS responds with a navigation data packet containing new values for roll, pitch, yaw, and altitude, where both sensor and navigation data use the same packet format.
+      </p>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: Architecture Overview</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>Architecture Overview</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="text-center">
+        <img src="sw_stack_all.png" alt="">
+      </div>
+      <br>
+      <p>
+        The JAviator's software runs on the Robostix, Gumstix, and ground system hardware. The software is divided into three layers called Helicopter Plant (Plant), Flight Control System (FCS), and Ground Control System (GCS), as illustrated in the left-hand portion of the figure above. Each of these layers has been developed independently with well-defined interfaces to the other layers. Moreover, there are multiple, alternative implementations of all layers, which can be switched at compile time without changing any of the other layers. The lowest layer, in terms of software hierarchy, is the Plant. It either communicates sensor and motor data with the real JAviator, or else implements a simulation of the JAviator's dynamics. The FCS layer is the most complex part of the JAviator's software, and is shown in more detail in the right-hand portion of the figure. It implements the flight control algorithms and communicates with both, the Plant and the GCS. Finally, the GCS implements the Control Terminal application for piloting the JAviator and displaying its status. All three layers communicate via a simple, custom-designed message-passing protocol with the following format: a message is a packet with a header, a variable-size payload, and a checksum to ensure data integrity. The figure below depicts the packet format, which starts with the packet delimiter (0xFF) followed by two header bytes. The first of these two bytes contains the type of the packet such as, for instance, sensor data. The second byte encodes the payload size, followed by the payload, checksum, and another, final packet delimiter.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="packet.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        Due to the protocol-based layer separation, we are able to switch between alternative implementations of all three layers. This allows us to experiment with different control algorithms and implementations, run-time environments, and even programming languages. In the following sections, we provide more details on the different requirements and implementations of the layers described.
+      </p>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>The JAviator Project</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="jquery.js"></script>
+  <script src="bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "";
+    var menuItem = "#menu-home";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header text-center">
+
+        <img src="javiator_v2_logo_large.png" alt="">
+        <br>
+        <br>
+        <h1>The JAviator Quadrotor: An Aerial Software Testbed</h1>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span7">
+          <p></p>
+          <p>
+            The JAviator (Java Aviator) project is a research project of the <a href="http://www.cs.uni-salzburg.at/~ck">Computational Systems Group</a> at the Department of Computer Sciences of the University of Salzburg, Austria. The goal of the project is to develop high-level real-time and concurrent programming abstractions and test them on UAVs (Unmanned Aerial Vehicles). We are working on methodologies that enable time-portable programming of high-performance, hard real-time applications in Java. The resulting application code is not only efficient but also robust with respect to real time. Time-portable programs do not change their real-time behavior across different hardware platforms and workloads similar to Java's write-once-run-anywhere paradigm for functional behavior but extended to the temporal domain. In collaboration with the <a href="http://www.research.ibm.com/labs/watson">IBM Thomas J. Watson Research Center</a> in Hawthorne, New York, USA, we are developing a software infrastructure that supports the time-portable execution of Java programs. We test our implementations on the JAviator, an electric quadrotor helicopter shaped like a cross with four rotors, one at each end. One pair of opposite rotors spins clockwise, the other pair counter-clockwise. The JAviator is controlled merely by adjusting the rotors' speed without changing the angle of its rotor blades. The JAviator is mechanically simpler than a traditional helicopter but very agile yet still inherently unstable and therefore very hard to fly. We have designed and manufactured the JAviator completely from scratch using only high-performance materials such as carbon fiber, aircraft aluminum, and medical titanium. The JAviator is an autonomously flying software laboratory that supports high payloads for a variety of complex sensors such as GPS, sonars, and lasers as well as networking services such as WLAN and wireless RS232.
+          </p>
+        </div>
+        <div class="span5 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/njSI_oPGXjE" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+      <br>
+      <br>
+
+      <ul class="thumbnails">
+        <li class="span3 text-center">
+          <div class="thumbnail">
+            <img src="ibm_oem_logo.png" alt="">
+            <p></p>
+            <p>
+              Research collaboration and project funding by the <a href="http://www.research.ibm.com/labs/watson">IBM Thomas J. Watson Research Center</a>.
+            </p>
+          </div>
+        </li>
+        <li class="span3 text-center">
+          <div class="thumbnail">
+            <img src="kp_edv_logo.png" alt="">
+            <p></p>
+            <p>
+              Hardware support and project funding by the <a href="http://www.k.p-edv.at/">K.P-EDV Company</a>.
+            </p>
+          </div>
+        </li>
+        <li class="span3 text-center">
+          <div class="thumbnail">
+            <img src="uni_sbg_logo.png" alt="">
+            <p></p>
+            <p>
+              Initial funding (start-up funds of Prof. Kirsch) by the <a href="http://www.uni-salzburg.at/">University of Salzburg</a>.
+            </p>
+          </div>
+        </li>
+        <li class="span3 text-center">
+          <div class="thumbnail">
+            <img src="techno_z_logo.png" alt="">
+            <p></p>
+            <p>
+              Project support by the <a href="http://www.techno-z.at/">Techno-Z, Salzburg</a>.
+            </p>
+          </div>
+        </li>
+        <li class="span3 text-center">
+          <div class="thumbnail">
+            <img src="carbon_team_logo.png" alt="">
+            <p></p>
+            <p>
+              Custom-built carbon-fiber JAviator parts by the <a href="http://www.carbon-team.de/">Carbon Team Germany GmbH</a>.
+            </p>
+          </div>
+        </li>
+      </ul>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

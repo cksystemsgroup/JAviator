@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator Videos: JAviator V1 Propulsion System Tests</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-videos";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>JAviator V1 Propulsion System Tests</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span6">
+          <h3>Thrust Determination</h3>
+          <p>
+            Propulsion system tests are unavoidable in order to determine the essential physical data required for designing the closed-loop controller. Honestly, our test bench is neither very attractive nor really competitive to state-of-the-art equipment used for this purpose. Nevertheless, intuitive improvisation in experimental research is the key to success! Of course we wanted to find out the real capacity of our propulsion system design, and therefore, had to torture the motors up to their limit. It turned out that the most sensitive parts are actually the brushless-motor controllers, which hardly forgive ride-outs into danger zone. They usually indicate their readiness by a sequence of beeps after being supplied with power. However, once exceeding their limit just for a few seconds and they will never again say 'hello' to you. After upgrading with much stronger motor controllers we finally could determine the maximum thrust, holding for several minutes before the motor winding burnt through. We are very sorry Armin, but this little motor generated an amazing thrust of almost 1,500g (!) until saying goodbye forever.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="thrust-determination" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#thrust-determination" data-slide-to="0" class="active"></li>
+              <li data-target="#thrust-determination" data-slide-to="1"></li>
+              <li data-target="#thrust-determination" data-slide-to="2"></li>
+              <li data-target="#thrust-determination" data-slide-to="3"></li>
+              <li data-target="#thrust-determination" data-slide-to="4"></li>
+            </ol>
+            <a class="carousel-control left" href="#thrust-determination" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#thrust-determination" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="engine_test_bench_8.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Engine Test Bench</h4>
+                    <p>
+                      Simple but effective - our non-certified office table test bench setup.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="engine_test_bench_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Engine Test Bench</h4>
+                    <p>
+                      JAviator mounted in our elaborate propulsion system test bench.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="engine_test_bench_4.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Engine Test Bench</h4>
+                    <p>
+                      High-precision spring scale connected to the JAviator's rear arm.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="broken_controller_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Broken Motor Controller</h4>
+                    <p>
+                      Broken brushless-motor controller (check out red-encircled transistor!).
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="burnt_through_winding_3.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Burnt-Through Winding</h4>
+                    <p>
+                      Burnt-through 3-phase motor winding (original wire color was light-red).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6">
+          <h3>Video Clips</h3>
+          <p>
+            The following video clips report on some of the many measurements we performed using two prototype motors with slightly different windings. The strong motor is indeed very attractive regarding its amazing thrust, however, it consumes a great deal of power. So we decided for the gentle motor since it perfectly meets our power consumption estimates and also generates much more thrust than originally expected.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div class="alert alert-info">
+            If your media player cannot interpret the video clips properly, you might need to install the freeware <a href="http://www.xvid.org/Downloads.15.0.html"><b>Xvid Video Codec</b></a> from <a href="https://www.xvidsolutions.com/Home-of-the-Xvid-Codec.1.0.html">Xvid Solutions</a>.
+          </div>
+          <ul>
+            <li>
+              <a href="https://dl.dropbox.com/s/tvhuf9t69743g2z/test_4_gentle_motor_5min_full_thrust.avi"><b>Gentle Motor - 5-Minute Full Thrust</b></a> (6:45)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/b6xp0472mrmkrbg/test_5_gentle_motor_data_sampling.avi"><b>Gentle Motor - Short Data Sampling</b></a> (1:35)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/t40tsu9k80oy4ju/test_6_gentle_motor_large_blades.avi"><b>Gentle Motor - Testing Larger Blades</b></a> (1:41)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/x34hsn43azlfaw4/test_12_strong_motor_speed_change_reaction.avi"><b>Strong Motor - Speed Change Reaction</b></a> (1:55)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/z3w0o38osm1lf7t/test_13_strong_motor_10_newton_at_12_amps.avi"><b>Strong Motor - 10 Newton at 12 Amps</b></a> (1:06)
+            </li>
+          </ul>
+        </div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span6">
+          <p>
+            Experimental research sometimes demands experimental evidence. Consequently, the following experiments had to be conducted, they were a simple 'must', and there was no way to get around this.
+          </p>
+        </div>
+        <div class="span6">
+          <ul>
+            <li>
+              <a href="https://dl.dropbox.com/s/zwhyn5t3w64pngg/test_14_strong_motor_moderate_rear_up.avi"><b>Strong Motor - Moderate Rear-Up</b></a> (0:57)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/8ipsl3ub71q45xm/test_15_strong_motor_three_step_rear_up.avi"><b>Strong Motor - Three-Step Rear-Up</b></a> (0:28)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/s5abetr4j7lm76x/test_16_strong_motor_immediate_rear_up.avi"><b>Strong Motor - Immediate Rear-Up</b></a> (0:18)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/lkfrkp2rhcxig9z/test_17_strong_motor_lifting_500_grams.avi"><b>Strong Motor - Lifting 500 Grams</b></a> (1:07)
+            </li>
+            <li>
+              <a href="https://dl.dropbox.com/s/8vqeui57mh978ym/test_18_strong_motor_lifting_1000_grams.avi"><b>Strong Motor - Lifting 1,000 Grams</b></a> (1:22)
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span12">
+          <h4>Acknowledgements</h4>
+          <p>
+            Many thanks to Johann Kraihammer for helping with the test bench setup.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

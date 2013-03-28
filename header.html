@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <script type="text/javascript">
+    $( document ).ready( function( ) {
+      document.getElementById( "link-home" ).href = homePath + "index.html";
+      document.getElementById( "link-team" ).href = homePath + "team/index.html";
+      document.getElementById( "link-system" ).href = homePath + "system/index.html";
+      document.getElementById( "link-releases" ).href = homePath + "releases/index.html";
+      document.getElementById( "link-publications" ).href = homePath + "publications/index.html";
+      document.getElementById( "link-talks" ).href = homePath + "talks/index.html";
+      document.getElementById( "link-videos" ).href = homePath + "videos/index.html";
+      document.getElementById( "link-press" ).href = homePath + "press/index.html";
+      $( menuItem ).toggleClass( "active" );
+    } );
+  </script>
+
+</head>
+
+<body>
+
+  <ul class="nav">
+    <li id="menu-home"><a id="link-home">Home</a></li>
+    <li id="menu-team"><a id="link-team">Team</a></li>
+    <li id="menu-system"><a id="link-system">System</a></li>
+    <li id="menu-releases"><a id="link-releases">Releases</a></li>
+    <li id="menu-publications"><a id="link-publications">Publications</a></li>
+    <li id="menu-talks"> <a id="link-talks">Talks</a></li>
+    <li id="menu-videos"><a id="link-videos">Videos</a></li>
+    <li id="menu-press"><a id="link-press">Press</a></li>
+  </ul>
+  <ul class="nav pull-right">
+    <li><a href="http://www.cs.uni-salzburg.at/~ck">Computational Systems Group</a></li>
+  </ul>
+
+</body>
+</html>

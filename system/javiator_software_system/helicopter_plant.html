@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: Helicopter Plant</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>Helicopter Plant</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="text-center">
+        <img src="sw_stack_hp.png" alt="">
+      </div>
+      <br>
+      <p>
+        The Plant provides an abstraction of sensors and actuators to the FCS. It either communicates sensor and motor data with the real JAviator (Physical Plant), or else implements a simulation of the JAviator's dynamics (Simulated Plant). The Physical Plant is a program written in C that runs on the Robostix and implements device drivers for sensors and actuators. The Simulated Plant is a program written in Java that runs on any JVM.
+      </p>
+
+      <h3>Physical Plant</h3>
+      <p>
+        The Physical Plant on the Robostix periodically polls all sensors for new values and buffers them locally for remote requests by the FCS. The rotational speed of the four motors is controlled by generating individual PWM signals according to the motor signals received from the FCS. The physical connection between the Physical Plant and the FCS is via an RS232 serial line.
+      </p>
+
+      <h3>Simulated Plant</h3>
+      <p>
+        The Simulated Plant, also called the MockJAviator, is a simulation of the real JAviator. It receives the motor signals from the FCS and, in response, computes new sensor values according to an estimation of the real JAviator's behavior. To ensure compatibility with the FCS, the device-independent aspects of the Controller-Plant Interface implemented in the MockJAviator are the same as in the Physical Plant. However, instead of an RS232 serial line, the MockJAviator uses a TCP/IP connection to communicate with the FCS. Therefore, the FCS implements the device-dependent aspects of the Controller-Plant Interface not only on RS232 but also on Ethernet. An advantage of this design is that the MockJAviator can run either locally on the same machine as the FCS or remotely on some other machine.
+      </p>
+
+      <h3>Controller-Plant Interface</h3>
+      <p>
+        The Controller-Plant interface defines the communication protocol between the FCS and the Plant. Only the FCS initiates communication. The FCS requests new sensor values by sending a packet containing new motor signals to the Plant. In response to this packet, the Plant generates a packet containing the current sensor values and sends it back to the FCS. The Plant keeps track of the time when packets are received and slowly shuts down the motors for safety if packets have not been received for a certain amount of time (200ms in our current setting).
+      </p>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

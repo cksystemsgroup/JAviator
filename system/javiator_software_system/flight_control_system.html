@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: Flight Control System</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>Flight Control System</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="text-center">
+        <img src="sw_stack_fcs.png" alt="">
+      </div>
+      <br>
+      <p>
+        All FCS versions implement the same control algorithms for flying the JAviator. Attitude/altitude control is implemented by a simple combination of PD (roll/pitch) and PID (yaw/altitude) controllers. We are currently implementing position control, which is, however, still in a prototypical stage, and are experimenting with both GPS- and RFID-based location data. The figure below depicts the schematic of the JAviator controller already extended by the required position logic.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="controller_schematic.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        Within a period of 20ms (50Hz), the FCS receives sensor values from the Plant and computes new motor signals that are sent back to the Plant. When connected to the GCS, the FCS sends a report to the GCS at the end of each period containing the current sensor values and motor signals. As depicted in the right-hand portion of the software architecture figure above, there are four alternative FCS implementations: (1) a Java-thread-based controller written in Java (JControl), (2) an Exotask-based controller written in Java (EControl), a Linux-process-based controller written in C (CControl), and a Tiptoe-based controller written in C (TControl). <a href="http://tiptoe.cs.uni-salzburg.at/">Tiptoe</a> is our own real-time operating system. JControl and EControl run on top of a Java Virtual Machine (JVM). CControl runs as a single-threaded Linux process. TControl is compiled into the Tiptoe kernel for lack of support of user processes in the current Tiptoe prototype. Except for TControl, we run all controllers on a Linux system with special real-time support for XScale CPUs. TControl, in contrast, runs bare-metal on Gumstix boards. CControl and TControl are scheduled to be released later this year under an open source license. We are also working with IBM Research on releasing JControl and EControl as well as the <a href="http://domino.research.ibm.com/comm/research_projects.nsf/pages/metronome.exotasks.html">Exotasks</a> tools and runtime extensions for the IBM <a href="http://www-01.ibm.com/software/webservers/realtime/">WebSphere Real Time</a> (WSRT) JVM in the near future under a suitable license.
+      </p>
+
+      <h3>JControl</h3>
+      <p>
+        JControl implements the FCS in Java threads, which run on any JVM that supports Java version 1.4. The control algorithms, the timing, and the communication logic are all implemented in standard Java. Only five procedure calls to the RS232 serial-line driver require implementations as native methods in C. Additionally, JControl is designed to enable code reuse by other components. For instance, JControl's communication subsystem is reused in the GCS and EControl implementations. Moreover, EControl reuses JControl's code that implements the functional aspects of the control algorithms. At runtime, JControl uses three separate threads of execution. In addition to the controller thread, which executes the control algorithm, there are two receiver threads in the communication subsystem. Both receiver threads are identical, except that one polls the Plant interface for incoming packets and the other one polls the GCS interface. If an incoming packet contains information needed by the control algorithm, a new Java object is generated and a reference to this object is stored in the communication subsystem. The controller thread retrieves the latest object at the start of each period. Packets that are not intended for the FCS are forwarded to the opposite communication interface. Although JControl runs on any JVM with support of Java version 1.4, better real-time results in terms of latency and pause times are achieved with IBM's WSRT JVM. It invokes the <a href="http://domino.research.ibm.com/comm/research_projects.nsf/pages/metronome.metronomegc.html">Metronome Garbage Collector</a>, which shortens pause times and thus enables predictable execution of user applications written in Java. The WSRT JVM has been selected, for instance, by Raytheon as computing platform for the DD(X), the U.S. Navy's future surface combatant ship program. All our test flights with JControl (and EControl) were conducted with the WSRT JVM modified for support of Exotasks.
+      </p>
+
+      <h3>EControl</h3>
+      <p>
+        EControl implements the FCS with <a href="http://domino.research.ibm.com/comm/research_projects.nsf/pages/metronome.exotasks.html">Exotasks</a>, which facilitate real-time programming in Java. Exotasks are isolated communicating tasks that execute in real time. Determinism is achieved by enforcing spatial isolation of each task and the use of the <a href="http://link.springer.com/chapter/10.1007%2F978-3-642-24349-3_5">Logical Execution Time (LET) model</a> to communicate between the tasks. Spatial isolation prohibits different tasks to share any state and therefore allows garbage-collecting tasks individually. Communication between tasks is done by sending messages through dedicated channels, which are managed by the Exotask runtime system. Messages are delivered at predefined logical instants of time (LET model) controlled by a scheduler that is part of the runtime system. Currently, the runtime system supports a Giotto-like scheduler and a Hierarchical Timing Language (HTL) scheduler. <a href="http://www.cs.uni-salzburg.at/~ck/content/publications/journals/ProcIEEE03-Giotto.pdf">Giotto</a> is a coordination language for distributed control systems based on the LET model. <a href="http://htl.cs.uni-salzburg.at/">HTL</a> is the most recent successor of Giotto. With the Giotto-like or the HTL scheduler, the Exotask system provides deterministic timing across changes of the hardware and software platform even in the presence of other Java threads. Note that the Exotask system also provides a scheduler framework that allows for other scheduler implementations that may not use the LET model. A detailed performance analysis of the Exotask system is available in our <a href="http://www.cs.uni-salzburg.at/~ck/content/publications/conferences/LCTES07-Exotasks.pdf">recent work</a>. The tasks of a program in combination with their communication links result in a graph, where the nodes represent the tasks and the edges represent the communication connections. The graph of an Exotask program is called Exotask Graph, which is implemented either in Java source classes that follow a certain design pattern or via a graphical editor. The figure below is a screenshot of the JAviator's Exotask Graph displayed in the graphical editor.
+      </p>
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="exotask_graph.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+      <p>
+        This editor is shipped with the Exotask development system as an extension to Eclipse, a popular integrated development environment for Java. While creating the Exotask Graph, the graphical editor performs additional error checks and, after successfully validating the graph, generates Java source code.
+      </p>
+
+      <h3>CControl</h3>
+      <p>
+        CControl implements the control algorithm in a single Linux process. It starts the control loop after the communication channels have been setup and initiated successfully. The control loop reads the latest sensor values from the communication subsystem and computes the new motor signals by invoking the PD/PID controllers described above. The new motor signals are then sent to the Plant by the communication subsystem. Similar to JControl, CControl uses a communication subsystem that performs all I/O-related tasks. In contrast to JControl, however, CControl does not employ any additional threads of execution. More precisely, CControl's communication subsystem provides a procedure with a deadline as argument. After the control algorithm computation, the control loop calls this procedure with the start of the next period as argument. The communication subsystem is then active until the end of that period. It starts by sending all outgoing messages through the correct connections and then polls the incoming channels for new packets. All packets are parsed and data intended for the control algorithm are stored in a buffer. Data received from the GCS and intended for the Plant are forwarded without modifications. Similarly, packets that are received via the Plant connection intended for the GCS are also forwarded without any modification. CControl implements a special framework to abstract the system-dependent parts of the controller. This design supports the execution of CControl on different systems by changing only the low-level implementation of the system-dependent modules, for instance, the I/O operations of the communication subsystem and the timing operations.
+      </p>
+
+      <h3>TControl</h3>
+      <p>
+        TControl is a port of CControl to our own real-time operating system called <a href="http://tiptoe.cs.uni-salzburg.at">Tiptoe</a>. The current version of TControl is hard-wired into the Tiptoe kernel for lack of support of user processes. Nevertheless, we were able to implement the FCS with Tiptoe, run it natively on the Gumstix, and fly the JAviator. We are currently working on the first Tiptoe release, which will offer better support of user processes. The Tiptoe release will also include an adapted version of TControl as an example application. TControl will then be implemented in the so-called <a href="http://www.cs.uni-salzburg.at/~ck/content/publications/reports/SBG08-WorkloadOrientedProgramming.pdf">Workload-Oriented Programming (WOP) model</a> of Tiptoe, which abstracts concurrency-dependent process execution times into concurrency-independent process response times, even on the level of individual process actions such as system and procedure call invocations. WOP is a design methodology for specifying throughput and latency of real-time software processes on the level of individual process actions. The key programming abstraction is that the workload involved in executing a process action, such as a system or procedure call, fully determines the action's response time, independently of any previous or concurrent actions. The WOP model thus enables sequential and concurrent real-time process composition while maintaining each action's workload-determined real-time behavior. We plan to implement TControl in the WOP model by specifying timing constraints on individual actions of the controller. Actions such as reading the sensors and updating the actuator signals have latency-oriented timing requirements while log and trace data usually need throughput guarantees. In the WOP model, we are able to specify these different constraints within the control loop itself and guarantee the correct timely execution of each controller action on top of Tiptoe. Similar to CControl, TControl connects to the Plant via a dedicated RS232 serial line. However, the Tiptoe kernel does not support TCP/IP, which is used to communicate with the GCS. Instead, Tiptoe multiplexes all TCP/IP traffic in real time in custom-designed Ethernet frames onto a dedicated Ethernet connection to another Gumstix host running our real-time enhanced version of Linux. The host machine demultiplexes all incoming traffic and relays it to regular wired or wireless Ethernet connected to the GCS. The other direction works similarly.
+      </p>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

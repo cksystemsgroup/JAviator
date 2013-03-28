@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator Releases: How to Run the Demo Software</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-releases";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>How to Run the Demo Software</h2>
+
+      </div><!-- end of page-header -->
+
+      <h3>1. Starting the MockJAviator</h3>
+      <p>
+        Extract the downloaded archive to an arbitrary directory of your choice, change to that directory, and start the MockJAviator helicopter simulation program using the following command.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_01.png" alt="">
+      </div>
+      <br>
+      <p>
+        The program indicates its readyness by waiting until someone connects to the specified port.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_02.png" alt="">
+      </div>
+      <br>
+
+      <h3>2. Starting the MockJControl</h3>
+      <p>
+        Open another terminal window, change to the directory containing the JAR files, and start the MockJControl helicopter control program using the command shown below. Note that the term 'localhost' is used in the present case for specifying an IP address, because the control program is executed on the same machine as the simulation program. If you want to run the control program on a different machine, then you need to specify the IP address of the machine where the simulation program is executed.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_03.png" alt="">
+      </div>
+      <br>
+      <p>
+        Upon connecting and successfully synchronizing with the simulated JAviator, the control program starts the control loop.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_04.png" alt="">
+      </div>
+      <br>
+      <p>
+        After the connection has been established, the simulation program starts sending sensor data to the control program and prints the simulated altitude, roll, pitch, and yaw values.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_05.png" alt="">
+      </div>
+      <br>
+
+      <h3>3. Starting the Control Terminal</h3>
+      <p>
+        Open another terminal window, change to the directory containing the JAR files, and start the Control Terminal application using the following command.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_06.png" alt="">
+      </div>
+      <br>
+      <p>
+        The Control Terminal displays attitude and altitude data for both the received sensor data, indicated by red needles, and sent navigation commands, indicated by green needles (covered by the red needles in the next screenshot). The gauges are arranged to meet the general stick assignment of standard R/C consoles, i.e., the left hand controls yawing and the altitude, whereas the right hand controls rolling and pitching. The thin green needles indicate the chosen navigation-command limits for the gauges. They are especially useful when operating with a joystick since they map the selected range to the control range of the stick. The top panel of the middle column displays the current helicopter mode, i.e., ground, ascend, hover, descend, or halt in case of a shut-down. In addition, it indicates the current controller operation, i.e., front, right, rear, and left turning yellow whenever the yaw deviation exceeds +/-1.5 degrees, as well as front and rear and/or right and left turning red whenever the roll and/or pitch deviation exceeds +/-1.5 degrees. The diamond-arranged numbers of the center panel show the motor offsets, i.e., the difference between the current and the previous motor signals, whereas the square-arranged numbers show the individual portions generated by the four controllers, i.e., left-top: yaw contribution, right-top: roll contribution, right-bottom: pitch contribution, and left-bottom: altitude contribution. The bottom panel displays the current motor signals assigned to the four motors.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_07.png" alt="">
+      </div>
+      <br>
+      <p>
+        It might be helpful to make yourself familiar with the key assignments of the Control Terminal, since they might differ slightly from key assignments used in commercially available flight simulators. For this purpose, simply click the 'Key Assistance' button.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_08.png" alt="">
+      </div>
+      <br>
+      <p>
+        If you have started the Control Terminal application on a different machine than the one where you execute the helicopter control program, then you need to specify the IP address of the machine running the control program. In this case, click the 'Port Settings' button and replace 'localhost' in the port-settings dialog with the correct IP address.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_09.png" alt="">
+      </div>
+      <br>
+      <p>
+        Now click the 'Connect to Heli' button and let the Control Terminal try to establish a connection to the control program. If successful, the button displays 'JAviator connected' and afterwards changes the label to 'Disconnect Heli', otherwise, in case of a failure, the button flashes three times 'Connection failed' and keeps the original label.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_10.png" alt="">
+      </div>
+      <br>
+
+      <h3>4. Issuing Navigation Commands</h3>
+      <p>
+        After the Control Terminal application is connected to the helicopter control program, you can start your flight by setting the desired altitude.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_11.png" alt="">
+      </div>
+      <br>
+      <p>
+        Wait until the helicopter has reached the hover mode, indicated by the top panel of the middle column, then start issuing arbitrary navigation commands for the roll, pitch, and/or yaw angle.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_12.png" alt="">
+      </div>
+      <br>
+      <p>
+        Upon landing the red needles are set back to zero automatically via the helicopter simulation program, whereas the green needles keep your settings. If you want them to take their original positions, simply click the 'Reset Needles' button.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_13.png" alt="">
+      </div>
+      <br>
+
+      <h3>5. Recording/Replaying a Flight Scenario</h3>
+      <p>
+        The Control Terminal allows you to record and replay individual flight scenarios. This is especially useful when tweaking the controllers, because a specific flight scenario can be reproduced over and over without any discrepancies. To record a flight, start the Control Terminal application with the additional parameter '-record' followed by an arbitrary file name for recording the issued navigation commands. Recording starts as soon as you click the 'Connect to Heli' button and stops with clicking it again, assuming the connection could be established successfully.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_14.png" alt="">
+      </div>
+      <br>
+      <p>
+        For replaying the recorded scenario restart the Control Terminal application with the same file name, but this time omit the '-record' parameter.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_15.png" alt="">
+      </div>
+      <br>
+      <p>
+        Upon completion of replaying the recorded scenario, the Control Terminal application prints the final status and closes itself.
+      </p>
+      <div class="text-center">
+        <img src="control_system_demo_software_16.png" alt="">
+      </div>
+      <br>
+
+      <h3>6. Have Fun!</h3>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

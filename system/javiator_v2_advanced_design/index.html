@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: JAviator V2 Advanced Design</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>JAviator V2 Advanced Design</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span6">
+          <h3>Frame Construction</h3>
+          <p>
+            The JAviator's frame is a light-weight construction consisting of a symmetrical (both horizontally and vertically) top and bottom frame. These two partial frames, as well as the eight vertical connecting pipes, are built entirely from Carbon Fiber (CF) and Aluminum (AL). The rotor axles, which connect the top and bottom frame at their far ends, are manufactured from Titanium (TI) with the aim to ensure high cohesiveness at reduced weight. The frame design of the JAviator not only incorporates light-weight materials, it also provides high mechanical integrity.
+          </p>
+          <p>
+            The first picture shows the bottom center ring equipped with four AL flanges that are used to connect the side-arm pipes. These flanges are designed to also hold eight vertical CF pipes, as shown in the second picture. The top ring, which is identical to the bottom ring and similarly equipped with four AL flanges, completes the JAviator's body frame, depicted in the third picture. In this illustration, the bottom ring is already closed with a thin CF plate used to carry the onboard battery. The four side arms consist of two CF pipes each with the same diameter as the vertical body pipes. Each side-arm pipe has AL connectors on both ends that fit to the AL flanges, as shown in the fourth picture, and also contain holes for mounting the rotor axles, shown in the last picture.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="frame-construction" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#frame-construction" data-slide-to="0" class="active"></li>
+              <li data-target="#frame-construction" data-slide-to="1"></li>
+              <li data-target="#frame-construction" data-slide-to="2"></li>
+              <li data-target="#frame-construction" data-slide-to="3"></li>
+              <li data-target="#frame-construction" data-slide-to="4"></li>
+            </ol>
+            <a class="carousel-control left" href="#frame-construction" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#frame-construction" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="frame_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>JAviator V2 Central Ring</h4>
+                    <p>
+                      Central ring equipped with side-arm flanges.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="frame_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Vertical Connecting Pipes</h4>
+                    <p>
+                      Vertical connecting pipes installed on side-arm flanges.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="frame_3.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>JAviator V2 Body Frame</h4>
+                    <p>
+                      Complete JAviator V2 body frame.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="frame_4.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Body Frame with Side Arms</h4>
+                    <p>
+                      Side arms connected to body frame via side-arm flanges.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="frame_5.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Side-Arm Ends Connection</h4>
+                    <p>
+                      Side-arm ends connected via rotor axle.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6">
+          <h3>Machined Components</h3>
+          <p>
+            In order to achieve a high degree of precision and reproducibility, the following fabrication methods were used. The CF rings and plates were manufactured by flow-jet cutting, whereas laser cutting was applied for the AL flanges, TI motor mounts, and TI rotor triangles. The AL frame connectors as well as all remaining AL and TI rotor components are CNC-fabricated. Due to the symmetrical frame design, the amount of comprising parts could be reduced to a lower number of different parts with higher quantity of occurrence.
+          </p>
+          <p>
+            The JAviator frame contains eight body pipes as well as eight side-arm pipes. The first picture shows the AL connector that serves as end tap for the body pipes. Due to the identical top and bottom frame, the same connector can be used on both ends of a body pipe for connecting the eight vertical pipes with the top and bottom ring. The design of the end taps for the side-arm pipes, however, turned out to be a challenge. A side arm consists of an upper and a lower pipe. Thus, there are four pipe ends to be equipped with appropriate connectors. For the prototype version of the JAviator, we designed hand-made connectors built from conventional AL pipes and profiles. Because the prototype neither had tilted rotors nor signal lights installed, the connectors of the upper pipe could be made identical to the ones of the lower pipe. However, this solution was based on two different connectors and the body-side connectors did not facilitate tilting the side arms. In our effort to create a single connector that can be used for all four pipe ends, we designed the connector presented in the second picture. This connector serves as end tap for both sides of both the upper and lower side-arm pipe. The problem with enabling a side-arm tilt was solved by designing a corresponding AL flange, depicted in the third picture, which contains a connecting strap that fits in the milled-out portion of the connector. The angle between the turned and milled portion of the connector was chosen to enable side-arm tilts of up to 6 degrees without stressing the comprised components.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="machined-components" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#machined-components" data-slide-to="0" class="active"></li>
+              <li data-target="#machined-components" data-slide-to="1"></li>
+              <li data-target="#machined-components" data-slide-to="2"></li>
+              <li data-target="#machined-components" data-slide-to="3"></li>
+              <li data-target="#machined-components" data-slide-to="4"></li>
+            </ol>
+            <a class="carousel-control left" href="#machined-components" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#machined-components" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="alu_parts_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Body-Pipe Connector</h4>
+                    <p>
+                      CNC-turned body-pipe connectors.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="alu_parts_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Side-Arm-Pipe Connector</h4>
+                    <p>
+                      CNC-turned/milled side-arm-pipe connectors.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="alu_parts_3.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Side-Arm Flange</h4>
+                    <p>
+                      Laser-cut side-arm flange.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="series_production_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Prefabricated Frame Components</h4>
+                    <p>
+                      Prefabricated components for five JAviator V2 frames.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="series_production_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Assembled JAviator V2 Frames</h4>
+                    <p>
+                      Completely assembled JAviator V2 frames including propulsion groups.<br />
+
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span12">
+          <p>
+            Accordingly, the number of different CF parts and AL connectors could be reduced to the minimum required for the JAviator frame, which facilitates the series production, illustrated in the fourth picture. A completely assembled JAviator frame, as shown in the last picture, weighs exactly 887g, including four rubber dumpers installed beneath the bottom ring, all required screws and nuts, as well as the four propulsion groups without motor and blades. Because the rotor axles are part of the frame construction, the rotors, belts, and motor mounts need to be installed already during assembly.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6">
+          <h3>Propulsion System</h3>
+          <p>
+            The propulsion system of the JAviator consists of four identical propulsion groups. Each rotor has three CF rotor blades attached, where two opposing rotors are equipped with clockwise and the other two with counter-clockwise spinning blades. Rather than using toothed gears, the transmission between motors and rotors is performed via belt drives, which tend to be less noisy and are more robust for this purpose. The belt-drive gears and belts are industrial DIN-norm T2.5 components, which can be found in tools of any description, for instance, small planing machines. The rotor is composed of an AL belt-drive gear with press-fitted stainless-steel bearings at both ends, as can be seen in the first picture. This main gear directly carries the three AL shafts used for mounting the blades. The shafts are conjuncted by a TI triangle at the upper end, shown in the second picture, for compensating centrifugal forces that might cause shaft deformations at high rotation speeds. The rotor axles are also manufactured from TI in order to achieve high integrity at low weight.
+          </p>
+          <p>
+            In order to generate maximum thrust at minimum weight, we decided to use custom-built 3-phase AC motors also known as brushless motors or outrunners, shown in the third picture. They consist of CNC-fabricated AL parts and hand-coiled armatures, are equipped with a TI axle, and weigh only 35g. They were originally designed for model planes by the <a href="http://www.ahm-brushless.de">AHM-Brushless Company</a>, but re-shaped for us according to our specifications. We tested two gearing options for the belt drive (1:6 and 1:5) and decided to use the stronger 1:5 transmission for all of our JAviators, because the flight time without payload is similar but it provides more thrust.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="propulsion-system" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#propulsion-system" data-slide-to="0" class="active"></li>
+              <li data-target="#propulsion-system" data-slide-to="1"></li>
+              <li data-target="#propulsion-system" data-slide-to="2"></li>
+              <li data-target="#propulsion-system" data-slide-to="3"></li>
+              <li data-target="#propulsion-system" data-slide-to="4"></li>
+            </ol>
+            <a class="carousel-control left" href="#propulsion-system" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#propulsion-system" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="rotor_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Rotor Bottom View</h4>
+                    <p>
+                      Main gear with installed rotor shafts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="rotor_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Rotor Top View</h4>
+                    <p>
+                      Rotor triangle on top of rotor shafts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="motor_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Brushless Motor</h4>
+                    <p>
+                      CNC-machined 3-phase AC synchronous motor.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="max_lifting_capacity_test.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Measuring Lift Capacity</h4>
+                    <p>
+                      Measuring the JAviator's maximum lift capacity.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="max_service_time_test.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Measuring Service Time</h4>
+                    <p>
+                      Measuring the JAviator's maximum service time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span12">
+          <p>
+            In order to verify our estimations regarding thrust generation and flight times, we conducted several experiments with a fully assembled JAviator. The motors and the entire avionics equipment were powered during all tests via a single, onboard <a href="http://www.thunderpowerrc.com/">Thunder Power</a> 4-cell lithium-polymer battery with a capacity of 6300mAh. The JAviator weighs a little less than 2.2kg in its ready-to-flight configuration. We tested two different gearings (1:6 and 1:5) to reveal the propulsion system's maximum capability. To do so, we placed the JAviator on a round launch pad with a small hole in the middle, which we normally use for tethered flights. We measured thrust with one end of a nylon rope attached to the center of the helicopter's bottom plate, put through the hole in the launch pad, guided over a pulley, and the other end attached to a high-precision spring scale. The rope had a play of approximately 10cm, hence allowing the JAviator to lift off and hover freely, as can be seen in the forth picture. Due to this setup, we were able to measure the thrust generated in addition to lifting the helicopter's empty weight. After determining the maximum thrust for both the 1:6 and 1:5 gearing, some heavy weight was placed on top of the JAviator to prevent it from lifting off during the service time tests, as shown in the last picture. 
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span12">
+          <h3>Propulsion Capacity</h3>
+          <p>
+            In order to determine the maximum battery service times for both gearings and for both the helicopter's empty weight with and without maximum payload, for each test the battery was fully drained until one of the motors dropped off, i.e., was shut down by its motor controller. The table below summarizes our measurements and gives an overview of the achieved lift capacities and battery service times. It points out that, even though the service times drop significantly when demanding full thrust, the JAviator can provide both either high payload capacities or relatively long flight times. Regarding the measurements without payload it is remarkable that, compared to the 37min service time achieved with the weaker 1:6 gearing, the same measurement performed with the stronger 1:5 gearing resulted in a service time of 39min. We assume that this result is due to certain tolerances associated with the charger, equalizer, and/or battery.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span2"></div>
+        <div class="span8">
+          <div class="text-center">
+            <table style="border: 1px solid rgb(0, 0, 120); text-align: left; background-color: rgb(244, 241, 243); width: 100%;" border="0" cellpadding="2" cellspacing="2">
+              <thead>
+                <tr>
+                  <th style="vertical-align: middle; text-align: left; width: 40%;">&nbsp;Experiment</th>
+                  <th style="vertical-align: middle; text-align: center; width: 15%;">Gearing</th>
+                  <th style="vertical-align: middle; text-align: center; width: 15%;">Thrust (%)</th>
+                  <th style="vertical-align: middle; text-align: center; width: 15%;">Lift (kg)</th>
+                  <th style="vertical-align: middle; text-align: center; width: 15%;">Time (min)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%; text-align: left;">&nbsp;JAviator without payload</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">1:6</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">43</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">2.2</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">37</td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%; text-align: left;">&nbsp;JAviator plus lifting 2.4kg</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">1:6</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">100</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">4.6</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">11</td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%; text-align: left;">&nbsp;JAviator without payload</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">1:5</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">38</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">2.2</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">39</td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%; text-align: left;">&nbsp;JAviator plus lifting 3.2kg</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">1:5</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">100</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">5.4</td>
+                  <td style="vertical-align: middle; text-align: center; width: 15%;">8</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="span2"></div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span12">
+          <h3>Assembled JAviator V2</h3>
+          <p>
+            The picture below shows a fully assembled and ready-to-flight JAviator V2 quadrotor that represents a milestone in this project. So far, we have built five V2 machines that are in use by us and our research collaborators.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span12">
+          <div class="text-center">
+            <img src="javiator_v2_front_view.jpg" alt="">
+          </div>
+        </div>
+      </div>
+      <br>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

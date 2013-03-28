@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator Videos: JAviator V2 High-Payload Tests</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-videos";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>JAviator V2 High-Payload Tests</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span12">
+          <h3>Initial Payload Experiments</h3>
+          <p>
+            In order to study the tradeoff regarding increased payload and decreased flight performance, we started our payload experiments by mounting two additional 6300mAh batteries beneath the bottom plate. Each battery weighs exactly 458g, which, together with the carbon fiber plates and mounting screws, resulted in a payload of nearly 1,000g. Except for an increased lift-off thrust requirement from 40% to 55% and a somewhat slower response time, no significant reduction in flight performance could be observed. Therefore, and due to our propulsion test results, the question arose, what if lifting the JAviator's empty weight, which would account for a payload of 2,200g? To this end, we mounted another completely assembled JAviator beneath the first one, but rotated it by 45 degrees to have the top one's rotors not in vertical line with the bottom one's. Although the lift-off thrust increased to roughly 80%, there was still enough thrust reserve for controlling this somewhat fancy-looking 'double-deck' JAviator. The flight performance was, as expected, reduced significantly and turned out to demand extraordinary reaction times from the pilot. However, we have demonstrated that our JAviator is capable of carrying its entire empty weight, and at the same time, provides sufficient freedom for controlled flying. Note that the same controller settings were used throughout all payload experiments. We believe that there is still potential for improving the JAviator's high-payload flight performance by appropriately adjusting the controller parameters for this purpose.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/ggnAvoNFzL4" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="span6 text-center">
+          <br>
+          <iframe width="425" height="344" src="http://www.youtube.com/embed/FpwRQvlRQM0" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span12">
+          <h4>Acknowledgements</h4>
+          <p>
+            Many thanks to Silviu Craciunas for taking pictures and videos.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>

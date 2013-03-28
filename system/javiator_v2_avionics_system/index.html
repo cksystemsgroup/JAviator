@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>JAviator System: JAviator V2 Avionics System</title>
+
+  <meta http-equiv="content-language" content="EN-US">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <meta name="author" content="Rainer Trummer">
+  <meta name="design" content="Computational Systems Group">
+  <meta name="description" content="The JAviator Project">
+  <meta name="keywords" content="javiator, quadrotor, uav, java, jvm, exotasks, ibm, web-sphere, real-time, concurrent, computational, control, embedded, systems, kirsch, trummer">
+
+  <link href="../../bootstrap.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-responsive.css" type="text/css" rel="stylesheet" media="all">
+  <link href="../../bootstrap-tweaks.css" type="text/css" rel="stylesheet" media="all">
+
+  <!-- HTML5 support for IE6-8 of HTML elements -->
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <script src="../../jquery.js"></script>
+  <script src="../../bootstrap.js"></script>
+  <script type="text/javascript">
+    var homePath = "../../";
+    var menuItem = "#menu-system";
+    $( document ).ready( function( ) {
+      $( "#javiator-header" ).load( homePath + "header.html" );
+      $( "#javiator-footer" ).load( homePath + "footer.html" );
+    } );
+  </script>
+  <script type="text/javascript">
+    var gaJsHost = ( ( "https:" == document.location.protocol ) ? "https://ssl." : "http://www." );
+    document.write( unescape( "%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E" ) );
+  </script>
+  <script type="text/javascript">
+    var pageTracker = _gat._getTracker( "UA-3827654-3" );
+    pageTracker._initData( );
+    pageTracker._trackPageview( );
+  </script>
+
+</head>
+
+<body>
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="brand" href="#">The JAviator Project</a>
+        <div class="nav-collapse collapse">
+          <div id="javiator-header"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+
+        <h2>JAviator V2 Avionics System</h2>
+
+      </div><!-- end of page-header -->
+
+      <div class="row">
+        <div class="span12">
+          <h3>Computer System</h3>
+          <p>
+            The computer system for flying the JAviator consist of an onboard computer system, mounted inside the JAviator's body, and a ground station. The figure below depicts the schematic of the computer system including all sensors and actuators as well as the 868MHz emergency shutdown circuitry. Note that the Global Positioning System (GPS) module and the secondary Robostix presented in this figure are not yet employed, i.e., GPS-based position control and the installation of different obstacle recognition sensors is part of planned future work.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span1"></div>
+        <div class="span10">
+          <div class="text-center">
+            <img src="system.png" alt="">
+          </div>
+        </div>
+        <div class="span1"></div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span6">
+          <h3>Onboard Computers</h3>
+          <p>
+            The JAviator is equipped with a so-called <a href="http://www.gumstix.com/">Robostix-Gumstix</a> stack, which serves as the onboard computer system. The Robostix, shown in the first picture, contains an Atmel ATmega128 processor and provides the necessary communication interfaces to connect to the Inertial Measurement Unit (IMU) and sonar sensor. Furthermore, it provides the required Pulse Width Modulation (PWM) units for driving the four motors. The Gumstix, shown in the second picture, features an Intel XScale PXA255 CPU clocked at 400MHz, a 64MB RAM, and a 16MB flash memory. The operating system on the Gumstix is a Linux system running a kernel version with real-time extensions and support of high-resolution timers, which we modified to work with the Gumstix. Robostix and Gumstix communicate via an RS232 connection. The third picture depicts a Robostix-Gumstix-NetCF stack, where the NetCF module provides an Ethernet connection that we use for tethered flights.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="onboard-computers" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#onboard-computers" data-slide-to="0" class="active"></li>
+              <li data-target="#onboard-computers" data-slide-to="1"></li>
+              <li data-target="#onboard-computers" data-slide-to="2"></li>
+            </ol>
+            <a class="carousel-control left" href="#onboard-computers" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#onboard-computers" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="robostix.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Robostix Expansion Board</h4>
+                    <p>
+                      Robostix expansion board featuring an Atmel ATmega128 CPU.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="gumstix.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Gumstix Computer-on-Module</h4>
+                    <p>
+                      Gumstix computer-on-module featuring an Intel XScale PXA255 CPU.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="hw_stack.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Robostix-Gumstix-NetCF Stack</h4>
+                    <p>
+                      Robostix-Gumstix-NetCF stack providing an Ethernet connection.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <br>
+
+      <div class="row">
+        <div class="span6">
+          <h3>Sensor Equipment</h3>
+          <p>
+            The current sensor equipment consists of a <a href="http://www.microstrain.com/">MicroStrain 3DM-GX1</a> IMU and a <a href="http://www.acroname.com/">Devantech SRF10</a> ultrasonic range finder. The IMU contains angular-rate gyros, accelerometers, and magnetometers for all three axes and provides triaxial orientation data in several formats like quaternions or Euler angles, either gyro-stabilized or instantaneous. The 3DM-GX1 provides an RS232 interface that is not directly supported by the onboard computer system. Therefore, an RS232-to-TTL converter is employed for adapting the signals. The first picture shows the IMU and converter mounted on the top plate, which is installed on the top ring with the IMU pointing downwards to be located protected inside the JAviator's body. The sonar sensor, shown in the second picture, uses fully timed echoing for providing distance data in the range of centimeters. Clearly, regarding inertial movements, the best location for the sonar sensor would be in the center beneath the bottom plate. However, since the minimum distance that can be measured by this sensor is 3cm and there is less than 2cm between the bottom plate and the ground, it is mounted on the bottom ring. We intend to equip the JAviator with a laser distance sensor mounted pivotably on the top plate for measuring distances in the plane. The next two pictures show the <a href="http://www.dimetix.com/">Dimetix LSM2-15</a> laser sensor module we are currently experimenting with. This distance sensor offers an accuracy of +/-1.5mm and a measuring range of up to 100m on natural surfaces without a target plate. In order to stabilize the JAviator's position in the plane and to enable autonomous control, we also plan to add a <a href="http://www.septentrio.com/">Septentrio AsterRx1</a> GPS receiver to the onboard computer system. This Differential-GPS receiver, depicted in the last picture, provides position data with an accuracy of +/-10cm at an update rate of 10Hz.
+          </p>
+        </div>
+        <div class="span6">
+          <br>
+          <div id="sensor-equipment" class="carousel slide" data-interval="">
+            <ol class="carousel-indicators">
+              <li data-target="#sensor-equipment" data-slide-to="0" class="active"></li>
+              <li data-target="#sensor-equipment" data-slide-to="1"></li>
+              <li data-target="#sensor-equipment" data-slide-to="2"></li>
+              <li data-target="#sensor-equipment" data-slide-to="3"></li>
+              <li data-target="#sensor-equipment" data-slide-to="4"></li>
+            </ol>
+            <a class="carousel-control left" href="#sensor-equipment" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#sensor-equipment" data-slide="next">&rsaquo;</a>
+            <div class="carousel-inner">
+              <div class="item active">
+                <img src="gyro_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Inertial Measurement Unit</h4>
+                    <p>
+                      MicroStrain 3DM-GX1 IMU sensor mounted on top plate.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="sonar_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Ultrasonic Range Finder</h4>
+                    <p>
+                      Devantech SRF10 sonar sensor mounted on bottom ring.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="laser_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Laser Distance Sensor</h4>
+                    <p>
+                      Front view of Dimetix LSM2-15 laser distance sensor.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="laser_2.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>Laser Distance Sensor</h4>
+                    <p>
+                      Top view of Dimetix LSM2-15 laser distance sensor.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="item">
+                <img src="gps_1.jpg" alt="">
+                <div class="container">
+                  <div class="carousel-caption">
+                    <h4>GPS Receiver</h4>
+                    <p>
+                      Septentrio AsterRx1 Differential-GPS receiver.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end of content -->
+    <div id="javiator-footer"></div>
+  </div><!-- end of container -->
+
+</body>
+</html>
