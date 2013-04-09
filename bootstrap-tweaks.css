@@ -35,6 +35,35 @@ a[name] {
   margin: -20px -20px 20px;
 }
 
+.ribbon-parent {
+  position: relative;
+  overflow: hidden
+}
+
+.ribbon {
+  background-color: #080;
+  position: absolute;
+  overflow: hidden;
+  top: 3em;
+  right: -4.5em;
+  -moz-transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+  -moz-box-shadow: 0 0 1em #888;
+  -webkit-box-shadow: 0 0 1em #888;
+}
+
+.ribbon a {
+  border: 1px solid #8d8;
+  color: #fff;
+  display: block;
+  font: bold 110% 'Helvetiva Neue', Helvetica, Arial, Sans-Serif;
+  margin: 0.05em 0 0.075em 0;
+  padding: 0.5em 3.5em;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 0 0.5em #444;
+}
+
 .content {
   background-color: #fff;
   padding-left: 20px;
