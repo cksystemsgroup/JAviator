@@ -4,7 +4,8 @@
 /*   Transceiver.java    Establishes and runs the serial connection between  */
 /*                       the JAviator and the control terminal.              */
 /*                                                                           */
-/*   Copyright (c) 2006-2010  Rainer Trummer, Harald Roeck                   */
+/*   Copyright (c) 2006-2013 Harald Roeck <harald.roeck@gmail.com>           */
+/*                       and Rainer Trummer <rainer.trummer@gmail.com>       */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

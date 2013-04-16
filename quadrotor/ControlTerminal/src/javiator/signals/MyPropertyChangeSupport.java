@@ -1,12 +1,13 @@
+/**
+ * @author Daniel Iercan, daniel.iercan@gmail.com
+ *
+ */
+
 package javiator.signals;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 
-/**
- * @author Daniel Iercan, daniel.iercan@cs.uni-salzburg.at
- *
- */
 public abstract class MyPropertyChangeSupport {
     private PropertyChangeSupport propertyChangeSupport;
     

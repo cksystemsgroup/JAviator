@@ -1,3 +1,8 @@
+/**
+ * @author Daniel Iercan, daniel.iercan@gmail.com
+ *  
+ */
+
 package javiator.signals;
 
 import java.awt.BorderLayout;
@@ -11,10 +16,6 @@ import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
-/**
- * @author Dani
- *
- */
 public class SignalsDialog extends JDialog {
     public static final long serialVersionUID = 1;
 

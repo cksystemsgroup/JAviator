@@ -27,7 +27,7 @@
  * ENHANCEMENTS, OR MODIFICATIONS.
  *
  *--------------------------------------------------------------------------
- *Created by Craciunas Silviu (silviu.craciunas@cs.uni-salzburg.at)
+ * Created by Silviu Craciunas <silviu.craciunas@gmail.com>
  *--------------------------------------------------------------------------
  */
 

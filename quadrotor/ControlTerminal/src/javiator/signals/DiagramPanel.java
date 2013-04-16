@@ -1,3 +1,8 @@
+/**
+ * @author Daniel Iercan, daniel.iercan@gmail.com
+ *  
+ */
+
 package javiator.signals;
 
 import java.awt.BorderLayout;
@@ -28,9 +33,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-/**
- * @author Daniel Iercan, daniel.iercan@cs.uni-salzburg.at
- */
 public final class DiagramPanel extends JPanel implements
 		PropertyChangeListener {
 

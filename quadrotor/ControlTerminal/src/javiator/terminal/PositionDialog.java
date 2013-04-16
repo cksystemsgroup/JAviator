@@ -4,7 +4,7 @@
 /*   PositionDialog.java    Constructs a non-modal dialog for displaying the */
 /*                          helicopter's desired and current position.       */
 /*                                                                           */
-/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

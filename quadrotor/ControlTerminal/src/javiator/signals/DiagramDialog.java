@@ -1,5 +1,9 @@
-package javiator.signals;
+/**
+ * @author Daniel Iercan, daniel.iercan@gmail.com
+ *  
+ */
 
+package javiator.signals;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -16,13 +20,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 
-
-/**
- * 
- * @author Daniel Iercan, daniel.iercan@cs.uni-salzburg.at
- *
- * This is a dialog that will plot a signal and it will compute the quality indicators
- */
 public class DiagramDialog extends JDialog {
     /**
      * 

@@ -1,13 +1,14 @@
+/**
+ * @author Silviu Craciunas, silviu.craciunas@gmail.com
+ *
+ */
+
 package javiator.terminal;
 
 import simulation.JAviator3D;
 import javiator.util.SensorData;
 import javiator.util.MotorSignals;
 
-/**
- * @author scraciunas
- *
- */
 public class JAviator3DControlPanel implements JAviator3DControl {
     
     private JAviator3D javiator3D;

@@ -1,9 +1,9 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   dm3gx1.h   Interface for the MicroStrain 3DM-GX1 IMU sensor device.     */
+/*   dm3gx1.h    Interface for the MicroStrain 3DM-GX1 IMU sensor device.    */
 /*                                                                           */
-/*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
+/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */

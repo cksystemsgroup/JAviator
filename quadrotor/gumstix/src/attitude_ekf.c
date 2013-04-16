@@ -1,8 +1,9 @@
 /*
- * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
+ *  Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>
  *
- * University Salzburg, www.uni-salzburg.at
- * Department of Computer Science, cs.uni-salzburg.at
+ *  Department of Computer Sciences, www.cs.uni-salzburg.at
+ *  University of Salzburg, www.uni-salzburg.at
+ *
  */
 
 /*

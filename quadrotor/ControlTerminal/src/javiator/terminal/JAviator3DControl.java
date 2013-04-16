@@ -1,9 +1,10 @@
-package javiator.terminal;
-
 /**
- * @author scraciunas
+ * @author Silviu Craciunas, silviu.craciunas@gmail.com
  *
  */
+
+package javiator.terminal;
+
 public interface JAviator3DControl{
     
     /**

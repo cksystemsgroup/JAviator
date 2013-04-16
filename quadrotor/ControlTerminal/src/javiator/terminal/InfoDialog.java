@@ -4,7 +4,7 @@
 /*   InfoDialog.java    Constructs a non-modal dialog presenting either      */
 /*                      key/button assistance or application info.           */
 /*                                                                           */
-/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
+/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -118,7 +118,7 @@ public class InfoDialog extends Dialog
     	ControlTerminal.NIL,
         "JAviator Control Terminal version 10.4",
         ControlTerminal.NIL,
-        "Copyright (c) 2006-2010  Rainer Trummer",
+        "Copyright (c) 2006-2013  Rainer Trummer",
         "Department of Computer Sciences",
         "University of Salzburg, Austria",
         ControlTerminal.NIL,

@@ -1,3 +1,8 @@
+/**
+ * @author Daniel Iercan, daniel.iercan@gmail.com
+ *  
+ */
+
 package javiator.signals;
 
 import java.io.FileNotFoundException;
@@ -6,12 +11,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-
-
-/**
- * @author Daniel Iercan, daniel.iercan@cs.uni-salzburg.at
- *  
- */
 public final class SignalModel extends MyPropertyChangeSupport {
 
     public final static String PROPERTY_VALUE_ADDED = "value_added";

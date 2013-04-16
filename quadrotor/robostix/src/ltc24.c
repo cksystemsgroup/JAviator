@@ -3,7 +3,7 @@
 /*                                                                           */
 /*   ltc24.c    Interface for the LTC24 ADCs (pressure conversion).          */
 /*                                                                           */
-/*   Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at                */
+/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
