@@ -14,7 +14,7 @@ The JAviator's software runs on the [Robostix expansion board](https://www.gumst
 
 ### JAviator Plant
 
-* [AVR toolchain](http://docwiki.gumstix.org/index.php?title=Robostix_avr_gcc)
+* [AVR Toolchain](http://docwiki.gumstix.org/index.php?title=Robostix_avr_gcc)
 
 Note that the following steps refer to Linux-based systems. Users of Windows and other systems are referred to the corresponding guidelines provided by the tool suppliers.
 
@@ -33,8 +33,8 @@ Install the AVR runtime library:
 
 ### Flight Controller
 
-* [OpenEmbedded build system](http://openembedded.org/wiki/Main_Page)
-* [Openmoko toolchain](http://wiki.openmoko.org/wiki/Main_Page)
+* [OpenEmbedded Build System](http://openembedded.org/wiki/Main_Page)
+* [Openmoko Toolchain](http://wiki.openmoko.org/wiki/Main_Page)
 
 Install the OpenEmbedded build system for the Ångström distribution by following the "Building Ångström" instructions given [here](http://www.angstrom-distribution.org/building-angstrom).
 
@@ -42,7 +42,7 @@ Install the Openmoko toolchain by following the "Downloading and Installing" ins
 
 ### Control Terminal
 
-* [Java runtime environment](http://openjdk.java.net/)
+* [Java Runtime Environment](http://openjdk.java.net/)
 
 Install the Java runtime environment by following the "OpenJDK > Installation of Java Runtime Environment" instructions given [here](https://help.ubuntu.com/community/Java).
 
@@ -51,7 +51,7 @@ Install the Java runtime environment by following the "OpenJDK > Installation of
 
 ### JAviator Plant
 
-Build the Robostix program:
+Build the Robostix programs:
 
     cd JAviator/quadrotor/robostix
     make
@@ -66,11 +66,11 @@ Build the Gumstix program:
     ./autogen_arm.sh
     make
 
-You should now have the file `control`. Copy this binary to the Gumstix. If you have installed a kernel version with real-time extensions and support of high-resolution timers, then also copy file `JAviator/quadrotor/tools/set_priority.sh` to the Gumstix. This script can be used for improving the controller's I/O handling behavior by adapting the relevant process priorities.
+You should now have the file `control`. Copy this binary to the Gumstix. If you have installed a kernel version with real-time extensions and support of high-resolution timers, then also copy the file `JAviator/quadrotor/tools/set_priority.sh` to the Gumstix. This script can be used for improving the controller's I/O handling behavior by adapting the relevant process priorities.
 
 ### Control Terminal
 
-Note that the following steps refer to Eclipse (&ge; 3.2) Java development tools, but may be similar to some extent for other Java development environments. Use "Import > Existing Projects into Workspace" to create the three projects `ControlTerminal`, `JAviator3D`, and `JoyDrv` from the existing file systems `JAviator/quadrotor/ControlTerminal`, `JAviator/quadrotor/JAviator3D`, and `JAviator/quadrotor/JoyDrv`, respectively. Then add the projects `JAviator3D` and `JoyDrv` under "ControlTerminal > Properties > Java Build Path > Projects" to the build path of project `ControlTerminal`. Finally, refer to `JAviator/quadrotor/JoyDrv/docs/html/index.html` for installing the system-specific joystick driver.
+Note that the following steps refer to the Eclipse (&ge; 3.2) Java development tools, but may be similar to some extent for other Java development environments. Use "Import > Existing Projects into Workspace" to create the three projects `ControlTerminal`, `JAviator3D`, and `JoyDrv` from the existing file systems `JAviator/quadrotor/ControlTerminal`, `JAviator/quadrotor/JAviator3D`, and `JAviator/quadrotor/JoyDrv`, respectively. Then add the projects `JAviator3D` and `JoyDrv` under "ControlTerminal > Properties > Java Build Path > Projects" to the build path of the project `ControlTerminal`. Finally, refer to `JAviator/quadrotor/JoyDrv/docs/html/index.html` for installing the system-specific joystick driver.
 
 
 ## Operation
@@ -93,11 +93,11 @@ Now start the control program with an arbitrary process priority between 50 and 
 
     chrt -f 60 ./control -t 15
 
-Upon successfully establishing a connection to the Robostix program, which will be displayed in the console window, the yellow LED on Robostix 1 should be blinking.
+After successfully establishing a connection to the Robostix program, which will be displayed in the console window, the yellow LED on Robostix 1 should be blinking.
 
 ### Control Terminal
 
-Start the Control Terminal application by selecting "ControlTerminal > Run As > Java Application". For a brief introduction to the basic functionality of the Control Terminal, please refer to [3. Starting the Control Terminal](http://javiator.cs.uni-salzburg.at/releases/control_system_demo_software/how_to.html). Note that displaying the "JAviator 3D" window by passing a command line argument has been disabled (commented out) in this stripped version. Furthermore, activating the "Signals Dialog" by pressing the F3 key has been disabled in favor of the "Helicopter Position" window, which is temporarily assigned to the F3 key.
+Start the Control Terminal application by selecting "ControlTerminal > Run As > Java Application". For a brief introduction to the basic functionality of the Control Terminal, please refer to [3. Starting the Control Terminal](http://javiator.cs.uni-salzburg.at/releases/control_system_demo_software/how_to.html). Note that displaying the "JAviator 3D" window by passing a command line argument has been disabled (commented out) in this stripped version. Furthermore, activating the "Signals Dialog" by pressing the F3 key has been disabled temporarily in favor of the "Helicopter Position" window, which is now assigned to the F3 key.
 
 
 ## License
