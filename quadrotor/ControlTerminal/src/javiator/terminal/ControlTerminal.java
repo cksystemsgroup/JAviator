@@ -1,9 +1,9 @@
 /*****************************************************************************/
 /*   This code is part of the JAviator project: javiator.cs.uni-salzburg.at  */
 /*                                                                           */
-/*   ControlTerminal.java    Runs the JAviator Control Terminal application. */
+/*   ControlTerminal.java	Runs the JAviator Control Terminal application.  */
 /*                                                                           */
-/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -1577,7 +1577,8 @@ public class ControlTerminal extends Frame
         private int     buttonNotPressed       = 0;
         private boolean alreadyToggledButton3  = false;
         private boolean alreadyToggledButton4  = false;
-        private boolean alreadyToggledButton7  = false;
+        private boolean alreadyToggledButton5  = false;
+        private boolean alreadyToggledButton6  = false;
         private boolean alreadyToggledButton9  = false;
         private boolean alreadyToggledButton10 = false;
         private boolean halt                   = false;
@@ -1613,7 +1614,7 @@ public class ControlTerminal extends Frame
             else
             if( (buttonsPressed & Joystick.BUTTON10) != 0 )
             {
-				/* toggle the heli-mode button */
+				/* toggle the heli-state button */
 				if( !alreadyToggledButton10 )
                 {
                     alreadyToggledButton10 = true;
@@ -1632,13 +1633,13 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton10 = false;
             }
 
-            /* send a store-trim-values command */
+            /* toggle the heli-mode button */
             if( (buttonsPressed & Joystick.BUTTON3) != 0 )
             {
 				if( !alreadyToggledButton3 )
                 {
                     alreadyToggledButton3 = true;
-            	    doStoreTrimValues( );
+                    doSwitchHeliMode( );
                 }
             }
             else
@@ -1646,13 +1647,13 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton3 = false;
             }
 
-            /* send a clear-trim-values command */
+            /* toggle the heli-mode button */
             if( (buttonsPressed & Joystick.BUTTON4) != 0 )
             {
 				if( !alreadyToggledButton4 )
                 {
                     alreadyToggledButton4 = true;
-            	    doClearTrimValues( );
+                    doSwitchHeliMode( );
                 }
             }
             else
@@ -1660,18 +1661,44 @@ public class ControlTerminal extends Frame
                 alreadyToggledButton4 = false;
             }
 
-            /* toggle the test-mode button */
-            if( (buttonsPressed & Joystick.BUTTON7) != 0 )
+            /* send a store-trim-values command */
+            if( (buttonsPressed & Joystick.BUTTON5) != 0 )
             {
-				if( !alreadyToggledButton7 )
+				if( !alreadyToggledButton5 )
                 {
-                    alreadyToggledButton7 = true;
-            	    doSwitchHeliMode( );
+                    alreadyToggledButton5 = true;
+            	    doStoreTrimValues( );
                 }
             }
             else
             {
-                alreadyToggledButton7 = false;
+                alreadyToggledButton5 = false;
+            }
+
+            /* send a clear-trim-values command */
+            if( (buttonsPressed & Joystick.BUTTON6) != 0 )
+            {
+				if( !alreadyToggledButton6 )
+                {
+                    alreadyToggledButton6 = true;
+            	    doClearTrimValues( );
+                }
+            }
+            else
+            {
+                alreadyToggledButton6 = false;
+            }
+
+            /* issue a fast-yaw-left command */
+            if( (buttonsPressed & Joystick.BUTTON7) != 0 )
+            {
+				meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) - (MOTION_STEP << 1) ) );
+            }
+
+            /* issue a fast-yaw-right command */
+            if( (buttonsPressed & Joystick.BUTTON8) != 0 )
+            {
+                meterYaw.setDesired( correct_yaw( meterYaw.getDesired( ) + (MOTION_STEP << 1) ) );
             }
 
             /* reset the green meter needles */

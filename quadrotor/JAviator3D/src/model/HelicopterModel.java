@@ -108,7 +108,7 @@ public class HelicopterModel extends BranchGroup implements Model
     /**
      * create the graphical appearance of the model
      */
-    @SuppressWarnings( "unchecked" ) private void createModel( )
+    private void createModel( )
     {
         objTrans = new TransformGroup( );
         objTrans.setName( this.name );

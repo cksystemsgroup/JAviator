@@ -82,7 +82,7 @@ static inline uint16_t calc_checksum( comm_packet_t *packet )
 
 int comm_recv_packet( comm_channel_t *channel, comm_packet_t *packet )
 {
-    uint8_t c, *buf = (char *) packet->payload;
+    char c, *buf = (char *) packet->payload;
     int res, mchecksum , retval = EAGAIN;
 
 redo:

@@ -47,10 +47,6 @@ static long long                next_period;
 static javiator_ldat_t          javiator_data;
 static motor_signals_t          motor_signals;
 
-/* function pointers */
-static void                     signal_handler( int num );
-static void                     int_handler( int num );
-
 
 /****************************************
  *          Control Loop Code           *
@@ -58,18 +54,9 @@ static void                     int_handler( int num );
 
 int control_loop_setup( void )
 {
-    struct sigaction act;
-
-    running             = 1;
-    us_period           = 20000;
-    next_period         = 0;
-    act.sa_handler      = signal_handler;
-	act.sa_handler      = int_handler;
-
-    if( sigaction( SIGUSR1, &act, NULL ) || sigaction( SIGINT, &act, NULL ) )
-    {
-        perror( "sigaction" );
-    }
+    running     = 1;
+    us_period   = 20000;
+    next_period = 0;
 
     memset( &javiator_data, 0, sizeof( javiator_data ) );
     memset( &motor_signals, 0, sizeof( motor_signals ) );
@@ -117,16 +104,8 @@ static int wait_for_next_period( void )
     }
 
     next_period += us_period;
+
     return( 0 );
-}
-
-static void signal_handler( int num )
-{
-}
-
-static void int_handler( int num )
-{
-	running = 0;
 }
 
 int control_loop_run( int motor, int speed )
@@ -149,11 +128,11 @@ int control_loop_run( int motor, int speed )
             break;
         }
 
-	    if( get_javiator_data( ) )
+	if( get_javiator_data( ) )
         {
             fprintf( stderr, "ERROR: connection to JAviator broken\n" );
             break;
-	    }
+	}
 
         if( rev_up )
         {
@@ -219,12 +198,14 @@ int control_loop_run( int motor, int speed )
     packet.type = COMM_SHUT_DOWN;
     javiator_port_forward( &packet );
     wait_for_next_period( );
+
     return( 0 );
 }
 
 int control_loop_stop( void )
 {
     running = 0;
+
     return( 0 );
 }
 

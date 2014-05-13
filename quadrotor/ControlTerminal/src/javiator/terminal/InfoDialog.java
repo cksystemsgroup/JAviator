@@ -4,7 +4,7 @@
 /*   InfoDialog.java    Constructs a non-modal dialog presenting either      */
 /*                      key/button assistance or application info.           */
 /*                                                                           */
-/*   Copyright (c) 2006-2013 Rainer Trummer <rainer.trummer@gmail.com>       */
+/*   Copyright (c) 2006-2010  Rainer Trummer                                 */
 /*                                                                           */
 /*   This program is free software; you can redistribute it and/or modify    */
 /*   it under the terms of the GNU General Public License as published by    */
@@ -71,7 +71,6 @@ public class InfoDialog extends Dialog
     /*************************************************************************/
 
     private static final String RELEASE_     = "Release ";
-    private static final String NOT_USED     = "(not used)";
     private static final String _TRIM_VALUES = " Trim Values";
 
     private static final String[] KEYBOARD_LIST =
@@ -87,7 +86,8 @@ public class InfoDialog extends Dialog
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "M",
         ControlTerminal.KEY_ASSISTANCE,                                          "F1",
         ControlTerminal.ABOUT_TERMINAL,                                          "F2",
-        ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,                      "F3",
+        //ControlTerminal.TOGGLE_ + ControlTerminal.DIAGRAMS,
+        "Position Window",                                                       "F3",
         ControlTerminal.TOGGLE_ + ControlTerminal.LOGGING,                       "F4",
         ControlTerminal.JOYSTICK + ControlTerminal._MODE,                        "F5",
         ControlTerminal.UDP_ + ControlTerminal.CONNECTION,                       "F6",
@@ -103,12 +103,12 @@ public class InfoDialog extends Dialog
     {
     	RELEASE_ + "Throttle",                                                   "1",
     	RELEASE_ + ControlTerminal.YAW,                                          "2",
-        "Store" + _TRIM_VALUES,                                                  "3",
-        "Clear" + _TRIM_VALUES,                                                  "4",
-        NOT_USED,                                                                "5",
-        NOT_USED,                                                                "6",
-        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "7",
-        NOT_USED,                                                                "8",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "3",
+        ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._MODE,  "4",
+        "Store" + _TRIM_VALUES,                                                  "5",
+        "Clear" + _TRIM_VALUES,                                                  "6",
+        "Fast " + ControlTerminal.YAW + " left",                                 "7",
+        "Fast " + ControlTerminal.YAW + " right",                                "8",
         ControlTerminal.RESET_NEEDLES,                                           "9",
         ControlTerminal.SWITCH + ControlTerminal._HELI + ControlTerminal._STATE, "10"
     };
@@ -118,7 +118,7 @@ public class InfoDialog extends Dialog
     	ControlTerminal.NIL,
         "JAviator Control Terminal version 10.4",
         ControlTerminal.NIL,
-        "Copyright (c) 2006-2013  Rainer Trummer",
+        "Copyright (c) 2006-2010  Rainer Trummer",
         "Department of Computer Sciences",
         "University of Salzburg, Austria",
         ControlTerminal.NIL,

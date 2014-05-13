@@ -166,7 +166,7 @@ public class PositionMeter extends Canvas
         {
 	        if( drawBackgnd )
 	        {
-	        	Enumeration en;
+	        	Enumeration<Integer> en;
 	        	String unitStr;
 	        	double unitNum;
 	        	int linePos, halfFontHeight = (g.getFontMetrics( g.getFont( ) ).getHeight( ) - 5) / 2;
@@ -327,7 +327,7 @@ public class PositionMeter extends Canvas
 
     public void paint( Graphics g )
     {
-    	Enumeration en;
+    	Enumeration<Point> en;
 
     	drawBackgnd = true;
     	computeScaledBackground( );

@@ -82,23 +82,23 @@ int main( int argc, char **argv )
     int setup = 1;
     int motor = 0;
     int speed = 40;
-	int opt;
+    int opt;
 
     memset( &javiator_channel, 0, sizeof( javiator_channel ) );
 
-	while( (opt = getopt( argc, argv, "cm:s:" )) != -1 )
+    while( (opt = getopt( argc, argv, "cm:s:" )) != -1 )
     {
-		switch( opt )
-		{
-			case 'c':
-				setup = 0;
-				break;
+        switch( opt )
+        {
+            case 'c':
+                setup = 0;
+                break;
 
-			case 'm':
+            case 'm':
                 motor = atoi( optarg );
-				break;
+                break;
 
-			case 's':
+            case 's':
                 speed = atoi( optarg );
                 if( speed < 0 || speed > 100 )
                 {
@@ -106,14 +106,14 @@ int main( int argc, char **argv )
                     usage( argv[0] );
                     exit( 1 );
                 }
-				break;
+                break;
 
-			case 'h':
-			default:
-				usage( argv[0] );
-				exit( 1 );
-		}
-	}
+            case 'h':
+            default:
+                usage( argv[0] );
+                exit( 1 );
+        }
+    }
 
     if( setup && (motor < 1 || motor > 4) )
     {

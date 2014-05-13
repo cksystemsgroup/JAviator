@@ -1,10 +1,9 @@
 /*
- *  Copyright (c) 2006-2013 Harald Roeck <harald.roeck@gmail.com>
- *                      and Rainer Trummer <rainer.trummer@gmail.com>
+ * Copyright (c) Harald Roeck hroeck@cs.uni-salzburg.at
+ * Copyright (c) Rainer Trummer rtrummer@cs.uni-salzburg.at
  *
- *  Department of Computer Sciences, www.cs.uni-salzburg.at
- *  University of Salzburg, www.uni-salzburg.at
- *
+ * University Salzburg, www.uni-salzburg.at
+ * Department of Computer Science, cs.uni-salzburg.at
  */
 
 /*
@@ -158,73 +157,73 @@ int main( int argc, char **argv )
     int    multiplier = PERIOD_MULTIPLIER;
     int    ubisense   = ACTIVATE_UBISENSE;
     int    ctrl_gain  = REDUCED_CTRL_CMDS;
-	int    conn_type  = SOCK_UDP;
-	int    opt, fd;
+    int    conn_type  = SOCK_UDP;
+    int    opt, fd;
 
     memset( &javiator_channel, 0, sizeof( javiator_channel ) );
     memset( &terminal_channel, 0, sizeof( terminal_channel ) );
     memset( &ubisense_channel, 0, sizeof( ubisense_channel ) );
 
-	while( (opt = getopt( argc, argv, "chi:m:r:st:u" )) != -1 )
+    while( (opt = getopt( argc, argv, "chi:m:r:st:u" )) != -1 )
     {
-		switch( opt )
-		{
-			case 'c':
-				exec_loop = 0;
-				break;
+        switch( opt )
+        {
+            case 'c':
+                exec_loop = 0;
+                break;
 
-			case 'i':
-				if( (ubi_tag_id = atoi( optarg )) < 0 )
+            case 'i':
+                if( (ubi_tag_id = atoi( optarg )) < 0 )
                 {
-					fprintf( stderr, "ERROR: option '-i' requires a positive value\n" );
-					usage( argv[0] );
-					exit( 1 );
-				}
-				break;
+                    fprintf( stderr, "ERROR: option '-i' requires a positive value\n" );
+                    usage( argv[0] );
+                    exit( 1 );
+                }
+                break;
 
-			case 'm':
-				if( (multiplier = atoi( optarg )) < 1 )
+            case 'm':
+                if( (multiplier = atoi( optarg )) < 1 )
                 {
-					fprintf( stderr, "ERROR: option '-m' requires a value > 0\n" );
-					usage( argv[0] );
-					exit( 1 );
-				}
-				break;
+                    fprintf( stderr, "ERROR: option '-m' requires a value > 0\n" );
+                    usage( argv[0] );
+                    exit( 1 );
+                }
+                break;
 
-			case 'r':
-				if( (ctrl_gain = atoi( optarg )) < 1 )
+            case 'r':
+                if( (ctrl_gain = atoi( optarg )) < 1 )
                 {
-					fprintf( stderr, "ERROR: option '-r' requires a value > 0\n" );
-					usage( argv[0] );
-					exit( 1 );
-				}
-				break;
+                    fprintf( stderr, "ERROR: option '-r' requires a value > 0\n" );
+                    usage( argv[0] );
+                    exit( 1 );
+                }
+                break;
 
-			case 's':
-				ubisense = 1;
-				break;
+            case 's':
+                ubisense = 1;
+                break;
 
-			case 't':
-				if( (ms_period = atoi( optarg )) < 1 )
+            case 't':
+                if( (ms_period = atoi( optarg )) < 1 )
                 {
-					fprintf( stderr, "ERROR: option '-t' requires a value > 0\n" );
-					usage( argv[0] );
-					exit( 1 );
-				}
-				break;
+                    fprintf( stderr, "ERROR: option '-t' requires a value > 0\n" );
+                    usage( argv[0] );
+                    exit( 1 );
+                }
+                break;
 
-			case 'u':
-				conn_type = SOCK_SERVER;
-				break;
+            case 'u':
+                conn_type = SOCK_SERVER;
+                break;
 
-			case 'h':
-			default:
-				usage( argv[0] );
-				exit( 1 );
-		}
-	}
+            case 'h':
+            default:
+                usage( argv[0] );
+                exit( 1 );
+        }
+    }
 
-	printf( "loading configuration ... " );
+    printf( "loading configuration ... " );
 
     if( (fd = open( CFG_FILENAME, O_RDONLY )) < 0 )
     {
@@ -257,7 +256,7 @@ int main( int argc, char **argv )
 
     printf( "ok\n" );
 
-	printf( "setting up Terminal port ... " );
+    printf( "setting up Terminal port ... " );
 
     if( setup_terminal_port( conn_type, TERMINAL_PORT, multiplier ) )
     {
@@ -270,7 +269,7 @@ int main( int argc, char **argv )
 
     if( ubisense )
     {
-	    printf( "setting up Ubisense port ... " );
+        printf( "setting up Ubisense port ... " );
 
         if( setup_ubisense_port( SOCK_UDP, UBISENSE_PORT, ubi_tag_id ) )
         {
@@ -292,26 +291,26 @@ int main( int argc, char **argv )
 
     if( javiator_channel.data )
     {
-	    printf( "destroying JAviator port ... " );
+        printf( "destroying JAviator port ... " );
         serial_channel_destroy( &javiator_channel );
         printf( "ok\n" );
     }
 
     if( terminal_channel.data )
     {
-	    printf( "destroying Terminal port ... " );
+        printf( "destroying Terminal port ... " );
         socket_channel_destroy( &terminal_channel, conn_type );
         printf( "ok\n" );
     }
 
     if( ubisense_channel.data )
     {
-	    printf( "destroying Ubisense port ... " );
+        printf( "destroying Ubisense port ... " );
         socket_channel_destroy( &ubisense_channel, SOCK_CLIENT );
         printf( "ok\n" );
     }
 
-	printf( "saving configuration ... " );
+    printf( "saving configuration ... " );
 
     if( (fd = open( CFG_FILENAME, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR )) < 0 )
     {

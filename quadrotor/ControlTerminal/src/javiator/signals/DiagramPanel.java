@@ -268,7 +268,7 @@ public final class DiagramPanel extends JPanel implements
 		diagram.paint(buff.getGraphics());
 		isImage = false;
 		try {
-			Iterator writers = ImageIO.getImageWritersByFormatName("jpg");
+			Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
 			ImageWriter writer = (ImageWriter) writers.next();
 
 			File f = new File(pFileName);
