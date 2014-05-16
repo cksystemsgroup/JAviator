@@ -4,8 +4,6 @@ syntax: glob
 traces
 launch
 classes
-CVS
-.cvsignore
 *.o
 *.class
 *.d
@@ -31,8 +29,6 @@ stamp-*
 bin
 share
 private.xml
-*.m4
-cross
 build
 *~
 
